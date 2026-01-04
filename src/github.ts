@@ -1,4 +1,6 @@
-import type { GitHub } from "@actions/github/lib/utils";
+// Using any type for Octokit since @actions/github is CommonJS and we're ESM
+// biome-ignore lint/suspicious/noExplicitAny: Octokit type from CommonJS module
+type OctokitClient = any;
 
 export interface GitHubContext {
 	repo: {
@@ -70,7 +72,7 @@ export interface GitHubClient {
 }
 
 export function createGitHubClient(
-	octokit: InstanceType<typeof GitHub>,
+	octokit: OctokitClient,
 	context: GitHubContext,
 ): GitHubClient {
 	return {

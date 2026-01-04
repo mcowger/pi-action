@@ -1,13 +1,10 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.runAgent = runAgent;
-const pi_coding_agent_1 = require("@mariozechner/pi-coding-agent");
-const context_js_1 = require("./context.js");
-async function runAgent(piContext, config, authStorage, modelRegistry) {
-    const prompt = (0, context_js_1.buildPrompt)(piContext);
+import { SessionManager, SettingsManager, createAgentSession, createCodingTools, discoverAuthStorage, discoverModels, } from "@mariozechner/pi-coding-agent";
+import { buildPrompt } from "./context.js";
+export async function runAgent(piContext, config, authStorage, modelRegistry) {
+    const prompt = buildPrompt(piContext);
     // Use provided or discover auth/models
-    const auth = authStorage ?? (0, pi_coding_agent_1.discoverAuthStorage)();
-    const models = modelRegistry ?? (0, pi_coding_agent_1.discoverModels)(auth);
+    const auth = authStorage ?? discoverAuthStorage();
+    const models = modelRegistry ?? discoverModels(auth);
     // Find the model
     const model = models.find(config.provider, config.model);
     if (!model) {
@@ -19,15 +16,15 @@ async function runAgent(piContext, config, authStorage, modelRegistry) {
     // Collect response text
     let response = "";
     try {
-        const { session } = await (0, pi_coding_agent_1.createAgentSession)({
+        const { session } = await createAgentSession({
             cwd: config.cwd,
             model,
             thinkingLevel: "off",
             authStorage: auth,
             modelRegistry: models,
-            tools: (0, pi_coding_agent_1.createCodingTools)(config.cwd),
-            sessionManager: pi_coding_agent_1.SessionManager.inMemory(),
-            settingsManager: pi_coding_agent_1.SettingsManager.inMemory({
+            tools: createCodingTools(config.cwd),
+            sessionManager: SessionManager.inMemory(),
+            settingsManager: SettingsManager.inMemory({
                 compaction: { enabled: false },
                 retry: { enabled: true, maxRetries: 2 },
             }),

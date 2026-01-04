@@ -2,6 +2,7 @@
 	"name": "pi-action",
 	"version": "1.0.0",
 	"description": "GitHub Action to invoke the pi coding agent on issues and PRs",
+	"type": "module",
 	"scripts": {
 		"build": "tsc",
 		"test": "vitest run",

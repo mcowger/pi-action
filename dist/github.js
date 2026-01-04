@@ -1,9 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.extractTriggerInfo = extractTriggerInfo;
-exports.createGitHubClient = createGitHubClient;
-exports.addReaction = addReaction;
-function extractTriggerInfo(payload) {
+export function extractTriggerInfo(payload) {
     const comment = payload.comment;
     const issue = (payload.issue || payload.pull_request);
     if (!issue) {
@@ -34,7 +29,7 @@ function extractTriggerInfo(payload) {
         isPullRequest: !!payload.pull_request,
     };
 }
-function createGitHubClient(octokit, context) {
+export function createGitHubClient(octokit, context) {
     return {
         async addReactionToComment(commentId, reaction) {
             await octokit.rest.reactions.createForIssueComment({
@@ -71,7 +66,7 @@ function createGitHubClient(octokit, context) {
         },
     };
 }
-async function addReaction(client, triggerInfo, reaction) {
+export async function addReaction(client, triggerInfo, reaction) {
     if (triggerInfo.isCommentEvent && triggerInfo.commentId) {
         await client.addReactionToComment(triggerInfo.commentId, reaction);
     }

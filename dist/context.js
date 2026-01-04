@@ -1,18 +1,13 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasTrigger = hasTrigger;
-exports.extractTask = extractTask;
-exports.buildPrompt = buildPrompt;
-function hasTrigger(text, trigger) {
+export function hasTrigger(text, trigger) {
     return text.toLowerCase().includes(trigger.toLowerCase());
 }
-function extractTask(comment, trigger) {
+export function extractTask(comment, trigger) {
     const idx = comment.toLowerCase().indexOf(trigger.toLowerCase());
     if (idx === -1)
         return comment;
     return comment.slice(idx + trigger.length).trim();
 }
-function buildPrompt(context) {
+export function buildPrompt(context) {
     let prompt = `# GitHub ${context.type === "pull_request" ? "Pull Request" : "Issue"} #${context.number}
 
 ## Title

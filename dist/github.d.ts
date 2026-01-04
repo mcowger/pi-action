@@ -1,4 +1,4 @@
-import type { GitHub } from "@actions/github/lib/utils";
+type OctokitClient = any;
 export interface GitHubContext {
     repo: {
         owner: string;
@@ -26,5 +26,6 @@ export interface GitHubClient {
     createComment(issueNumber: number, body: string): Promise<void>;
     getPullRequestDiff(pullNumber: number): Promise<string>;
 }
-export declare function createGitHubClient(octokit: InstanceType<typeof GitHub>, context: GitHubContext): GitHubClient;
+export declare function createGitHubClient(octokit: OctokitClient, context: GitHubContext): GitHubClient;
 export declare function addReaction(client: GitHubClient, triggerInfo: TriggerInfo, reaction: string): Promise<void>;
+export {};
