@@ -68,6 +68,8 @@ Alternatively, you can set provider-specific environment variables (e.g., `ANTHR
 
 ### Inputs
 
+All inputs are defined in [`action.yml`](action.yml). Default values are centralized in [`src/defaults.ts`](src/defaults.ts).
+
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `github_token` | GitHub token for API access | Yes | - |
@@ -168,15 +170,17 @@ jobs:
 ## How It Works
 
 1. When a comment or issue/PR containing the trigger phrase is posted, the action is triggered
-2. The action validates that the author has write access to the repository
+2. The action validates that the author has write access to the repository (see [`src/security.ts`](src/security.ts))
 3. An 👀 reaction is added to acknowledge the request
-4. **Git hooks are installed** in the target repository (standalone shell scripts) to enforce commit conventions
-5. The pi SDK is invoked with the issue/PR context and the task from the trigger
+4. **Git hooks are installed** in the target repository to enforce commit conventions (see [action.yml](action.yml#L44-L107))
+5. The pi SDK is invoked with the issue/PR context and the task from the trigger (see [`src/agent.ts`](src/agent.ts))
 6. The response is posted as a new comment with a 🚀 reaction
+
+The main orchestration logic is in [`src/run.ts`](src/run.ts), with prompt building in [`src/context.ts`](src/context.ts).
 
 ### Git Hooks for the Agent
 
-The action automatically installs **lightweight, standalone git hooks** in your repository before running the agent. These hooks have no dependencies and work with any language/stack:
+The action automatically installs **lightweight, standalone git hooks** ([defined in action.yml](action.yml#L44-L107)) in your repository before running the agent. These hooks have no dependencies and work with any language/stack:
 
 - **commit-msg**: Enforces [Conventional Commits](https://www.conventionalcommits.org/) format
 - **prepare-commit-msg**: Auto-appends issue numbers from branch names
@@ -187,7 +191,7 @@ This ensures the agent follows conventional commit format without imposing any t
 
 ## Security
 
-The action only responds to users with write access:
+The action only responds to users with write access (see [`src/security.ts`](src/security.ts)):
 - Repository owners
 - Organization members
 - Collaborators
