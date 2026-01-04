@@ -11,6 +11,7 @@ A GitHub Action that invokes the [pi coding agent](https://github.com/mariozechn
 - 🆕 Trigger on issue/PR creation, not just comments
 - 🔀 Automatically includes PR diffs for code review tasks
 - 📦 Uses the pi SDK directly - no separate installation needed
+- 🪝 Auto-installs git hooks to enforce commit conventions for the agent
 
 ## Usage
 
@@ -128,8 +129,20 @@ jobs:
 1. When a comment or issue/PR containing the trigger phrase is posted, the action is triggered
 2. The action validates that the author has write access to the repository
 3. An 👀 reaction is added to acknowledge the request
-4. The pi SDK is invoked with the issue/PR context and the task from the trigger
-5. The response is posted as a new comment with a 🚀 reaction
+4. **Git hooks are installed** in the target repository (husky + commitlint) to enforce commit conventions
+5. The pi SDK is invoked with the issue/PR context and the task from the trigger
+6. The response is posted as a new comment with a 🚀 reaction
+
+### Git Hooks for the Agent
+
+The action automatically installs **lightweight, standalone git hooks** in your repository before running the agent. These hooks have no dependencies and work with any language/stack:
+
+- **commit-msg**: Enforces [Conventional Commits](https://www.conventionalcommits.org/) format
+- **prepare-commit-msg**: Auto-appends issue numbers from branch names
+
+**Important**: These hooks are only installed if no existing hook is present - your existing hooks are never overwritten.
+
+This ensures the agent follows conventional commit format without imposing any tooling requirements on your repository.
 
 ## Security
 
@@ -164,6 +177,38 @@ npm run typecheck
 
 # Lint and format
 npm run check
+```
+
+### Git Hooks
+
+This project uses [Husky](https://typicode.github.io/husky/) to enforce quality checks via git hooks:
+
+| Hook | What it does |
+|------|--------------|
+| **pre-commit** | Runs tests, type checking, linting, builds, and verifies `dist/` is up to date |
+| **commit-msg** | Enforces [Conventional Commits](https://www.conventionalcommits.org/) format |
+| **prepare-commit-msg** | Auto-appends issue number from branch name (e.g., `feat/123-description` → `Refs #123`) |
+| **pre-push** | Runs full test suite with coverage thresholds (80% lines/functions, 70% branches) |
+
+#### Commit Message Format
+
+Commits must follow the conventional commits format:
+
+```
+type(scope?): subject
+
+body?
+
+footer?
+```
+
+Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+Examples:
+```bash
+git commit -m "feat: add webhook support"
+git commit -m "fix: handle empty response from API"
+git commit -m "docs: update installation instructions"
 ```
 
 ### Architecture
