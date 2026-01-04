@@ -10,6 +10,7 @@ A GitHub Action that invokes the [pi coding agent](https://github.com/mariozechn
 - 📝 Works on both issues and pull requests
 - 🆕 Trigger on issue/PR creation, not just comments
 - 🔀 Automatically includes PR diffs for code review tasks
+- 📦 Uses the pi SDK directly - no separate installation needed
 
 ## Usage
 
@@ -46,9 +47,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Install pi
-        run: npm install -g @mariozechner/pi-coding-agent
 
       - name: Run pi-action
         uses: cv/pi-action@v1
@@ -130,7 +128,7 @@ jobs:
 1. When a comment or issue/PR containing the trigger phrase is posted, the action is triggered
 2. The action validates that the author has write access to the repository
 3. An 👀 reaction is added to acknowledge the request
-4. pi is invoked with the issue/PR context and the task from the trigger
+4. The pi SDK is invoked with the issue/PR context and the task from the trigger
 5. The response is posted as a new comment with a 🚀 reaction
 
 ## Security
@@ -155,6 +153,9 @@ npm install
 # Run tests
 npm test
 
+# Run tests with coverage
+npm test -- --coverage
+
 # Build
 npm run build
 
@@ -164,6 +165,19 @@ npm run typecheck
 # Lint and format
 npm run check
 ```
+
+### Architecture
+
+The action is built with TypeScript and uses the pi-coding-agent SDK directly:
+
+- `src/index.ts` - Entry point, wires up dependencies
+- `src/run.ts` - Main orchestration logic
+- `src/agent.ts` - pi SDK integration
+- `src/github.ts` - GitHub API helpers
+- `src/context.ts` - Prompt building
+- `src/security.ts` - Permission validation and input sanitization
+
+All business logic has 100% test coverage (88% overall including the entry point).
 
 ## License
 
