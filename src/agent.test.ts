@@ -17,6 +17,7 @@ vi.mock("@mariozechner/pi-coding-agent", () => {
 		createAgentSession: vi.fn(() => Promise.resolve({ session: mockSession })),
 		SessionManager: {
 			inMemory: vi.fn(() => ({})),
+			create: vi.fn(() => ({})),
 		},
 		SettingsManager: {
 			inMemory: vi.fn(() => ({})),

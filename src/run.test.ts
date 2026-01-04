@@ -13,7 +13,13 @@ vi.mock("./agent.js", () => ({
 	runAgent: vi.fn(),
 }));
 
+// Mock the share module
+vi.mock("./share.js", () => ({
+	shareSession: vi.fn(),
+}));
+
 import { runAgent } from "./agent.js";
+import { shareSession } from "./share.js";
 
 // Mock fs and os for setupAuth tests
 vi.mock("node:fs", () => ({
@@ -68,6 +74,7 @@ describe("run", () => {
 				githubToken: "test-token",
 				piAuthJson: undefined,
 				promptTemplate: undefined,
+				shareSession: true,
 			},
 			context: {
 				payload: {},
@@ -401,6 +408,90 @@ describe("run", () => {
 				triggerComment: "@pi  do something", // HTML comment and invisible char removed
 			}),
 			expect.anything(),
+		);
+	});
+
+	it("shares session when shareSession is enabled", async () => {
+		const mockClient = createMockGitHubClient();
+		const mockSession = { exportToHtml: vi.fn() };
+
+		// Mock shareSession to return a result
+		vi.mocked(shareSession).mockResolvedValue({
+			gistUrl: "https://gist.github.com/user/abc123",
+			previewUrl: "https://shittycodingagent.ai/session?abc123",
+		});
+
+		const deps = createMockDeps({
+			context: {
+				payload: {
+					issue: {
+						number: 1,
+						title: "Test Issue",
+						body: "@pi test task",
+						user: { login: "user", type: "User" },
+						author_association: "OWNER",
+					},
+				},
+				repo: createRepoRef(),
+			},
+			createClient: vi.fn(() => mockClient),
+			inputs: {
+				...createMockDeps().inputs,
+				shareSession: true,
+			},
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: true,
+			response: "Task completed!",
+			session: mockSession,
+		});
+
+		await run(deps);
+
+		// Check that comment includes session link
+		expect(mockClient.createComment).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining(
+				"📎 [View full session](https://shittycodingagent.ai/session?abc123)",
+			),
+		);
+	});
+
+	it("works without session sharing when shareSession is disabled", async () => {
+		const mockClient = createMockGitHubClient();
+
+		const deps = createMockDeps({
+			context: {
+				payload: {
+					issue: {
+						number: 1,
+						title: "Test Issue",
+						body: "@pi test task",
+						user: { login: "user", type: "User" },
+						author_association: "OWNER",
+					},
+				},
+				repo: createRepoRef(),
+			},
+			createClient: vi.fn(() => mockClient),
+			inputs: {
+				...createMockDeps().inputs,
+				shareSession: false,
+			},
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: true,
+			response: "Task completed!",
+		});
+
+		await run(deps);
+
+		// Check that comment does not include session link
+		expect(mockClient.createComment).toHaveBeenCalledWith(
+			1,
+			"### 🤖 pi Response\n\nTask completed!",
 		);
 	});
 });

@@ -7,6 +7,7 @@ export interface ActionInputs {
     githubToken: string | undefined;
     piAuthJson: string | undefined;
     promptTemplate: string | undefined;
+    shareSession: boolean;
 }
 export interface ActionContext {
     payload: Record<string, unknown>;

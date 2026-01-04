@@ -12,6 +12,7 @@ export function createMockGitHubClient() {
         addReactionToIssue: vi.fn(),
         createComment: vi.fn(),
         getPullRequestDiff: vi.fn().mockResolvedValue(""),
+        createGist: vi.fn().mockResolvedValue("https://gist.github.com/test123"),
     };
 }
 /**

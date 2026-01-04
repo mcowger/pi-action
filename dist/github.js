@@ -65,6 +65,14 @@ export function createGitHubClient(octokit, context) {
             });
             return diff;
         },
+        async createGist(content, filename, description, isPublic = false) {
+            const { data: gist } = await octokit.rest.gists.create({
+                files: { [filename]: { content } },
+                public: isPublic,
+                description,
+            });
+            return gist.html_url || "";
+        },
     };
 }
 export async function addReaction(client, triggerInfo, reaction) {

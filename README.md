@@ -80,6 +80,7 @@ All inputs are defined in [`action.yml`](action.yml). Default values are central
 | `provider` | LLM provider (anthropic, openai, google, etc.) | No | `anthropic` |
 | `model` | Model ID | No | `claude-sonnet-4-20250514` |
 | `prompt_template` | Custom prompt template with placeholder variables | No | (built-in default) |
+| `share_session` | Include a link to the full session HTML in the response comment | No | `true` |
 
 ### Examples
 
@@ -151,6 +152,36 @@ Customize how GitHub issue/PR context is presented to the pi agent:
 
 See [examples/prompt-templates.md](examples/prompt-templates.md) for more template examples.
 
+#### Session Sharing
+
+By default, pi-action shares the complete session (including tool executions and agent reasoning) as a secret GitHub gist and includes a link in the response comment. This helps with debugging and provides full transparency of what the agent did.
+
+```yaml
+- uses: cv/pi-action@v1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
+    share_session: true  # Default: true
+```
+
+To disable session sharing:
+
+```yaml
+- uses: cv/pi-action@v1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
+    share_session: false  # Disable session links
+```
+
+**Session sharing includes:**
+- Full conversation history
+- All tool executions (file reads, bash commands, edits)
+- Agent reasoning and decision process
+- Error details when things go wrong
+
+Sessions are uploaded as **secret** (non-public) GitHub gists and are accessible via a viewer at `https://shittycodingagent.ai/session?<gist_id>`.
+
 #### Comments only (no issue/PR creation triggers)
 
 If you only want to trigger on comments, not when issues/PRs are created:
@@ -174,7 +205,8 @@ jobs:
 3. An 👀 reaction is added to acknowledge the request
 4. **Git hooks are installed** in the target repository to enforce commit conventions (see [action.yml](action.yml#L44-L107))
 5. The pi SDK is invoked with the issue/PR context and the task from the trigger (see [`src/agent.ts`](src/agent.ts))
-6. The response is posted as a new comment with a 🚀 reaction
+6. **Session is shared** as a secret GitHub gist with a preview URL (if `share_session` is enabled)
+7. The response is posted as a new comment with a 🚀 reaction, including the session link
 
 The main orchestration logic is in [`src/run.ts`](src/run.ts), with prompt building in [`src/context.ts`](src/context.ts).
 

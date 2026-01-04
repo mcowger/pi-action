@@ -8,6 +8,7 @@ export interface GitHubClient {
     addReactionToIssue(issueNumber: number, reaction: GitHubReaction): Promise<void>;
     createComment(issueNumber: number, body: string): Promise<void>;
     getPullRequestDiff(pullNumber: number): Promise<string>;
+    createGist(content: string, filename: string, description: string, isPublic?: boolean): Promise<string>;
 }
 export declare function createGitHubClient(octokit: OctokitClient, context: GitHubContext): GitHubClient;
 export declare function addReaction(client: GitHubClient, triggerInfo: TriggerInfo, reaction: GitHubReaction): Promise<void>;

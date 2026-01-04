@@ -23,6 +23,13 @@ export interface RepoRef {
 }
 
 /**
+ * Session interface for session sharing
+ */
+export interface Session {
+	exportToHtml: (outputPath?: string) => string;
+}
+
+/**
  * Model configuration - commonly passed together
  */
 export interface ModelConfig {
@@ -46,8 +53,8 @@ export interface TriggerInfo {
 
 // Improved AgentResult using discriminated union
 export type AgentResult =
-	| { success: true; response: string }
-	| { success: false; error: string };
+	| { success: true; response: string; session?: Session }
+	| { success: false; error: string; session?: Session };
 
 // Minimal Octokit interface to replace 'any' type
 export interface OctokitClient {
@@ -81,6 +88,13 @@ export interface OctokitClient {
 				pull_number: number;
 				mediaType: { format: string };
 			}) => Promise<{ data: unknown }>;
+		};
+		gists: {
+			create: (params: {
+				files: Record<string, { content: string }>;
+				public?: boolean;
+				description?: string;
+			}) => Promise<{ data: { html_url?: string } }>;
 		};
 	};
 }

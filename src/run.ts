@@ -12,7 +12,8 @@ import {
 } from "./github.js";
 import { sanitizeInput, validatePermissions } from "./security.js";
 import type { SecurityContext } from "./security.js";
-import type { ModelConfig, RepoRef, TriggerInfo } from "./types.js";
+import { shareSession } from "./share.js";
+import type { ModelConfig, RepoRef, Session, TriggerInfo } from "./types.js";
 
 export interface ActionInputs {
 	triggerPhrase: string;
@@ -21,6 +22,7 @@ export interface ActionInputs {
 	githubToken: string | undefined;
 	piAuthJson: string | undefined;
 	promptTemplate: string | undefined;
+	shareSession: boolean;
 }
 
 export interface ActionContext {
@@ -132,22 +134,42 @@ async function postResult(
 	ghClient: GitHubClient,
 	triggerInfo: TriggerInfo,
 	result:
-		| { success: true; response: string }
-		| { success: false; error: string },
+		| { success: true; response: string; session?: Session }
+		| { success: false; error: string; session?: Session },
+	shareSessionEnabled: boolean,
 	log: Logger,
 ): Promise<void> {
+	let shareUrl: string | undefined;
+
+	// Try to share session if enabled and session exists
+	if (shareSessionEnabled && result.session) {
+		try {
+			const shareResult = await shareSession(
+				result.session,
+				ghClient,
+				`pi-action session for ${result.success ? "success" : "error"}: ${triggerInfo.issueTitle}`,
+			);
+			if (shareResult) {
+				shareUrl = shareResult.previewUrl;
+				log.info(`Session shared: ${shareUrl}`);
+			}
+		} catch (error) {
+			log.warning(`Failed to share session: ${error}`);
+		}
+	}
+
 	if (result.success) {
 		await addReaction(ghClient, triggerInfo, "rocket");
 		await ghClient.createComment(
 			triggerInfo.issueNumber,
-			formatSuccessComment(result.response),
+			formatSuccessComment(result.response, shareUrl),
 		);
 	} else {
 		log.error(`pi execution failed: ${result.error}`);
 		await addReaction(ghClient, triggerInfo, "confused");
 		await ghClient.createComment(
 			triggerInfo.issueNumber,
-			formatErrorComment(result.error),
+			formatErrorComment(result.error, shareUrl),
 		);
 	}
 }
@@ -186,5 +208,5 @@ export async function run(deps: ActionDependencies): Promise<void> {
 	});
 
 	// Post result
-	await postResult(ghClient, triggerInfo, result, log);
+	await postResult(ghClient, triggerInfo, result, inputs.shareSession, log);
 }

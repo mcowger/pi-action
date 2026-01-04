@@ -11,6 +11,12 @@ export interface RepoRef {
     name: string;
 }
 /**
+ * Session interface for session sharing
+ */
+export interface Session {
+    exportToHtml: (outputPath?: string) => string;
+}
+/**
  * Model configuration - commonly passed together
  */
 export interface ModelConfig {
@@ -32,9 +38,11 @@ export interface TriggerInfo {
 export type AgentResult = {
     success: true;
     response: string;
+    session?: Session;
 } | {
     success: false;
     error: string;
+    session?: Session;
 };
 export interface OctokitClient {
     rest: {
@@ -70,6 +78,19 @@ export interface OctokitClient {
                 };
             }) => Promise<{
                 data: unknown;
+            }>;
+        };
+        gists: {
+            create: (params: {
+                files: Record<string, {
+                    content: string;
+                }>;
+                public?: boolean;
+                description?: string;
+            }) => Promise<{
+                data: {
+                    html_url?: string;
+                };
             }>;
         };
     };

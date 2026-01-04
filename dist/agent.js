@@ -57,15 +57,16 @@ export async function runAgent(piContext, config, authStorage, modelRegistry) {
     }
     // Collect response text
     let response = "";
+    let session;
     try {
-        const { session } = await createAgentSession({
+        const { session: createdSession } = await createAgentSession({
             cwd: config.cwd,
             model,
             thinkingLevel: "off",
             authStorage: auth,
             modelRegistry: models,
             tools: createCodingTools(config.cwd),
-            sessionManager: SessionManager.inMemory(),
+            sessionManager: SessionManager.create(config.cwd),
             settingsManager: SettingsManager.inMemory({
                 compaction: { enabled: false },
                 retry: { enabled: true, maxRetries: 2 },
@@ -76,21 +77,26 @@ export async function runAgent(piContext, config, authStorage, modelRegistry) {
             contextFiles: [],
             slashCommands: [],
         });
+        session = createdSession;
         // biome-ignore lint/suspicious/noEmptyBlockStatements: noop logger
         const log = config.logger ?? { info: () => { } };
         const eventHandler = createSessionEventHandler(log, (delta) => {
             response += delta;
         });
-        session.subscribe(eventHandler);
+        createdSession.subscribe(eventHandler);
         // Run with timeout
-        await withTimeout(session.prompt(prompt), config.timeout * 1000, `Timeout after ${config.timeout} seconds`);
+        await withTimeout(createdSession.prompt(prompt), config.timeout * 1000, `Timeout after ${config.timeout} seconds`);
         const trimmedResponse = response.trim();
         if (!trimmedResponse) {
-            return { success: false, error: "Agent returned empty response" };
+            return {
+                success: false,
+                error: "Agent returned empty response",
+                session,
+            };
         }
-        return { success: true, response: trimmedResponse };
+        return { success: true, response: trimmedResponse, session };
     }
     catch (error) {
-        return { success: false, error: getErrorMessage(error) };
+        return { success: false, error: getErrorMessage(error), session };
     }
 }

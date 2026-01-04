@@ -61,6 +61,12 @@ export interface GitHubClient {
 	): Promise<void>;
 	createComment(issueNumber: number, body: string): Promise<void>;
 	getPullRequestDiff(pullNumber: number): Promise<string>;
+	createGist(
+		content: string,
+		filename: string,
+		description: string,
+		isPublic?: boolean,
+	): Promise<string>;
 }
 
 export function createGitHubClient(
@@ -105,6 +111,20 @@ export function createGitHubClient(
 				mediaType: { format: "diff" },
 			});
 			return diff as unknown as string;
+		},
+
+		async createGist(
+			content: string,
+			filename: string,
+			description: string,
+			isPublic = false,
+		): Promise<string> {
+			const { data: gist } = await octokit.rest.gists.create({
+				files: { [filename]: { content } },
+				public: isPublic,
+				description,
+			});
+			return gist.html_url || "";
 		},
 	};
 }

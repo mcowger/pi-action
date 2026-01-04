@@ -30,6 +30,10 @@ inputs:
   prompt_template:
     description: 'Custom prompt template with placeholder variables'
     required: false
+  share_session:
+    description: 'Include a link to the full session HTML in the response comment'
+    required: false
+    default: 'true'
 
 runs:
   using: 'composite'
@@ -132,3 +136,4 @@ runs:
         INPUT_PROVIDER: ${{ inputs.provider }}
         INPUT_MODEL: ${{ inputs.model }}
         INPUT_PROMPT_TEMPLATE: ${{ inputs.prompt_template }}
+        INPUT_SHARE_SESSION: ${{ inputs.share_session }}

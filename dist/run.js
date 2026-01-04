@@ -6,6 +6,7 @@ import { extractTask, hasTrigger } from "./context.js";
 import { formatErrorComment, formatSuccessComment } from "./formatting.js";
 import { addReaction, extractTriggerInfo, } from "./github.js";
 import { sanitizeInput, validatePermissions } from "./security.js";
+import { shareSession } from "./share.js";
 export function setupAuth(piAuthJson) {
     if (piAuthJson) {
         const authDir = join(homedir(), ".pi", "agent");
@@ -71,15 +72,29 @@ async function buildPIContext(triggerInfo, ghClient, triggerPhrase) {
 /**
  * Posts the agent result as a comment with appropriate reaction.
  */
-async function postResult(ghClient, triggerInfo, result, log) {
+async function postResult(ghClient, triggerInfo, result, shareSessionEnabled, log) {
+    let shareUrl;
+    // Try to share session if enabled and session exists
+    if (shareSessionEnabled && result.session) {
+        try {
+            const shareResult = await shareSession(result.session, ghClient, `pi-action session for ${result.success ? "success" : "error"}: ${triggerInfo.issueTitle}`);
+            if (shareResult) {
+                shareUrl = shareResult.previewUrl;
+                log.info(`Session shared: ${shareUrl}`);
+            }
+        }
+        catch (error) {
+            log.warning(`Failed to share session: ${error}`);
+        }
+    }
     if (result.success) {
         await addReaction(ghClient, triggerInfo, "rocket");
-        await ghClient.createComment(triggerInfo.issueNumber, formatSuccessComment(result.response));
+        await ghClient.createComment(triggerInfo.issueNumber, formatSuccessComment(result.response, shareUrl));
     }
     else {
         log.error(`pi execution failed: ${result.error}`);
         await addReaction(ghClient, triggerInfo, "confused");
-        await ghClient.createComment(triggerInfo.issueNumber, formatErrorComment(result.error));
+        await ghClient.createComment(triggerInfo.issueNumber, formatErrorComment(result.error, shareUrl));
     }
 }
 export async function run(deps) {
@@ -104,5 +119,5 @@ export async function run(deps) {
         promptTemplate: inputs.promptTemplate,
     });
     // Post result
-    await postResult(ghClient, triggerInfo, result, log);
+    await postResult(ghClient, triggerInfo, result, inputs.shareSession, log);
 }
