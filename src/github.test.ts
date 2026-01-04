@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { extractTriggerInfo } from "./github.js";
+import { describe, expect, it, vi } from "vitest";
+import {
+	type GitHubContext,
+	type TriggerInfo,
+	addReaction,
+	createGitHubClient,
+	extractTriggerInfo,
+} from "./github.js";
 
 describe("extractTriggerInfo", () => {
 	describe("comment events", () => {
@@ -171,5 +177,163 @@ describe("extractTriggerInfo", () => {
 			expect(result?.author.type).toBe("Bot");
 			expect(result?.author.login).toBe("dependabot[bot]");
 		});
+	});
+});
+
+describe("createGitHubClient", () => {
+	const mockContext: GitHubContext = {
+		repo: {
+			owner: "testowner",
+			repo: "testrepo",
+		},
+	};
+
+	function createMockOctokit() {
+		return {
+			rest: {
+				reactions: {
+					createForIssueComment: vi.fn(),
+					createForIssue: vi.fn(),
+				},
+				issues: {
+					createComment: vi.fn(),
+				},
+				pulls: {
+					get: vi.fn(),
+				},
+			},
+		};
+	}
+
+	it("addReactionToComment calls correct API", async () => {
+		const octokit = createMockOctokit();
+		const client = createGitHubClient(octokit, mockContext);
+
+		await client.addReactionToComment(123, "eyes");
+
+		expect(octokit.rest.reactions.createForIssueComment).toHaveBeenCalledWith({
+			owner: "testowner",
+			repo: "testrepo",
+			comment_id: 123,
+			content: "eyes",
+		});
+	});
+
+	it("addReactionToIssue calls correct API", async () => {
+		const octokit = createMockOctokit();
+		const client = createGitHubClient(octokit, mockContext);
+
+		await client.addReactionToIssue(42, "rocket");
+
+		expect(octokit.rest.reactions.createForIssue).toHaveBeenCalledWith({
+			owner: "testowner",
+			repo: "testrepo",
+			issue_number: 42,
+			content: "rocket",
+		});
+	});
+
+	it("createComment calls correct API", async () => {
+		const octokit = createMockOctokit();
+		const client = createGitHubClient(octokit, mockContext);
+
+		await client.createComment(42, "Hello world");
+
+		expect(octokit.rest.issues.createComment).toHaveBeenCalledWith({
+			owner: "testowner",
+			repo: "testrepo",
+			issue_number: 42,
+			body: "Hello world",
+		});
+	});
+
+	it("getPullRequestDiff calls correct API and returns diff", async () => {
+		const octokit = createMockOctokit();
+		octokit.rest.pulls.get.mockResolvedValue({
+			data: "+added line\n-removed line",
+		});
+		const client = createGitHubClient(octokit, mockContext);
+
+		const diff = await client.getPullRequestDiff(99);
+
+		expect(octokit.rest.pulls.get).toHaveBeenCalledWith({
+			owner: "testowner",
+			repo: "testrepo",
+			pull_number: 99,
+			mediaType: { format: "diff" },
+		});
+		expect(diff).toBe("+added line\n-removed line");
+	});
+});
+
+describe("addReaction", () => {
+	function createMockClient() {
+		return {
+			addReactionToComment: vi.fn(),
+			addReactionToIssue: vi.fn(),
+			createComment: vi.fn(),
+			getPullRequestDiff: vi.fn(),
+		};
+	}
+
+	it("adds reaction to comment when isCommentEvent is true", async () => {
+		const client = createMockClient();
+		const triggerInfo: TriggerInfo = {
+			isCommentEvent: true,
+			triggerText: "@pi test",
+			author: { login: "user", type: "User" },
+			authorAssociation: "OWNER",
+			issueNumber: 1,
+			issueTitle: "Test",
+			issueBody: "Body",
+			commentId: 123,
+			isPullRequest: false,
+		};
+
+		await addReaction(client, triggerInfo, "eyes");
+
+		expect(client.addReactionToComment).toHaveBeenCalledWith(123, "eyes");
+		expect(client.addReactionToIssue).not.toHaveBeenCalled();
+	});
+
+	it("adds reaction to issue when isCommentEvent is false", async () => {
+		const client = createMockClient();
+		const triggerInfo: TriggerInfo = {
+			isCommentEvent: false,
+			triggerText: "@pi test",
+			author: { login: "user", type: "User" },
+			authorAssociation: "OWNER",
+			issueNumber: 42,
+			issueTitle: "Test",
+			issueBody: "Body",
+			commentId: undefined,
+			isPullRequest: false,
+		};
+
+		await addReaction(client, triggerInfo, "rocket");
+
+		expect(client.addReactionToIssue).toHaveBeenCalledWith(42, "rocket");
+		expect(client.addReactionToComment).not.toHaveBeenCalled();
+	});
+
+	it("adds reaction to issue when commentId is undefined", async () => {
+		const client = createMockClient();
+		const triggerInfo: TriggerInfo = {
+			isCommentEvent: true, // This shouldn't happen in practice, but test the fallback
+			triggerText: "@pi test",
+			author: { login: "user", type: "User" },
+			authorAssociation: "OWNER",
+			issueNumber: 42,
+			issueTitle: "Test",
+			issueBody: "Body",
+			commentId: undefined,
+			isPullRequest: false,
+		};
+
+		await addReaction(client, triggerInfo, "confused");
+
+		// When commentId is undefined, should fall back to issue reaction
+		expect(client.addReactionToIssue).toHaveBeenCalledWith(42, "confused");
+		expect(client.addReactionToComment).not.toHaveBeenCalled();
 	});
 });
