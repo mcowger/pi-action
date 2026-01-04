@@ -87,8 +87,9 @@ export async function run(deps) {
     setupAuth(inputs.piAuthJson);
     // Validate and extract trigger info
     const validated = validateTrigger(deps);
-    if (!validated)
+    if (!validated) {
         return;
+    }
     const { triggerInfo, ghClient } = validated;
     // Add eyes reaction to acknowledge
     await addReaction(ghClient, triggerInfo, "eyes");

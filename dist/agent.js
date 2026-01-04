@@ -5,6 +5,7 @@ import { getErrorMessage, withTimeout } from "./utils.js";
  * Creates a session event handler that logs tool executions and collects response text.
  */
 function createSessionEventHandler(log, onTextDelta) {
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: switch statement handling many event types
     return (event) => {
         switch (event.type) {
             case "turn_start":
@@ -75,6 +76,7 @@ export async function runAgent(piContext, config, authStorage, modelRegistry) {
             contextFiles: [],
             slashCommands: [],
         });
+        // biome-ignore lint/suspicious/noEmptyBlockStatements: noop logger
         const log = config.logger ?? { info: () => { } };
         const eventHandler = createSessionEventHandler(log, (delta) => {
             response += delta;

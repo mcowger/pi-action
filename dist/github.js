@@ -14,7 +14,7 @@ export function extractTriggerInfo(payload) {
     const authorAssociation = isCommentEvent
         ? comment?.author_association
         : issue.author_association;
-    if (!triggerText || !author) {
+    if (!(triggerText && author)) {
         return null;
     }
     return {

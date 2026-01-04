@@ -159,7 +159,9 @@ export async function run(deps: ActionDependencies): Promise<void> {
 
 	// Validate and extract trigger info
 	const validated = validateTrigger(deps);
-	if (!validated) return;
+	if (!validated) {
+		return;
+	}
 
 	const { triggerInfo, ghClient } = validated;
 

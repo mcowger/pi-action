@@ -44,6 +44,7 @@ function createSessionEventHandler(
 	log: AgentLogger,
 	onTextDelta: (delta: string) => void,
 ): (event: SessionEvent) => void {
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: switch statement handling many event types
 	return (event: SessionEvent) => {
 		switch (event.type) {
 			case "turn_start":
@@ -122,6 +123,7 @@ export async function runAgent(
 			slashCommands: [],
 		});
 
+		// biome-ignore lint/suspicious/noEmptyBlockStatements: noop logger
 		const log = config.logger ?? { info: () => {} };
 		const eventHandler = createSessionEventHandler(log, (delta) => {
 			response += delta;

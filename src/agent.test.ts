@@ -183,7 +183,8 @@ describe("runAgent", () => {
 
 		const mockSession = {
 			subscribe: vi.fn(),
-			prompt: vi.fn(() => new Promise(() => {})), // Never resolves
+			// biome-ignore lint/suspicious/noEmptyBlockStatements: intentionally never resolves for timeout test
+			prompt: vi.fn(() => new Promise(() => {})),
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -486,6 +487,7 @@ describe("runAgent", () => {
 					assistantMessageEvent: { type: "text_delta", delta: "Response" },
 				});
 			}),
+			// biome-ignore lint/suspicious/noEmptyBlockStatements: mock implementation
 			prompt: vi.fn(async () => {}),
 		};
 

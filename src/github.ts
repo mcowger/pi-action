@@ -33,7 +33,7 @@ export function extractTriggerInfo(
 		? (comment?.author_association as string)
 		: (issue.author_association as string);
 
-	if (!triggerText || !author) {
+	if (!(triggerText && author)) {
 		return null;
 	}
 

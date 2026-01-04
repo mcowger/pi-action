@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import * as os from "node:os";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULTS } from "./defaults.js";
 import { type ActionDependencies, run, setupAuth } from "./run.js";

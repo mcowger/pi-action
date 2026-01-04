@@ -3,8 +3,9 @@ export function hasTrigger(text, trigger) {
 }
 export function extractTask(comment, trigger) {
     const idx = comment.toLowerCase().indexOf(trigger.toLowerCase());
-    if (idx === -1)
+    if (idx === -1) {
         return comment;
+    }
     return comment.slice(idx + trigger.length).trim();
 }
 export function renderTemplate(template, context) {

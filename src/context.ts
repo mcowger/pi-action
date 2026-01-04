@@ -4,7 +4,9 @@ export function hasTrigger(text: string, trigger: string): boolean {
 
 export function extractTask(comment: string, trigger: string): string {
 	const idx = comment.toLowerCase().indexOf(trigger.toLowerCase());
-	if (idx === -1) return comment;
+	if (idx === -1) {
+		return comment;
+	}
 	return comment.slice(idx + trigger.length).trim();
 }
 

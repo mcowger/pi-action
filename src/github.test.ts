@@ -6,7 +6,6 @@ import {
 	extractTriggerInfo,
 } from "./github.js";
 import { createMockGitHubClient, createTriggerInfo } from "./test-helpers.js";
-import type { TriggerInfo } from "./types.js";
 
 describe("extractTriggerInfo", () => {
 	describe("comment events", () => {
