@@ -2,7 +2,6 @@
 	"name": "pi-action",
 	"version": "1.0.0",
 	"description": "GitHub Action to invoke the pi coding agent on issues and PRs",
-
 	"scripts": {
 		"build": "esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --format=cjs",
 		"test": "vitest run",
@@ -11,7 +10,13 @@
 		"typecheck": "tsc --noEmit",
 		"prepare": "npm run build"
 	},
-	"keywords": ["github-action", "pi", "ai", "coding-agent", "automation"],
+	"keywords": [
+		"github-action",
+		"pi",
+		"ai",
+		"coding-agent",
+		"automation"
+	],
 	"author": "Carlos Villela",
 	"license": "MIT",
 	"repository": {
@@ -29,6 +34,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
 		"@types/node": "^20.17.12",
+		"@vitest/coverage-v8": "^2.1.9",
 		"esbuild": "^0.24.2",
 		"typescript": "^5.7.2",
 		"vitest": "^2.1.8"

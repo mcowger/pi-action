@@ -23878,10 +23878,9 @@ var require_github = __commonJS({
 });
 
 // src/index.ts
-var import_node_child_process = require("node:child_process");
-var import_node_fs = require("node:fs");
-var import_node_os = require("node:os");
-var import_node_path = require("node:path");
+var import_node_fs2 = require("node:fs");
+var import_node_os2 = require("node:os");
+var import_node_path2 = require("node:path");
 var core = __toESM(require_core());
 var github = __toESM(require_github());
 
@@ -23939,13 +23938,118 @@ function sanitizeInput(text) {
   return text.replace(/<!--[\s\S]*?-->/g, "").replace(/\u200B|\u200C|\u200D|\uFEFF|\u00AD/g, "").trim();
 }
 
+// src/github.ts
+function extractTriggerInfo(payload) {
+  const comment = payload.comment;
+  const issue = payload.issue || payload.pull_request;
+  if (!issue) {
+    return null;
+  }
+  const isCommentEvent = !!comment;
+  const triggerText = isCommentEvent ? comment?.body : issue.body;
+  const author = isCommentEvent ? comment?.user : issue.user;
+  const authorAssociation = isCommentEvent ? comment?.author_association : issue.author_association;
+  if (!triggerText || !author) {
+    return null;
+  }
+  return {
+    isCommentEvent,
+    triggerText,
+    author,
+    authorAssociation,
+    issueNumber: issue.number,
+    issueTitle: issue.title,
+    issueBody: issue.body || "",
+    commentId: comment?.id,
+    isPullRequest: !!payload.pull_request
+  };
+}
+function createGitHubClient(octokit, context) {
+  return {
+    async addReactionToComment(commentId, reaction) {
+      await octokit.rest.reactions.createForIssueComment({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        comment_id: commentId,
+        content: reaction
+      });
+    },
+    async addReactionToIssue(issueNumber, reaction) {
+      await octokit.rest.reactions.createForIssue({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issue_number: issueNumber,
+        content: reaction
+      });
+    },
+    async createComment(issueNumber, body) {
+      await octokit.rest.issues.createComment({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issue_number: issueNumber,
+        body
+      });
+    },
+    async getPullRequestDiff(pullNumber) {
+      const { data: diff } = await octokit.rest.pulls.get({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: pullNumber,
+        mediaType: { format: "diff" }
+      });
+      return diff;
+    }
+  };
+}
+async function addReaction(client, triggerInfo, reaction) {
+  if (triggerInfo.isCommentEvent && triggerInfo.commentId) {
+    await client.addReactionToComment(triggerInfo.commentId, reaction);
+  } else {
+    await client.addReactionToIssue(triggerInfo.issueNumber, reaction);
+  }
+}
+
+// src/agent.ts
+var import_node_child_process = require("node:child_process");
+var import_node_fs = require("node:fs");
+var import_node_os = require("node:os");
+var import_node_path = require("node:path");
+function runAgent(piContext, config) {
+  const prompt = buildPrompt(piContext);
+  const promptFile = (0, import_node_path.join)((0, import_node_os.tmpdir)(), `pi-prompt-${Date.now()}.md`);
+  (0, import_node_fs.writeFileSync)(promptFile, prompt);
+  try {
+    const cmd = `pi --provider ${config.provider} --model ${config.model} -p @${promptFile}`;
+    const response = (0, import_node_child_process.execSync)(cmd, {
+      encoding: "utf-8",
+      timeout: config.timeout * 1e3,
+      maxBuffer: 10 * 1024 * 1024,
+      cwd: config.cwd
+    });
+    return {
+      success: true,
+      response: response.trim()
+    };
+  } catch (error2) {
+    return {
+      success: false,
+      error: error2 instanceof Error ? error2.message : "Unknown error"
+    };
+  } finally {
+    try {
+      (0, import_node_fs.unlinkSync)(promptFile);
+    } catch {
+    }
+  }
+}
+
 // src/index.ts
 function setupAuth() {
   const authJson = core.getInput("pi_auth_json");
   if (authJson) {
-    const authDir = (0, import_node_path.join)((0, import_node_os.homedir)(), ".pi", "agent");
-    (0, import_node_fs.mkdirSync)(authDir, { recursive: true });
-    (0, import_node_fs.writeFileSync)((0, import_node_path.join)(authDir, "auth.json"), authJson);
+    const authDir = (0, import_node_path2.join)((0, import_node_os2.homedir)(), ".pi", "agent");
+    (0, import_node_fs2.mkdirSync)(authDir, { recursive: true });
+    (0, import_node_fs2.writeFileSync)((0, import_node_path2.join)(authDir, "auth.json"), authJson);
     core.info("Wrote pi auth.json");
   }
 }
@@ -23958,33 +24062,24 @@ async function run() {
   const model = core.getInput("model") || "claude-sonnet-4-20250514";
   const { context } = github;
   const { payload } = context;
-  const comment = payload.comment;
-  const issue = payload.issue || payload.pull_request;
-  if (!issue) {
+  const triggerInfo = extractTriggerInfo(payload);
+  if (!triggerInfo) {
     core.info("No issue or pull_request in payload, skipping");
     return;
   }
-  const isCommentEvent = !!comment;
-  const triggerText = isCommentEvent ? comment.body : issue.body;
-  const author = isCommentEvent ? comment.user : issue.user;
-  const authorAssociation = isCommentEvent ? comment.author_association : issue.author_association;
-  if (!triggerText) {
-    core.info("No trigger text found, skipping");
-    return;
-  }
-  if (!hasTrigger(triggerText, triggerPhrase)) {
+  if (!hasTrigger(triggerInfo.triggerText, triggerPhrase)) {
     core.info(`No trigger phrase "${triggerPhrase}" found, skipping`);
     return;
   }
   const securityContext = {
-    authorAssociation,
-    authorLogin: author.login,
-    isBot: author.type === "Bot",
+    authorAssociation: triggerInfo.authorAssociation,
+    authorLogin: triggerInfo.author.login,
+    isBot: triggerInfo.author.type === "Bot",
     allowedBots
   };
   if (!validatePermissions(securityContext)) {
     core.warning(
-      `User ${author.login} (${authorAssociation}) does not have permission`
+      `User ${triggerInfo.author.login} (${triggerInfo.authorAssociation}) does not have permission`
     );
     return;
   }
@@ -23994,110 +24089,46 @@ async function run() {
     return;
   }
   const octokit = github.getOctokit(token);
-  if (isCommentEvent) {
-    await octokit.rest.reactions.createForIssueComment({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      comment_id: comment.id,
-      content: "eyes"
-    });
-  } else {
-    await octokit.rest.reactions.createForIssue({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      issue_number: issue.number,
-      content: "eyes"
-    });
-  }
-  const sanitizedBody = sanitizeInput(triggerText);
+  const ghClient = createGitHubClient(octokit, context);
+  await addReaction(ghClient, triggerInfo, "eyes");
+  const sanitizedBody = sanitizeInput(triggerInfo.triggerText);
   const task = extractTask(sanitizedBody, triggerPhrase);
   const piContext = {
-    type: payload.pull_request ? "pull_request" : "issue",
-    title: issue.title,
-    body: issue.body || "",
-    number: issue.number,
+    type: triggerInfo.isPullRequest ? "pull_request" : "issue",
+    title: triggerInfo.issueTitle,
+    body: triggerInfo.issueBody,
+    number: triggerInfo.issueNumber,
     triggerComment: sanitizedBody,
     task
   };
-  if (payload.pull_request) {
-    const { data: diff } = await octokit.rest.pulls.get({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      pull_number: issue.number,
-      mediaType: { format: "diff" }
-    });
-    piContext.diff = diff;
+  if (triggerInfo.isPullRequest) {
+    piContext.diff = await ghClient.getPullRequestDiff(triggerInfo.issueNumber);
   }
-  const prompt = buildPrompt(piContext);
-  core.info(`Prompt:
-${prompt}`);
-  const promptFile = (0, import_node_path.join)((0, import_node_os.tmpdir)(), `pi-prompt-${Date.now()}.md`);
-  (0, import_node_fs.writeFileSync)(promptFile, prompt);
-  let response;
-  try {
-    const cmd = `pi --provider ${provider} --model ${model} -p @${promptFile}`;
-    core.info(`Running: ${cmd}`);
-    response = (0, import_node_child_process.execSync)(cmd, {
-      encoding: "utf-8",
-      timeout: timeout * 1e3,
-      maxBuffer: 10 * 1024 * 1024
-    });
-  } catch (error2) {
-    const errorMessage = error2 instanceof Error ? error2.message : "Unknown error";
-    core.error(`pi execution failed: ${errorMessage}`);
-    if (isCommentEvent) {
-      await octokit.rest.reactions.createForIssueComment({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        comment_id: comment.id,
-        content: "confused"
-      });
-    } else {
-      await octokit.rest.reactions.createForIssue({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        issue_number: issue.number,
-        content: "confused"
-      });
-    }
-    await octokit.rest.issues.createComment({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      issue_number: issue.number,
-      body: `### \u274C pi Error
-
-Failed to process request: ${errorMessage}`
-    });
-    return;
-  } finally {
-    try {
-      (0, import_node_fs.unlinkSync)(promptFile);
-    } catch {
-    }
-  }
-  if (isCommentEvent) {
-    await octokit.rest.reactions.createForIssueComment({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      comment_id: comment.id,
-      content: "rocket"
-    });
-  } else {
-    await octokit.rest.reactions.createForIssue({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      issue_number: issue.number,
-      content: "rocket"
-    });
-  }
-  await octokit.rest.issues.createComment({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    issue_number: issue.number,
-    body: `### \u{1F916} pi Response
-
-${response}`
+  core.info(`Running pi agent for: ${task}`);
+  const result = await runAgent(piContext, {
+    provider,
+    model,
+    timeout,
+    cwd: process.cwd()
   });
+  if (result.success) {
+    await addReaction(ghClient, triggerInfo, "rocket");
+    await ghClient.createComment(
+      triggerInfo.issueNumber,
+      `### \u{1F916} pi Response
+
+${result.response}`
+    );
+  } else {
+    core.error(`pi execution failed: ${result.error}`);
+    await addReaction(ghClient, triggerInfo, "confused");
+    await ghClient.createComment(
+      triggerInfo.issueNumber,
+      `### \u274C pi Error
+
+Failed to process request: ${result.error}`
+    );
+  }
 }
 run().catch((error2) => {
   core.setFailed(error2 instanceof Error ? error2.message : "Unknown error");
