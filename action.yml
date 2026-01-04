@@ -1,0 +1,33 @@
+name: 'PI Action'
+description: 'Invoke the PI coding agent on GitHub issues and PRs via comment triggers'
+author: 'Carlos Villela'
+branding:
+  icon: 'cpu'
+  color: 'purple'
+
+inputs:
+  github_token:
+    description: 'GitHub token for API access'
+    required: true
+  pi_auth_json:
+    description: 'Contents of ~/.pi/agent/auth.json for OAuth authentication'
+    required: false
+  trigger_phrase:
+    description: 'Phrase to trigger PI (e.g., @pi)'
+    default: '@pi'
+  allowed_bots:
+    description: 'Comma-separated list of allowed bot usernames'
+    default: ''
+  timeout:
+    description: 'Execution timeout in seconds'
+    default: '300'
+  provider:
+    description: 'LLM provider (anthropic, openai, google, etc.)'
+    default: 'anthropic'
+  model:
+    description: 'Model ID'
+    default: 'claude-sonnet-4-20250514'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
