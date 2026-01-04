@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { runAgent } from "./agent.js";
 import { extractTask, hasTrigger } from "./context.js";
 import type { PIContext } from "./context.js";
+import { formatErrorComment, formatSuccessComment } from "./formatting.js";
 import {
 	type GitHubClient,
 	addReaction,
@@ -11,6 +12,7 @@ import {
 } from "./github.js";
 import { sanitizeInput, validatePermissions } from "./security.js";
 import type { SecurityContext } from "./security.js";
+import { getErrorMessage } from "./utils.js";
 
 export interface ActionInputs {
 	triggerPhrase: string;
@@ -126,14 +128,14 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		await addReaction(ghClient, triggerInfo, "rocket");
 		await ghClient.createComment(
 			triggerInfo.issueNumber,
-			`### 🤖 pi Response\n\n${result.response}`,
+			formatSuccessComment(result.response),
 		);
 	} else {
 		log.error(`pi execution failed: ${result.error}`);
 		await addReaction(ghClient, triggerInfo, "confused");
 		await ghClient.createComment(
 			triggerInfo.issueNumber,
-			`### ❌ pi Error\n\nFailed to process request: ${result.error}`,
+			formatErrorComment(result.error),
 		);
 	}
 }

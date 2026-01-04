@@ -1,27 +1,15 @@
-// Using any type for Octokit since @actions/github is CommonJS and we're ESM
-// biome-ignore lint/suspicious/noExplicitAny: Octokit type from CommonJS module
-type OctokitClient = any;
+import type {
+	GitHubReaction,
+	GitHubUser,
+	OctokitClient,
+	TriggerInfo,
+} from "./types.js";
 
 export interface GitHubContext {
 	repo: {
 		owner: string;
 		repo: string;
 	};
-}
-
-export interface TriggerInfo {
-	isCommentEvent: boolean;
-	triggerText: string;
-	author: {
-		login: string;
-		type: string;
-	};
-	authorAssociation: string;
-	issueNumber: number;
-	issueTitle: string;
-	issueBody: string;
-	commentId?: number;
-	isPullRequest: boolean;
 }
 
 export function extractTriggerInfo(
@@ -41,8 +29,8 @@ export function extractTriggerInfo(
 		? (comment?.body as string)
 		: (issue.body as string);
 	const author = isCommentEvent
-		? (comment?.user as { login: string; type: string })
-		: (issue.user as { login: string; type: string });
+		? (comment?.user as GitHubUser)
+		: (issue.user as GitHubUser);
 	const authorAssociation = isCommentEvent
 		? (comment?.author_association as string)
 		: (issue.author_association as string);
@@ -65,8 +53,14 @@ export function extractTriggerInfo(
 }
 
 export interface GitHubClient {
-	addReactionToComment(commentId: number, reaction: string): Promise<void>;
-	addReactionToIssue(issueNumber: number, reaction: string): Promise<void>;
+	addReactionToComment(
+		commentId: number,
+		reaction: GitHubReaction,
+	): Promise<void>;
+	addReactionToIssue(
+		issueNumber: number,
+		reaction: GitHubReaction,
+	): Promise<void>;
 	createComment(issueNumber: number, body: string): Promise<void>;
 	getPullRequestDiff(pullNumber: number): Promise<string>;
 }
@@ -76,37 +70,21 @@ export function createGitHubClient(
 	context: GitHubContext,
 ): GitHubClient {
 	return {
-		async addReactionToComment(commentId: number, reaction: string) {
+		async addReactionToComment(commentId: number, reaction: GitHubReaction) {
 			await octokit.rest.reactions.createForIssueComment({
 				owner: context.repo.owner,
 				repo: context.repo.repo,
 				comment_id: commentId,
-				content: reaction as
-					| "+1"
-					| "-1"
-					| "laugh"
-					| "confused"
-					| "heart"
-					| "hooray"
-					| "rocket"
-					| "eyes",
+				content: reaction,
 			});
 		},
 
-		async addReactionToIssue(issueNumber: number, reaction: string) {
+		async addReactionToIssue(issueNumber: number, reaction: GitHubReaction) {
 			await octokit.rest.reactions.createForIssue({
 				owner: context.repo.owner,
 				repo: context.repo.repo,
 				issue_number: issueNumber,
-				content: reaction as
-					| "+1"
-					| "-1"
-					| "laugh"
-					| "confused"
-					| "heart"
-					| "hooray"
-					| "rocket"
-					| "eyes",
+				content: reaction,
 			});
 		},
 
@@ -134,7 +112,7 @@ export function createGitHubClient(
 export async function addReaction(
 	client: GitHubClient,
 	triggerInfo: TriggerInfo,
-	reaction: string,
+	reaction: GitHubReaction,
 ): Promise<void> {
 	if (triggerInfo.isCommentEvent && triggerInfo.commentId) {
 		await client.addReactionToComment(triggerInfo.commentId, reaction);

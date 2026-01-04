@@ -1,5 +1,6 @@
 import { SessionManager, SettingsManager, createAgentSession, createCodingTools, discoverAuthStorage, discoverModels, } from "@mariozechner/pi-coding-agent";
 import { buildPrompt } from "./context.js";
+import { getErrorMessage } from "./utils.js";
 export async function runAgent(piContext, config, authStorage, modelRegistry) {
     const prompt = buildPrompt(piContext);
     // Use provided or discover auth/models
@@ -42,20 +43,25 @@ export async function runAgent(piContext, config, authStorage, modelRegistry) {
             }
         });
         // Create a timeout promise
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error(`Timeout after ${config.timeout} seconds`)), config.timeout * 1000);
+        const timeoutId = setTimeout(() => reject(new Error(`Timeout after ${config.timeout} seconds`)), config.timeout * 1000);
+        let reject;
+        const timeoutPromise = new Promise((_, rej) => {
+            reject = rej;
         });
-        // Run with timeout
-        await Promise.race([session.prompt(prompt), timeoutPromise]);
-        return {
-            success: true,
-            response: response.trim(),
-        };
+        try {
+            // Run with timeout
+            await Promise.race([session.prompt(prompt), timeoutPromise]);
+            const trimmedResponse = response.trim();
+            if (!trimmedResponse) {
+                return { success: false, error: "Agent returned empty response" };
+            }
+            return { success: true, response: trimmedResponse };
+        }
+        finally {
+            clearTimeout(timeoutId);
+        }
     }
     catch (error) {
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-        };
+        return { success: false, error: getErrorMessage(error) };
     }
 }

@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { runAgent } from "./agent.js";
 import { extractTask, hasTrigger } from "./context.js";
+import { formatErrorComment, formatSuccessComment } from "./formatting.js";
 import { addReaction, extractTriggerInfo, } from "./github.js";
 import { sanitizeInput, validatePermissions } from "./security.js";
 export function setupAuth(piAuthJson) {
@@ -69,11 +70,11 @@ export async function run(deps) {
     });
     if (result.success) {
         await addReaction(ghClient, triggerInfo, "rocket");
-        await ghClient.createComment(triggerInfo.issueNumber, `### 🤖 pi Response\n\n${result.response}`);
+        await ghClient.createComment(triggerInfo.issueNumber, formatSuccessComment(result.response));
     }
     else {
         log.error(`pi execution failed: ${result.error}`);
         await addReaction(ghClient, triggerInfo, "confused");
-        await ghClient.createComment(triggerInfo.issueNumber, `### ❌ pi Error\n\nFailed to process request: ${result.error}`);
+        await ghClient.createComment(triggerInfo.issueNumber, formatErrorComment(result.error));
     }
 }

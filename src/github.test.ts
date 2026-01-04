@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	type GitHubContext,
-	type TriggerInfo,
 	addReaction,
 	createGitHubClient,
 	extractTriggerInfo,
 } from "./github.js";
+import { createMockGitHubClient, createTriggerInfo } from "./test-helpers.js";
+import type { TriggerInfo } from "./types.js";
 
 describe("extractTriggerInfo", () => {
 	describe("comment events", () => {
@@ -267,28 +268,12 @@ describe("createGitHubClient", () => {
 });
 
 describe("addReaction", () => {
-	function createMockClient() {
-		return {
-			addReactionToComment: vi.fn(),
-			addReactionToIssue: vi.fn(),
-			createComment: vi.fn(),
-			getPullRequestDiff: vi.fn(),
-		};
-	}
-
 	it("adds reaction to comment when isCommentEvent is true", async () => {
-		const client = createMockClient();
-		const triggerInfo: TriggerInfo = {
+		const client = createMockGitHubClient();
+		const triggerInfo = createTriggerInfo({
 			isCommentEvent: true,
-			triggerText: "@pi test",
-			author: { login: "user", type: "User" },
-			authorAssociation: "OWNER",
-			issueNumber: 1,
-			issueTitle: "Test",
-			issueBody: "Body",
 			commentId: 123,
-			isPullRequest: false,
-		};
+		});
 
 		await addReaction(client, triggerInfo, "eyes");
 
@@ -297,18 +282,11 @@ describe("addReaction", () => {
 	});
 
 	it("adds reaction to issue when isCommentEvent is false", async () => {
-		const client = createMockClient();
-		const triggerInfo: TriggerInfo = {
+		const client = createMockGitHubClient();
+		const triggerInfo = createTriggerInfo({
 			isCommentEvent: false,
-			triggerText: "@pi test",
-			author: { login: "user", type: "User" },
-			authorAssociation: "OWNER",
 			issueNumber: 42,
-			issueTitle: "Test",
-			issueBody: "Body",
-			commentId: undefined,
-			isPullRequest: false,
-		};
+		});
 
 		await addReaction(client, triggerInfo, "rocket");
 
@@ -317,18 +295,12 @@ describe("addReaction", () => {
 	});
 
 	it("adds reaction to issue when commentId is undefined", async () => {
-		const client = createMockClient();
-		const triggerInfo: TriggerInfo = {
+		const client = createMockGitHubClient();
+		const triggerInfo = createTriggerInfo({
 			isCommentEvent: true, // This shouldn't happen in practice, but test the fallback
-			triggerText: "@pi test",
-			author: { login: "user", type: "User" },
-			authorAssociation: "OWNER",
 			issueNumber: 42,
-			issueTitle: "Test",
-			issueBody: "Body",
 			commentId: undefined,
-			isPullRequest: false,
-		};
+		});
 
 		await addReaction(client, triggerInfo, "confused");
 

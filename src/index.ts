@@ -2,6 +2,7 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { createGitHubClient } from "./github.js";
 import { run } from "./run.js";
+import { getErrorMessage } from "./utils.js";
 
 run({
 	inputs: {
@@ -30,5 +31,5 @@ run({
 	},
 	cwd: process.cwd(),
 }).catch((error) => {
-	core.setFailed(error instanceof Error ? error.message : "Unknown error");
+	core.setFailed(getErrorMessage(error));
 });

@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type ActionDependencies, run, setupAuth } from "./run.js";
+import { createMockGitHubClient } from "./test-helpers.js";
 
 // Mock the agent module
 vi.mock("./agent.js", () => ({
@@ -69,12 +70,7 @@ describe("run", () => {
 				payload: {},
 				repo: { owner: "testowner", repo: "testrepo" },
 			},
-			createClient: vi.fn(() => ({
-				addReactionToComment: vi.fn(),
-				addReactionToIssue: vi.fn(),
-				createComment: vi.fn(),
-				getPullRequestDiff: vi.fn(),
-			})),
+			createClient: vi.fn(() => createMockGitHubClient()),
 			log: {
 				info: vi.fn(),
 				warning: vi.fn(),
@@ -143,12 +139,7 @@ describe("run", () => {
 	});
 
 	it("allows bots in allowedBots list", async () => {
-		const mockClient = {
-			addReactionToComment: vi.fn(),
-			addReactionToIssue: vi.fn(),
-			createComment: vi.fn(),
-			getPullRequestDiff: vi.fn(),
-		};
+		const mockClient = createMockGitHubClient();
 		const deps = createMockDeps({
 			inputs: {
 				triggerPhrase: "@pi",
@@ -223,12 +214,7 @@ describe("run", () => {
 	});
 
 	it("runs agent and posts success response", async () => {
-		const mockClient = {
-			addReactionToComment: vi.fn(),
-			addReactionToIssue: vi.fn(),
-			createComment: vi.fn(),
-			getPullRequestDiff: vi.fn(),
-		};
+		const mockClient = createMockGitHubClient();
 		const deps = createMockDeps({
 			context: {
 				payload: {
@@ -274,12 +260,7 @@ describe("run", () => {
 	});
 
 	it("runs agent and posts error response on failure", async () => {
-		const mockClient = {
-			addReactionToComment: vi.fn(),
-			addReactionToIssue: vi.fn(),
-			createComment: vi.fn(),
-			getPullRequestDiff: vi.fn(),
-		};
+		const mockClient = createMockGitHubClient();
 		const deps = createMockDeps({
 			context: {
 				payload: {
@@ -314,12 +295,10 @@ describe("run", () => {
 	});
 
 	it("fetches PR diff for pull requests", async () => {
-		const mockClient = {
-			addReactionToComment: vi.fn(),
-			addReactionToIssue: vi.fn(),
-			createComment: vi.fn(),
-			getPullRequestDiff: vi.fn().mockResolvedValue("+added\n-removed"),
-		};
+		const mockClient = createMockGitHubClient();
+		mockClient.getPullRequestDiff = vi
+			.fn()
+			.mockResolvedValue("+added\n-removed");
 		const deps = createMockDeps({
 			context: {
 				payload: {
@@ -354,12 +333,7 @@ describe("run", () => {
 	});
 
 	it("handles comment events", async () => {
-		const mockClient = {
-			addReactionToComment: vi.fn(),
-			addReactionToIssue: vi.fn(),
-			createComment: vi.fn(),
-			getPullRequestDiff: vi.fn(),
-		};
+		const mockClient = createMockGitHubClient();
 		const deps = createMockDeps({
 			context: {
 				payload: {
@@ -396,12 +370,7 @@ describe("run", () => {
 	});
 
 	it("sanitizes input before processing", async () => {
-		const mockClient = {
-			addReactionToComment: vi.fn(),
-			addReactionToIssue: vi.fn(),
-			createComment: vi.fn(),
-			getPullRequestDiff: vi.fn(),
-		};
+		const mockClient = createMockGitHubClient();
 		const deps = createMockDeps({
 			context: {
 				payload: {

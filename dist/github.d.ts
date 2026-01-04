@@ -1,31 +1,16 @@
-type OctokitClient = any;
+import type { GitHubReaction, OctokitClient, TriggerInfo } from "./types.js";
 export interface GitHubContext {
     repo: {
         owner: string;
         repo: string;
     };
 }
-export interface TriggerInfo {
-    isCommentEvent: boolean;
-    triggerText: string;
-    author: {
-        login: string;
-        type: string;
-    };
-    authorAssociation: string;
-    issueNumber: number;
-    issueTitle: string;
-    issueBody: string;
-    commentId?: number;
-    isPullRequest: boolean;
-}
 export declare function extractTriggerInfo(payload: Record<string, unknown>): TriggerInfo | null;
 export interface GitHubClient {
-    addReactionToComment(commentId: number, reaction: string): Promise<void>;
-    addReactionToIssue(issueNumber: number, reaction: string): Promise<void>;
+    addReactionToComment(commentId: number, reaction: GitHubReaction): Promise<void>;
+    addReactionToIssue(issueNumber: number, reaction: GitHubReaction): Promise<void>;
     createComment(issueNumber: number, body: string): Promise<void>;
     getPullRequestDiff(pullNumber: number): Promise<string>;
 }
 export declare function createGitHubClient(octokit: OctokitClient, context: GitHubContext): GitHubClient;
-export declare function addReaction(client: GitHubClient, triggerInfo: TriggerInfo, reaction: string): Promise<void>;
-export {};
+export declare function addReaction(client: GitHubClient, triggerInfo: TriggerInfo, reaction: GitHubReaction): Promise<void>;
