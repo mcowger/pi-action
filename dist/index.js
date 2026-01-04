@@ -23884,6 +23884,12 @@ var import_node_path2 = require("node:path");
 var core = __toESM(require_core());
 var github = __toESM(require_github());
 
+// src/agent.ts
+var import_node_child_process = require("node:child_process");
+var import_node_fs = require("node:fs");
+var import_node_os = require("node:os");
+var import_node_path = require("node:path");
+
 // src/context.ts
 function hasTrigger(text, trigger) {
   return text.toLowerCase().includes(trigger.toLowerCase());
@@ -23926,16 +23932,34 @@ ${context.diff}
   return prompt;
 }
 
-// src/security.ts
-var WRITE_ACCESS_ROLES = ["OWNER", "MEMBER", "COLLABORATOR"];
-function validatePermissions(ctx) {
-  if (ctx.isBot) {
-    return ctx.allowedBots.includes(ctx.authorLogin);
+// src/agent.ts
+function runAgent(piContext, config) {
+  const prompt = buildPrompt(piContext);
+  const promptFile = (0, import_node_path.join)((0, import_node_os.tmpdir)(), `pi-prompt-${Date.now()}.md`);
+  (0, import_node_fs.writeFileSync)(promptFile, prompt);
+  try {
+    const cmd = `pi --provider ${config.provider} --model ${config.model} -p @${promptFile}`;
+    const response = (0, import_node_child_process.execSync)(cmd, {
+      encoding: "utf-8",
+      timeout: config.timeout * 1e3,
+      maxBuffer: 10 * 1024 * 1024,
+      cwd: config.cwd
+    });
+    return {
+      success: true,
+      response: response.trim()
+    };
+  } catch (error2) {
+    return {
+      success: false,
+      error: error2 instanceof Error ? error2.message : "Unknown error"
+    };
+  } finally {
+    try {
+      (0, import_node_fs.unlinkSync)(promptFile);
+    } catch {
+    }
   }
-  return WRITE_ACCESS_ROLES.includes(ctx.authorAssociation);
-}
-function sanitizeInput(text) {
-  return text.replace(/<!--[\s\S]*?-->/g, "").replace(/\u200B|\u200C|\u200D|\uFEFF|\u00AD/g, "").trim();
 }
 
 // src/github.ts
@@ -24009,38 +24033,16 @@ async function addReaction(client, triggerInfo, reaction) {
   }
 }
 
-// src/agent.ts
-var import_node_child_process = require("node:child_process");
-var import_node_fs = require("node:fs");
-var import_node_os = require("node:os");
-var import_node_path = require("node:path");
-function runAgent(piContext, config) {
-  const prompt = buildPrompt(piContext);
-  const promptFile = (0, import_node_path.join)((0, import_node_os.tmpdir)(), `pi-prompt-${Date.now()}.md`);
-  (0, import_node_fs.writeFileSync)(promptFile, prompt);
-  try {
-    const cmd = `pi --provider ${config.provider} --model ${config.model} -p @${promptFile}`;
-    const response = (0, import_node_child_process.execSync)(cmd, {
-      encoding: "utf-8",
-      timeout: config.timeout * 1e3,
-      maxBuffer: 10 * 1024 * 1024,
-      cwd: config.cwd
-    });
-    return {
-      success: true,
-      response: response.trim()
-    };
-  } catch (error2) {
-    return {
-      success: false,
-      error: error2 instanceof Error ? error2.message : "Unknown error"
-    };
-  } finally {
-    try {
-      (0, import_node_fs.unlinkSync)(promptFile);
-    } catch {
-    }
+// src/security.ts
+var WRITE_ACCESS_ROLES = ["OWNER", "MEMBER", "COLLABORATOR"];
+function validatePermissions(ctx) {
+  if (ctx.isBot) {
+    return ctx.allowedBots.includes(ctx.authorLogin);
   }
+  return WRITE_ACCESS_ROLES.includes(ctx.authorAssociation);
+}
+function sanitizeInput(text) {
+  return text.replace(/<!--[\s\S]*?-->/g, "").replace(/\u200B|\u200C|\u200D|\uFEFF|\u00AD/g, "").trim();
 }
 
 // src/index.ts

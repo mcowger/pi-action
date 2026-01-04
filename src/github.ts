@@ -22,9 +22,13 @@ export interface TriggerInfo {
 	isPullRequest: boolean;
 }
 
-export function extractTriggerInfo(payload: Record<string, unknown>): TriggerInfo | null {
+export function extractTriggerInfo(
+	payload: Record<string, unknown>,
+): TriggerInfo | null {
 	const comment = payload.comment as Record<string, unknown> | undefined;
-	const issue = (payload.issue || payload.pull_request) as Record<string, unknown> | undefined;
+	const issue = (payload.issue || payload.pull_request) as
+		| Record<string, unknown>
+		| undefined;
 
 	if (!issue) {
 		return null;
@@ -75,7 +79,15 @@ export function createGitHubClient(
 				owner: context.repo.owner,
 				repo: context.repo.repo,
 				comment_id: commentId,
-				content: reaction as "+1" | "-1" | "laugh" | "confused" | "heart" | "hooray" | "rocket" | "eyes",
+				content: reaction as
+					| "+1"
+					| "-1"
+					| "laugh"
+					| "confused"
+					| "heart"
+					| "hooray"
+					| "rocket"
+					| "eyes",
 			});
 		},
 
@@ -84,7 +96,15 @@ export function createGitHubClient(
 				owner: context.repo.owner,
 				repo: context.repo.repo,
 				issue_number: issueNumber,
-				content: reaction as "+1" | "-1" | "laugh" | "confused" | "heart" | "hooray" | "rocket" | "eyes",
+				content: reaction as
+					| "+1"
+					| "-1"
+					| "laugh"
+					| "confused"
+					| "heart"
+					| "hooray"
+					| "rocket"
+					| "eyes",
 			});
 		},
 

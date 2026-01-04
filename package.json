@@ -10,13 +10,7 @@
 		"typecheck": "tsc --noEmit",
 		"prepare": "npm run build"
 	},
-	"keywords": [
-		"github-action",
-		"pi",
-		"ai",
-		"coding-agent",
-		"automation"
-	],
+	"keywords": ["github-action", "pi", "ai", "coding-agent", "automation"],
 	"author": "Carlos Villela",
 	"license": "MIT",
 	"repository": {

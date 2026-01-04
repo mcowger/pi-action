@@ -3,12 +3,16 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import * as core from "@actions/core";
 import * as github from "@actions/github";
+import { runAgent } from "./agent.js";
 import { extractTask, hasTrigger } from "./context.js";
 import type { PIContext } from "./context.js";
+import {
+	addReaction,
+	createGitHubClient,
+	extractTriggerInfo,
+} from "./github.js";
 import { sanitizeInput, validatePermissions } from "./security.js";
 import type { SecurityContext } from "./security.js";
-import { addReaction, createGitHubClient, extractTriggerInfo } from "./github.js";
-import { runAgent } from "./agent.js";
 
 function setupAuth(): void {
 	const authJson = core.getInput("pi_auth_json");
