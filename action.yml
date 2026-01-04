@@ -29,5 +29,20 @@ inputs:
     default: 'claude-sonnet-4-20250514'
 
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: 'composite'
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: npm ci --prefix ${{ github.action_path }}
+    
+    - name: Run pi-action
+      shell: bash
+      run: node ${{ github.action_path }}/dist/index.js
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_PI_AUTH_JSON: ${{ inputs.pi_auth_json }}
+        INPUT_TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
+        INPUT_ALLOWED_BOTS: ${{ inputs.allowed_bots }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_PROVIDER: ${{ inputs.provider }}
+        INPUT_MODEL: ${{ inputs.model }}

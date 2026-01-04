@@ -27,9 +27,6 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install pi
-        run: npm install -g @mariozechner/pi-coding-agent
-
       - name: Run pi-action
         uses: ./  # Dogfooding: use the action from this repo
         with:

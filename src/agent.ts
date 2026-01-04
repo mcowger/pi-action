@@ -1,7 +1,13 @@
-import { execSync } from "node:child_process";
-import { unlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import {
+	type AuthStorage,
+	type ModelRegistry,
+	SessionManager,
+	SettingsManager,
+	createAgentSession,
+	createCodingTools,
+	discoverAuthStorage,
+	discoverModels,
+} from "@mariozechner/pi-coding-agent";
 import type { PIContext } from "./context.js";
 import { buildPrompt } from "./context.js";
 
@@ -18,24 +24,70 @@ export interface AgentResult {
 	error?: string;
 }
 
-export function runAgent(
+export async function runAgent(
 	piContext: PIContext,
 	config: AgentConfig,
-): AgentResult {
+	authStorage?: AuthStorage,
+	modelRegistry?: ModelRegistry,
+): Promise<AgentResult> {
 	const prompt = buildPrompt(piContext);
 
-	// Write prompt to temp file
-	const promptFile = join(tmpdir(), `pi-prompt-${Date.now()}.md`);
-	writeFileSync(promptFile, prompt);
+	// Use provided or discover auth/models
+	const auth = authStorage ?? discoverAuthStorage();
+	const models = modelRegistry ?? discoverModels(auth);
+
+	// Find the model
+	const model = models.find(config.provider, config.model);
+	if (!model) {
+		return {
+			success: false,
+			error: `Model not found: ${config.provider}/${config.model}`,
+		};
+	}
+
+	// Collect response text
+	let response = "";
 
 	try {
-		const cmd = `pi --provider ${config.provider} --model ${config.model} -p @${promptFile}`;
-		const response = execSync(cmd, {
-			encoding: "utf-8",
-			timeout: config.timeout * 1000,
-			maxBuffer: 10 * 1024 * 1024,
+		const { session } = await createAgentSession({
 			cwd: config.cwd,
+			model,
+			thinkingLevel: "off",
+			authStorage: auth,
+			modelRegistry: models,
+			tools: createCodingTools(config.cwd),
+			sessionManager: SessionManager.inMemory(),
+			settingsManager: SettingsManager.inMemory({
+				compaction: { enabled: false },
+				retry: { enabled: true, maxRetries: 2 },
+			}),
+			// Disable discovery for hooks, skills, etc. in CI environment
+			hooks: [],
+			skills: [],
+			contextFiles: [],
+			slashCommands: [],
 		});
+
+		// Subscribe to collect response
+		session.subscribe((event) => {
+			if (
+				event.type === "message_update" &&
+				event.assistantMessageEvent.type === "text_delta"
+			) {
+				response += event.assistantMessageEvent.delta;
+			}
+		});
+
+		// Create a timeout promise
+		const timeoutPromise = new Promise<never>((_, reject) => {
+			setTimeout(
+				() => reject(new Error(`Timeout after ${config.timeout} seconds`)),
+				config.timeout * 1000,
+			);
+		});
+
+		// Run with timeout
+		await Promise.race([session.prompt(prompt), timeoutPromise]);
 
 		return {
 			success: true,
@@ -46,11 +98,5 @@ export function runAgent(
 			success: false,
 			error: error instanceof Error ? error.message : "Unknown error",
 		};
-	} finally {
-		try {
-			unlinkSync(promptFile);
-		} catch {
-			// Ignore cleanup errors
-		}
 	}
 }

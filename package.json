@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"description": "GitHub Action to invoke the pi coding agent on issues and PRs",
 	"scripts": {
-		"build": "esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --format=cjs",
+		"build": "tsc",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"check": "biome check --write .",
@@ -23,13 +23,13 @@
 	"homepage": "https://github.com/cv/pi-action#readme",
 	"dependencies": {
 		"@actions/core": "^1.10.1",
-		"@actions/github": "^6.0.0"
+		"@actions/github": "^6.0.0",
+		"@mariozechner/pi-coding-agent": "^0.33.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
 		"@types/node": "^20.17.12",
 		"@vitest/coverage-v8": "^2.1.9",
-		"esbuild": "^0.24.2",
 		"typescript": "^5.7.2",
 		"vitest": "^2.1.8"
 	}
