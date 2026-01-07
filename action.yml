@@ -23,7 +23,7 @@ inputs:
     default: ''
   timeout:
     description: 'Execution timeout in seconds'
-    default: '300'
+    default: '1800'
   provider:
     description: 'LLM provider (anthropic, openai, google, etc.)'
     default: 'anthropic'
