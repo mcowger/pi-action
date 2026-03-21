@@ -1,0 +1,31 @@
+name: Build and Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run checks
+        run: bun run validate
+
+      - name: Run tests
+        run: bun run test
+
+      - name: Bundle with esbuild
+        run: bun run package

@@ -1,0 +1,44 @@
+{
+  "name": "pi-coding-agent-action",
+  "version": "1.0.3",
+  "description": "GitHub Action that runs the pi coding agent on issues and pull requests",
+  "main": "dist/index.js",
+  "scripts": {
+    "package": "esbuild src/index.ts --bundle --platform=node --target=node24 --outfile=dist/index.js --format=cjs --minify --define:import.meta.url=importMetaUrl --inject:src/import-meta-url.js",
+    "prepare": "bun run package",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "test:watch": "bun test --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --check src/**/*.ts",
+    "format:fix": "prettier --write src/**/*.ts",
+    "validate": "bun run lint && bun run type-check && bun run format"
+  },
+  "keywords": [
+    "github-action",
+    "pi",
+    "coding-agent",
+    "ai"
+  ],
+  "author": "Alexander Fortin",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0",
+    "@mariozechner/pi-coding-agent": "^0.62.0",
+    "@sinclair/typebox": "^0.34.48",
+    "ignore": "^7.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
+    "bun-types": "latest",
+    "esbuild": "^0.27.4",
+    "eslint": "^10.1.0",
+    "prettier": "^3.8.1",
+    "typescript": "^6.0.2"
+  }
+}

@@ -1,0 +1,36 @@
+name: 'pi GitHub Action'
+description: 'Run the pi coding agent (pi.dev) in GitHub Actions workflows'
+branding:
+  icon: 'terminal'
+  color: 'purple'
+
+inputs:
+  github_token:
+    description: 'GitHub token for API access'
+    required: true
+
+  provider:
+    description: 'LLM provider (e.g. anthropic, openai, google, zai, etc.)'
+    required: true
+
+  model:
+    description: 'Model to use (e.g. claude-sonnet-4-5, gpt-4o, gemini-2.5-pro, glm-4.7)'
+    required: true
+
+  token:
+    description: 'API token for the LLM provider'
+    required: true
+
+  thinking_level:
+    description: 'Thinking level (e.g. off, low, medium, high)'
+    required: false
+    default: 'off'
+
+  trigger:
+    description: 'Trigger phrase for the pi agent (e.g. /pi)'
+    required: false
+    default: '/pi'
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js'
