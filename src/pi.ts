@@ -11,7 +11,7 @@ import type { AgentSession } from '@mariozechner/pi-coding-agent';
 import type { Api, Model } from '@mariozechner/pi-ai';
 import type { ThinkingLevel } from '@mariozechner/pi-agent-core';
 
-export async function getResourceLoader(): Promise<DefaultResourceLoader> {
+async function getResourceLoader(): Promise<DefaultResourceLoader> {
   const loader = new DefaultResourceLoader({
     extensionFactories: [extFactory],
     systemPromptOverride: () => SYSTEM_PROMPT,

@@ -13,9 +13,7 @@ type createCommentType =
   RestEndpointMethodTypes.RestEndpointMethodTypes['issues']['createComment']['response'];
 
 const trigger = core.getInput('trigger') || '/pi';
-export const octokit = github.getOctokit(core.getInput('github_token'));
-
-export const isPR = github.context.payload.pull_request !== undefined;
+const octokit = github.getOctokit(core.getInput('github_token'));
 
 export async function addReaction(
   comment: typeof github.context.payload.comment
@@ -100,12 +98,12 @@ export interface CreatePullRequestParams {
   dryRun?: boolean;
 }
 
-export interface CreatePullRequestResult {
+interface CreatePullRequestResult {
   content: { type: 'text'; text: string }[];
   details: CreatePullRequestDetails;
 }
 
-export interface CreatePullRequestDetails {
+interface CreatePullRequestDetails {
   pullRequestNumber: number;
   pullRequestUrl: string;
   headBranch: string;
@@ -404,7 +402,7 @@ export async function createPullRequest(
 
     info(`SUCCESS: ${successMessage}`);
 
-    const details: CreatePullRequestDetails = {
+    const details = {
       pullRequestNumber: prNumber,
       pullRequestUrl: prUrl,
       headBranch: result.data.head.ref,
