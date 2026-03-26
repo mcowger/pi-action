@@ -37,8 +37,13 @@ mock.module('@actions/core', () => ({
   warning: mock(noop),
 }));
 
-const { extFactory } = await import('./tools');
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+
+// Dynamic import to ensure env vars and mocks are set before module loads
+const toolsModule = import('./tools.js');
+const { extFactory } =
+  // @ts-expect-error TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
+  await toolsModule;
 
 // Minimal type for tool in tests - we only test specific properties
 interface TestTool {
@@ -48,102 +53,187 @@ interface TestTool {
   promptGuidelines: string[];
   promptSnippet: string;
   parameters: {
-    properties: {
-      title: { type: string };
-      body?: { type: string };
-      base?: { type: string };
-      dryRun?: { type: string };
-    };
+    properties: Record<string, { type: string }>;
     required: string[];
   };
   execute: (
     id: string,
-    params: { title: string; body?: string; base?: string; dryRun?: boolean },
+    params: Record<string, unknown>,
     signal: AbortSignal,
     context: unknown,
     sendResponse: (chunk: string) => void
   ) => Promise<{ content: { text: string }[] }>;
 }
 
-function captureRegisteredTool() {
-  let registered: unknown;
+function captureRegisteredTools() {
+  const tools: unknown[] = [];
   const api = {
     registerTool: mock((tool: unknown) => {
-      registered = tool;
+      tools.push(tool);
     }),
   } as unknown as ExtensionAPI;
 
   extFactory(api);
-  return registered as TestTool;
+  return tools as TestTool[];
+}
+
+function getToolByName(tools: TestTool[], name: string): TestTool | undefined {
+  return tools.find(t => t.name === name);
 }
 
 describe('extFactory', () => {
-  let tool: TestTool;
+  let tools: TestTool[];
+  let createPRTool: TestTool;
+  let getIssuePRThreadTool: TestTool;
 
   beforeEach(() => {
-    tool = captureRegisteredTool();
+    tools = captureRegisteredTools();
+    createPRTool = getToolByName(tools, 'create_pull_request')!;
+    getIssuePRThreadTool = getToolByName(tools, 'get_issue_or_pr_thread')!;
+  });
+
+  test('registers two tools', () => {
+    expect(tools.length).toBe(2);
   });
 
   test('registers a tool named create_pull_request', () => {
-    expect(tool.name).toBe('create_pull_request');
+    expect(createPRTool).toBeDefined();
+    expect(createPRTool.name).toBe('create_pull_request');
   });
 
-  test('has a non-empty description', () => {
-    expect(typeof tool.description).toBe('string');
-    expect(tool.description.length).toBeGreaterThan(0);
+  test('registers a tool named get_issue_or_pr_thread', () => {
+    expect(getIssuePRThreadTool).toBeDefined();
+    expect(getIssuePRThreadTool.name).toBe('get_issue_or_pr_thread');
   });
 
-  test('has a label', () => {
-    expect(tool.label).toBe('Create Pull Request');
+  test('create_pull_request has a non-empty description', () => {
+    expect(typeof createPRTool.description).toBe('string');
+    expect(createPRTool.description.length).toBeGreaterThan(0);
   });
 
-  test('has prompt guidelines', () => {
-    expect(Array.isArray(tool.promptGuidelines)).toBe(true);
-    expect(tool.promptGuidelines.length).toBeGreaterThan(0);
+  test('get_issue_or_pr_thread has a non-empty description', () => {
+    expect(typeof getIssuePRThreadTool.description).toBe('string');
+    expect(getIssuePRThreadTool.description.length).toBeGreaterThan(0);
   });
 
-  test('has a prompt snippet', () => {
-    expect(typeof tool.promptSnippet).toBe('string');
-    expect(tool.promptSnippet.length).toBeGreaterThan(0);
+  test('create_pull_request has a label', () => {
+    expect(createPRTool.label).toBe('Create Pull Request');
   });
 
-  test('parameters require title as string', () => {
-    const params = tool.parameters;
+  test('get_issue_or_pr_thread has a label', () => {
+    expect(getIssuePRThreadTool.label).toBe('Get Issue/PR Thread');
+  });
+
+  test('create_pull_request has prompt guidelines', () => {
+    expect(Array.isArray(createPRTool.promptGuidelines)).toBe(true);
+    expect(createPRTool.promptGuidelines.length).toBeGreaterThan(0);
+  });
+
+  test('get_issue_or_pr_thread has prompt guidelines', () => {
+    expect(Array.isArray(getIssuePRThreadTool.promptGuidelines)).toBe(true);
+    expect(getIssuePRThreadTool.promptGuidelines.length).toBeGreaterThan(0);
+  });
+
+  test('create_pull_request has a prompt snippet', () => {
+    expect(typeof createPRTool.promptSnippet).toBe('string');
+    expect(createPRTool.promptSnippet.length).toBeGreaterThan(0);
+  });
+
+  test('get_issue_or_pr_thread has a prompt snippet', () => {
+    expect(typeof getIssuePRThreadTool.promptSnippet).toBe('string');
+    expect(getIssuePRThreadTool.promptSnippet.length).toBeGreaterThan(0);
+  });
+
+  test('create_pull_request parameters require title as string', () => {
+    const params = createPRTool.parameters;
     expect(params.properties.title).toBeDefined();
-    expect(params.properties.title.type).toBe('string');
+    expect(params.properties.title?.type).toBe('string');
   });
 
-  test('parameters body is optional', () => {
-    const params = tool.parameters;
+  test('create_pull_request parameters body is optional', () => {
+    const params = createPRTool.parameters;
     expect(params.properties.body).toBeDefined();
     expect(params.required).not.toContain('body');
   });
 
-  test('parameters base is optional', () => {
-    const params = tool.parameters;
+  test('create_pull_request parameters base is optional', () => {
+    const params = createPRTool.parameters;
     expect(params.properties.base).toBeDefined();
     expect(params.required).not.toContain('base');
   });
 
-  test('parameters dryRun is optional', () => {
-    const params = tool.parameters;
+  test('create_pull_request parameters dryRun is optional', () => {
+    const params = createPRTool.parameters;
     expect(params.properties.dryRun).toBeDefined();
     expect(params.required).not.toContain('dryRun');
   });
 
-  test('title is required', () => {
-    const params = tool.parameters;
+  test('create_pull_request title is required', () => {
+    const params = createPRTool.parameters;
     expect(params.required).toContain('title');
   });
 
-  describe('execute', () => {
+  test('get_issue_or_pr_thread parameters owner is optional', () => {
+    const params = getIssuePRThreadTool.parameters;
+    expect(params.properties.owner).toBeDefined();
+    // When all fields are optional, required may be undefined
+    if (Array.isArray(params.required)) {
+      expect(params.required).not.toInclude('owner');
+    }
+  });
+
+  test('get_issue_or_pr_thread parameters repo is optional', () => {
+    const params = getIssuePRThreadTool.parameters;
+    expect(params.properties.repo).toBeDefined();
+    // When all fields are optional, required may be undefined
+    if (Array.isArray(params.required)) {
+      expect(params.required).not.toInclude('repo');
+    }
+  });
+
+  test('get_issue_or_pr_thread parameters issue_number is optional', () => {
+    const params = getIssuePRThreadTool.parameters;
+    expect(params.properties.issue_number).toBeDefined();
+    // When all fields are optional, required may be undefined
+    if (Array.isArray(params.required)) {
+      expect(params.required).not.toInclude('issue_number');
+    }
+  });
+
+  test('get_issue_or_pr_thread parameters max_comments is optional', () => {
+    const params = getIssuePRThreadTool.parameters;
+    expect(params.properties.max_comments).toBeDefined();
+    // When all fields are optional, required may be undefined
+    if (Array.isArray(params.required)) {
+      expect(params.required).not.toInclude('max_comments');
+    }
+  });
+
+  describe('create_pull_request execute', () => {
     test('returns cancellation message when signal is aborted', async () => {
       const controller = new AbortController();
       controller.abort();
 
-      const result = await tool.execute(
+      const result = await createPRTool.execute(
         'id',
         { title: 'Nope' },
+        controller.signal,
+        undefined,
+        noop
+      );
+
+      expect(result.content[0]?.text).toContain('cancelled');
+    });
+  });
+
+  describe('get_issue_or_pr_thread execute', () => {
+    test('returns cancellation message when signal is aborted', async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      const result = await getIssuePRThreadTool.execute(
+        'id',
+        {},
         controller.signal,
         undefined,
         noop

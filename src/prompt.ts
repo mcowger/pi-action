@@ -29,3 +29,30 @@ export const CREATE_PULL_REQUEST_PARAM_BASE_DESCRIPTION =
 
 export const CREATE_PULL_REQUEST_PARAM_DRY_RUN_DESCRIPTION =
   'Set to true to simulate PR creation without actually creating it (for testing). Set to false to create the actual PR.';
+
+//
+// Get Issue/PR Thread
+//
+export const GET_ISSUE_PR_THREAD_PROMPT_SNIPPET =
+  'Get the full comment thread for a GitHub issue or pull request, including title, description, labels, and all comments.';
+
+export const GET_ISSUE_PR_THREAD_PROMPT_GUIDELINES = [
+  'Use get_issue_or_pr_thread to understand the context of an issue or PR before taking action.',
+  'By default, the tool fetches the current issue/PR from the GitHub context. Only provide owner/repo/issue_number when you need to fetch a different one.',
+  'Use max_comments to limit results for very long threads; defaults to 100 comments.',
+];
+
+export const GET_ISSUE_PR_THREAD_DESCRIPTION =
+  'Retrieve the complete comment thread for a GitHub issue or pull request. Returns the title, description, labels, state, author, timestamps, and all comments. For pull requests, also includes branch names and merge status. Does NOT fetch code changes - use read/grep tools for that.';
+
+export const GET_ISSUE_PR_THREAD_PARAM_OWNER_DESCRIPTION =
+  'Repository owner (e.g., "octocat"). If not provided, uses the current repository from context.';
+
+export const GET_ISSUE_PR_THREAD_PARAM_REPO_DESCRIPTION =
+  'Repository name (e.g., "hello-world"). If not provided, uses the current repository from context.';
+
+export const GET_ISSUE_PR_THREAD_PARAM_ISSUE_NUMBER_DESCRIPTION =
+  'Issue or pull request number. If not provided, uses the current issue/PR from context.';
+
+export const GET_ISSUE_PR_THREAD_PARAM_MAX_COMMENTS_DESCRIPTION =
+  'Maximum number of comments to fetch. Defaults to 100. Use for limiting very long threads.';

@@ -12,8 +12,7 @@ const _mockedWrite = mock((...args: any[]) => {
   if (msg.startsWith('::')) {
     return true; // swallow annotations
   }
-  // @ts-expect-error -- spread parameter type limitation
-  return realStdoutWrite(...args);
+  return realStdoutWrite(...(args as Parameters<typeof process.stdout.write>));
 });
 // stdout.write is readonly, we override for tests
 process.stdout.write = _mockedWrite as typeof process.stdout.write;
@@ -29,6 +28,8 @@ mock.module('@actions/core', () => ({
   warning: mock(noop),
 }));
 
+import * as github from '@actions/github';
+
 // Set env vars BEFORE importing github.ts (it runs module-level side effects)
 process.env.INPUT_TRIGGER = '/pi';
 process.env.INPUT_GITHUB_TOKEN = 'fake-token';
@@ -36,8 +37,17 @@ process.env.GITHUB_REPOSITORY = 'test-owner/test-repo';
 process.env.GITHUB_EVENT_PATH = path.join(os.tmpdir(), `gh-event-${Date.now()}.json`);
 fs.writeFileSync(process.env.GITHUB_EVENT_PATH, '{}');
 
-const { getPrompt, createFinalComment, getIssueOrPullRequestContext } = await import('./github');
-import * as github from '@actions/github';
+// Dynamic import to ensure env vars are set before module loads
+const githubModule = import('./github.js');
+const {
+  getPrompt,
+  createFinalComment,
+  getIssueOrPullRequestContext,
+  isPR,
+  getContextType,
+  getIssueOrPRThread,
+} = // @ts-expect-error TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
+  await githubModule;
 
 describe('getPrompt', () => {
   beforeEach(() => {
@@ -142,6 +152,76 @@ describe('createFinalComment', () => {
   });
 });
 
+describe('isPR', () => {
+  beforeEach(() => {
+    github.context.payload = {};
+    github.context.eventName = 'issue_comment';
+  });
+
+  test('returns false for issue_comment event', () => {
+    github.context.eventName = 'issue_comment';
+    expect(isPR()).toBe(false);
+  });
+
+  test('returns false for issues event', () => {
+    github.context.eventName = 'issues';
+    expect(isPR()).toBe(false);
+  });
+
+  test('returns true for pull_request event', () => {
+    github.context.eventName = 'pull_request';
+    expect(isPR()).toBe(true);
+  });
+
+  test('returns true when payload has pull_request', () => {
+    github.context.eventName = 'issue_comment';
+    github.context.payload = {
+      pull_request: { number: 123 },
+    };
+    expect(isPR()).toBe(true);
+  });
+
+  test('returns false for unknown event type', () => {
+    github.context.eventName = 'push';
+    expect(isPR()).toBe(false);
+  });
+});
+
+describe('getContextType', () => {
+  beforeEach(() => {
+    github.context.payload = {};
+    github.context.eventName = 'issue_comment';
+  });
+
+  test('returns issue for issue_comment event', () => {
+    github.context.eventName = 'issue_comment';
+    expect(getContextType()).toBe('issue');
+  });
+
+  test('returns issue for issues event', () => {
+    github.context.eventName = 'issues';
+    expect(getContextType()).toBe('issue');
+  });
+
+  test('returns pull_request for pull_request event', () => {
+    github.context.eventName = 'pull_request';
+    expect(getContextType()).toBe('pull_request');
+  });
+
+  test('returns pull_request when payload has pull_request', () => {
+    github.context.eventName = 'issue_comment';
+    github.context.payload = {
+      pull_request: { number: 123 },
+    };
+    expect(getContextType()).toBe('pull_request');
+  });
+
+  test('returns undefined for unknown event type', () => {
+    github.context.eventName = 'push';
+    expect(getContextType()).toBeUndefined();
+  });
+});
+
 describe('getIssueOrPullRequestContext', () => {
   beforeEach(() => {
     github.context.payload = {};
@@ -232,7 +312,6 @@ describe('getIssueOrPullRequestContext', () => {
     expect(result).toEqual({
       number: 999,
       title: 'Title only',
-      body: undefined,
     });
   });
 
@@ -260,7 +339,12 @@ describe('getIssueOrPullRequestContext', () => {
     expect(result).toEqual({
       number: 888,
       title: 'PR title only',
-      body: undefined,
     });
+  });
+});
+
+describe('getIssueOrPRThread', () => {
+  test('is exported function', () => {
+    expect(typeof getIssueOrPRThread).toBe('function');
   });
 });
