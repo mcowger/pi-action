@@ -9,7 +9,7 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 - **Issue assistance**: Type `/pi` in an issue comment to have the agent analyze the issue and create a fix
 - **PR assistance**: Type `/pi` in a PR comment to have the agent review and improve the pull request
 - **Automated commits**: The agent can make changes, commit them, and create PRs automatically
-- **Flexible LLM support**: Support for various providers via custom environment variable injection
+- **Flexible LLM support**: Support for various providers
 
 ## Usage
 
