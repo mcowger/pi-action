@@ -33,9 +33,10 @@ import {
   GET_ISSUE_PR_THREAD_PARAM_ISSUE_NUMBER_DESCRIPTION,
   GET_ISSUE_PR_THREAD_PARAM_MAX_COMMENTS_DESCRIPTION,
 } from './prompt';
-import type { ExtensionAPI, ToolDefinition } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI, ToolDefinition, AgentToolResult } from '@mariozechner/pi-coding-agent';
 import type {
   CreatePullRequestParams,
+  CreatePullRequestDetails,
   GetIssueOrPRThreadParams,
   IssueOrPRThread,
 } from './github/index';
@@ -49,7 +50,9 @@ import type {
  *          `false` to continue.
  */
 function handleToolStart(toolName: string, signal: AbortSignal | undefined): boolean {
-  console.info(`\n=== ${toolName} tool called ===`);
+  console.info('\n');
+  console.info(`\n[tool called] === ${toolName} ===`);
+  console.info('\n');
 
   if (signal?.aborted) {
     console.warn(`[${toolName}] Tool execution cancelled`);
@@ -86,11 +89,24 @@ const createPRTool: ToolDefinition = {
     ),
   }),
 
-  async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
+  async execute(
+    _toolCallId,
+    params,
+    signal,
+    _onUpdate,
+    _ctx
+  ): Promise<AgentToolResult<CreatePullRequestDetails>> {
     if (handleToolStart('create_pull_request', signal)) {
       return {
         content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_CREATE_PR }],
-        details: {},
+        details: {
+          pullRequestNumber: 0,
+          pullRequestUrl: '',
+          headBranch: '',
+          baseBranch: '',
+          dryRun: false,
+          cancelled: true,
+        },
       };
     }
 
@@ -202,11 +218,35 @@ const getIssueOrPRThreadTool: ToolDefinition = {
     ),
   }),
 
-  async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
+  async execute(
+    _toolCallId,
+    params,
+    signal,
+    _onUpdate,
+    _ctx
+  ): Promise<AgentToolResult<IssueOrPRThread>> {
     if (handleToolStart('get_issue_or_pr_thread', signal)) {
       return {
         content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_GET_THREAD }],
-        details: {},
+        details: {
+          number: 0,
+          title: 'Cancelled',
+          body: CANCELLATION_MESSAGE_GET_THREAD,
+          state: 'closed',
+          author: 'unknown',
+          author_type: 'user',
+          created_at: undefined,
+          updated_at: undefined,
+          closed_at: undefined,
+          merged_at: undefined,
+          labels: [],
+          is_pull_request: false,
+          head_branch: undefined,
+          base_branch: undefined,
+          head_sha: undefined,
+          comments: [],
+          cancelled: true,
+        },
       };
     }
 
@@ -215,7 +255,24 @@ const getIssueOrPRThreadTool: ToolDefinition = {
     if (!result) {
       return {
         content: [{ type: 'text' as const, text: 'Issue or pull request not found' }],
-        details: {},
+        details: {
+          number: 0,
+          title: 'Not Found',
+          body: null,
+          state: 'closed',
+          author: 'unknown',
+          author_type: 'user',
+          created_at: undefined,
+          updated_at: undefined,
+          closed_at: undefined,
+          merged_at: undefined,
+          labels: [],
+          is_pull_request: false,
+          head_branch: undefined,
+          base_branch: undefined,
+          head_sha: undefined,
+          comments: [],
+        },
       };
     }
 
@@ -240,6 +297,6 @@ export const extFactory = (pi: ExtensionAPI): void => {
   const tools = [createPRTool, getIssueOrPRThreadTool];
   tools.forEach(tool => {
     pi.registerTool(tool);
-    core.info(`[${tool.name}] Tool registered successfully`);
+    core.debug(`[${tool.name}] Tool registered successfully`);
   });
 };

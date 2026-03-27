@@ -62,7 +62,7 @@ interface TestTool {
     signal: AbortSignal,
     context: unknown,
     sendResponse: (chunk: string) => void
-  ) => Promise<{ content: { text: string }[] }>;
+  ) => Promise<{ content: { text: string }[]; details: Record<string, unknown> }>;
 }
 
 function captureRegisteredTools() {
@@ -223,6 +223,9 @@ describe('extFactory', () => {
       );
 
       expect(result.content[0]?.text).toContain('cancelled');
+      expect(result.details.cancelled).toBe(true);
+      expect(result.details.pullRequestNumber).toBe(0);
+      expect(result.details.pullRequestUrl).toBe('');
     });
   });
 
@@ -240,6 +243,8 @@ describe('extFactory', () => {
       );
 
       expect(result.content[0]?.text).toContain('cancelled');
+      expect(result.details.cancelled).toBe(true);
+      expect(result.details.number).toBe(0);
     });
   });
 });

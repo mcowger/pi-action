@@ -72,10 +72,8 @@ export class Client {
     this.thinkingLevel = level as ThinkingLevel;
     this.modelRegistry = new ModelRegistry(this.authStorage);
 
-    core.info('[thinking level] ' + level);
-
     if (this.token) {
-      core.info(`[auth] Setting api_key token for ${this.provider} provider`);
+      core.debug(`[auth] Setting api_key token for ${this.provider} provider`);
       this.authStorage.set(this.provider, {
         type: 'api_key',
         key: this.token,
@@ -86,7 +84,11 @@ export class Client {
 
     if (foundModel) {
       this.model = foundModel;
-      core.info(`[model] ${this.model.provider}/${this.model.id}`);
+      let msg = `[model] ${this.model.provider}/${this.model.id}`;
+      if (this.thinkingLevel !== 'off') {
+        msg += ` (thinking: ${this.thinkingLevel})`;
+      }
+      core.info(msg);
     } else {
       throw new Error('Model not found: ' + this.provider + '/' + this.modelStr);
     }
@@ -141,12 +143,19 @@ export class Client {
       throw new Error('no text, skipping prompt');
     }
 
-    core.info('[prompt] ' + text);
-    core.info('[thinking...]');
+    core.info('[prompt]');
+    text.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.length > 0) {
+        core.info(' =====> ' + trimmed);
+      }
+    });
+    core.info('[agent session starting...]');
     core.info('');
 
     await this.session.prompt(text);
     process.stdout.write('\n'); // ensure new line after prompt, usually missing from agent
+    core.info('[agent session completed]');
 
     return this.outputChunks.join('');
   }

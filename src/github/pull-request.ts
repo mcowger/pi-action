@@ -43,6 +43,7 @@ export interface CreatePullRequestDetails {
   headBranch: string;
   baseBranch: string;
   dryRun: boolean;
+  cancelled?: boolean;
 }
 
 /**

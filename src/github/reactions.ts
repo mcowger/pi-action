@@ -30,7 +30,7 @@ export type DeleteReactionType =
 export async function addReaction(): Promise<CreateReactionType | undefined> {
   const comment = github.context.payload.comment;
   if (!comment) {
-    core.notice('no comment found, skipping reaction');
+    core.debug('no comment found, skipping reaction');
     return;
   }
 

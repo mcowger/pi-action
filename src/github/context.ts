@@ -82,6 +82,8 @@ export interface IssueOrPRThread {
   head_sha: string | undefined; // PR only
   // Comments
   comments: ThreadComment[];
+  // Cancellation flag
+  cancelled?: boolean;
 }
 
 export interface GetIssueOrPRThreadParams {
@@ -210,12 +212,13 @@ export async function getPrompt(promptInput?: string): Promise<string | undefine
   // Fall back to comment-based prompt
   const comment = await getComment();
   if (!comment) {
+    core.notice('no comment found in context, skipping');
     return undefined;
   }
 
   const prompt = comment.body;
   if (!prompt) {
-    core.notice('no prompt found in comment, skipping prompt');
+    core.notice('no prompt found in comment, skipping');
     return undefined;
   }
 
@@ -225,7 +228,6 @@ export async function getPrompt(promptInput?: string): Promise<string | undefine
 async function getComment(): Promise<typeof github.context.payload.comment | undefined> {
   const comment = github.context.payload.comment;
   if (!comment) {
-    core.notice('no comment found in context, skipping prompt');
     return;
   }
 

@@ -22,25 +22,19 @@ import type { CreateReactionType } from './github/index';
 /**
  * Run the Pi coding agent end-to-end.
  *
- * Reads action inputs, fetches the prompt from the triggering comment, creates a
- * Pi client session, sends the prompt, and posts the result (or error) back as a
- * GitHub comment. An "eyes" reaction is added while processing to give visual
- * feedback and is always cleaned up afterwards.
- *
  * @throws Rethrows any error from the Pi session after posting it as a comment.
  */
 export async function run() {
   const provider = core.getInput('provider');
   const model = core.getInput('model');
   const token = core.getInput('token');
-  const thinkingInput = core.getInput('thinking_level') ?? 'off';
-
+  const thinkingLevel = core.getInput('thinking_level') ?? 'off';
   const prompt = await getPrompt(core.getInput('prompt'));
+
   if (!prompt) {
     return;
   }
 
-  // Use the event timestamp from GitHub context to measure total time from user action
   let startTime = getStartTimeFromContext();
   if (startTime !== undefined) {
     core.info(`[trigger time] ${startTime.toString()}`);
@@ -55,34 +49,50 @@ export async function run() {
     reaction = await addReaction();
 
     // Pi session execution
-    const pi = await new Client(model, provider, token, thinkingInput).ready();
+    const pi = await new Client(model, provider, token, thinkingLevel).ready();
     result = await pi.prompt(prompt);
   } catch (e) {
-    const endTime = Temporal.Now.instant();
-    const executionDuration = startTime.until(endTime);
-
-    if (reaction) {
-      await deleteReaction(reaction);
-    }
-    await createFinalComment(e instanceof Error ? e.message : String(e), {
+    await finalize(
+      e instanceof Error ? e.message : String(e),
       provider,
       model,
-      thinkingLevel: thinkingInput,
-      executionDuration,
-    });
+      thinkingLevel,
+      startTime,
+      reaction
+    );
     throw e;
   }
 
-  const endTime = Temporal.Now.instant();
-  const executionDuration = startTime.until(endTime);
+  await finalize(result, provider, model, thinkingLevel, startTime, reaction);
+}
 
+/**
+ * Finalizes the execution by creating a final comment and optionally deleting the reaction
+ * from the comment.
+ *
+ * @param body
+ * @param provider
+ * @param model
+ * @param thinkingLevel
+ * @param startTime
+ * @param reaction
+ */
+async function finalize(
+  body: string,
+  provider: string,
+  model: string,
+  thinkingLevel: string,
+  startTime: Temporal.Instant,
+  reaction?: CreateReactionType
+): Promise<void> {
   if (reaction) {
     await deleteReaction(reaction);
   }
-  await createFinalComment(result, {
+
+  await createFinalComment(body, {
     provider,
     model,
-    thinkingLevel: thinkingInput,
-    executionDuration,
+    thinkingLevel,
+    executionDuration: startTime.until(Temporal.Now.instant()),
   });
 }
