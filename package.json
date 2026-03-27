@@ -1,11 +1,12 @@
 {
   "name": "pi-coding-agent-action",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "description": "GitHub Action that runs the pi coding agent on issues and pull requests",
   "main": "dist/index.js",
   "scripts": {
     "package": "./scripts/package.sh",
     "prepare": "bun run package",
+    "tag": "bun run scripts/tag-version.ts",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
     "test:watch": "bun test --watch",
@@ -39,6 +40,7 @@
     "bun-types": "latest",
     "esbuild": "^0.27.4",
     "eslint": "^10.1.0",
+    "isomorphic-git": "^1.37.4",
     "prettier": "^3.8.1",
     "typescript": "^6.0.2"
   }
