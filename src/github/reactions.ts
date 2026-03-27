@@ -2,6 +2,7 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import RestEndpointMethodTypes from '@octokit/plugin-rest-endpoint-methods';
 import { getOctokit } from './octokit.js';
+import { REACTION_TYPE_EYES } from './constants.js';
 
 const octokit = getOctokit();
 
@@ -21,7 +22,7 @@ export async function addReaction(): Promise<CreateReactionType | undefined> {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     comment_id: comment.id,
-    content: 'eyes',
+    content: REACTION_TYPE_EYES,
   });
 }
 

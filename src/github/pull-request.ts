@@ -4,6 +4,14 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import ignore from 'ignore';
 import { getOctokit } from './octokit.js';
+import {
+  FILE_MODE_DIRECTORY,
+  FILE_MODE_EXECUTABLE,
+  FILE_MODE_REGULAR,
+  MAX_FILE_SIZE_BYTES,
+  BRANCH_PREFIX,
+  IGNORE_PATTERNS,
+} from './constants.js';
 
 const octokit = getOctokit();
 
@@ -26,6 +34,14 @@ export interface CreatePullRequestDetails {
   baseBranch: string;
   dryRun: boolean;
 }
+
+/**
+ * Git file mode types
+ */
+export type FileMode =
+  | typeof FILE_MODE_REGULAR
+  | typeof FILE_MODE_EXECUTABLE
+  | typeof FILE_MODE_DIRECTORY;
 
 /**
  * Determine the base branch for the pull request.
@@ -113,7 +129,7 @@ async function scanForChanges(
   {
     path: string;
     content: string;
-    mode: '100644' | '100755' | '040000';
+    mode: FileMode;
   }[]
 > {
   const debug = (msg: string) => {
@@ -132,15 +148,12 @@ async function scanForChanges(
     // No .gitignore file, that's fine
   }
   // Add additional patterns to always ignore
-  ig.add([
-    '.git',
-    '.github/workflows/*/pi.yml', // Don't include the workflow that runs this action
-  ]);
+  ig.add(IGNORE_PATTERNS);
 
   const changedFiles: {
     path: string;
     content: string;
-    mode: '100644' | '100755' | '040000';
+    mode: FileMode;
   }[] = [];
 
   async function scanDirectory(dir: string, relativePath = '') {
@@ -160,7 +173,7 @@ async function scanForChanges(
       } else if (entry.isFile()) {
         // Skip files that are too large (>1MB to be safe)
         const stats = await fs.stat(fullPath);
-        if (stats.size > 1024 * 1024) {
+        if (stats.size > MAX_FILE_SIZE_BYTES) {
           debug(`Skipping large file (>1MB): ${relativeFilePath}`);
           continue;
         }
@@ -192,7 +205,7 @@ async function scanForChanges(
           changedFiles.push({
             path: relativeFilePath,
             content: localContent,
-            mode: '100644', // Default file mode (regular file, not executable)
+            mode: FILE_MODE_REGULAR, // Default file mode (regular file, not executable)
           });
         }
       }
@@ -213,7 +226,7 @@ async function createBlobsAndTree(
   changedFiles: {
     path: string;
     content: string;
-    mode: '100644' | '100755' | '040000';
+    mode: FileMode;
   }[],
   baseSha: string
 ): Promise<string> {
@@ -248,7 +261,7 @@ async function createBlobsAndTree(
     base_tree: baseSha,
     tree: Array.from(blobShaMap.entries()).map(([path, sha]) => ({
       path,
-      mode: '100644',
+      mode: FILE_MODE_REGULAR,
       type: 'blob',
       sha,
     })),
@@ -353,7 +366,7 @@ export async function createPullRequest(
   // Auto-generate branch name
   const issueNumber = github.context.issue?.number ?? 'unknown';
   const timestamp = Date.now();
-  const head = `pi/issue${issueNumber}-${timestamp}`;
+  const head = `${BRANCH_PREFIX}${issueNumber}-${timestamp}`;
 
   debug(`Title: ${title}`);
   debug(`Auto-generated branch: ${head}`);

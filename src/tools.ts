@@ -2,6 +2,10 @@ import { Type } from '@mariozechner/pi-ai';
 import * as core from '@actions/core';
 import { createPullRequest, getIssueOrPRThread } from './github/index';
 import {
+  CANCELLATION_MESSAGE_CREATE_PR,
+  CANCELLATION_MESSAGE_GET_THREAD,
+} from './github/index';
+import {
   CREATE_PULL_REQUEST_PROMPT_SNIPPET,
   CREATE_PULL_REQUEST_PROMPT_GUIDELINES,
   CREATE_PULL_REQUEST_DESCRIPTION,
@@ -65,7 +69,7 @@ const createPRTool: ToolDefinition = {
   async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
     if (handleToolStart('create_pull_request', signal)) {
       return {
-        content: [{ type: 'text' as const, text: 'Pull request creation was cancelled' }],
+        content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_CREATE_PR }],
         details: {},
       };
     }
@@ -175,7 +179,7 @@ const getIssueOrPRThreadTool: ToolDefinition = {
   async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
     if (handleToolStart('get_issue_or_pr_thread', signal)) {
       return {
-        content: [{ type: 'text' as const, text: 'Thread retrieval was cancelled' }],
+        content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_GET_THREAD }],
         details: {},
       };
     }

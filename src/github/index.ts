@@ -32,3 +32,16 @@ export {
   type CreatePullRequestResult,
   type CreatePullRequestDetails,
 } from './pull-request.js';
+
+// Constants
+export {
+  REACTION_TYPE_EYES,
+  FILE_MODE_REGULAR,
+  FILE_MODE_EXECUTABLE,
+  FILE_MODE_DIRECTORY,
+  MAX_FILE_SIZE_BYTES,
+  BRANCH_PREFIX,
+  CANCELLATION_MESSAGE_CREATE_PR,
+  CANCELLATION_MESSAGE_GET_THREAD,
+  IGNORE_PATTERNS,
+} from './constants.js';

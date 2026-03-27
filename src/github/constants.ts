@@ -1,0 +1,27 @@
+/**
+ * GitHub API and repository constants
+ */
+
+// Reaction types
+export const REACTION_TYPE_EYES = 'eyes' as const;
+
+// Git file modes
+export const FILE_MODE_REGULAR = '100644' as const; // Regular file, not executable
+export const FILE_MODE_EXECUTABLE = '100755' as const; // Executable file
+export const FILE_MODE_DIRECTORY = '040000' as const; // Directory
+
+// File size limits
+export const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1MB
+
+// Branch naming patterns
+export const BRANCH_PREFIX = 'pi/issue' as const;
+
+// Cancellation messages
+export const CANCELLATION_MESSAGE_CREATE_PR = 'Pull request creation was cancelled';
+export const CANCELLATION_MESSAGE_GET_THREAD = 'Thread retrieval was cancelled';
+
+// Ignore patterns for file scanning
+export const IGNORE_PATTERNS = [
+  '.git',
+  '.github/workflows/*/pi.yml', // Don't include the workflow that runs this action
+] as const;
