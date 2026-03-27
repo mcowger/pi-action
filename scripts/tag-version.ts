@@ -49,7 +49,6 @@ async function createGitTag(tag: string): Promise<void> {
       dir,
       ref: tag,
       object: oid,
-      message: `Release ${tag}`,
     });
   } catch (error) {
     console.error('Error: Failed to create git tag', error);
