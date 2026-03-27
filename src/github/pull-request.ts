@@ -1,3 +1,12 @@
+/**
+ * @file GitHub pull request creation tool implementation.
+ *
+ * Implements the server-side logic for the `create_pull_request` custom tool:
+ * detecting changed files in the working tree, creating blobs/trees/commits
+ * via the Git Data API, creating a new branch, and opening a pull request.
+ * Supports dry-run mode for testing without side effects.
+ */
+
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as core from '@actions/core';
@@ -44,8 +53,13 @@ export type FileMode =
   | typeof FILE_MODE_DIRECTORY;
 
 /**
- * Determine the base branch for the pull request.
- * Uses the provided base branch, or the repository default branch.
+ * Resolve the base (target) branch for the pull request.
+ *
+ * Uses the explicitly provided branch if given, otherwise falls back to the
+ * repository's default branch (from the workflow context or the GitHub API).
+ *
+ * @param providedBase - Optional branch name override.
+ * @returns The resolved base branch name.
  */
 async function determineBaseBranch(providedBase: string | undefined): Promise<string> {
   const debug = (msg: string) => {
@@ -81,8 +95,13 @@ async function determineBaseBranch(providedBase: string | undefined): Promise<st
 }
 
 /**
- * Generate the body text for the pull request.
- * Uses the provided body, or auto-generates based on issue/PR context.
+ * Build the pull request body text.
+ *
+ * Uses the caller-supplied body if provided. Otherwise auto-generates a body
+ * that references the originating issue/PR number (e.g. "Fixes #42").
+ *
+ * @param providedBody - Optional body text from the tool caller.
+ * @returns The final Markdown body string.
  */
 function generatePullRequestBody(providedBody: string | undefined): string {
   const debug = (msg: string) => {
@@ -105,8 +124,9 @@ function generatePullRequestBody(providedBody: string | undefined): string {
 }
 
 /**
- * Determine if the current GitHub context is a pull request.
- * @returns true if the event type is 'pull_request' or if the context payload contains a pull_request object
+ * Classify the current GitHub context as an issue or a pull request.
+ *
+ * @returns `'issue'`, `'pull_request'`, or `undefined`.
  */
 function getContextType(): 'issue' | 'pull_request' | undefined {
   const eventType = github.context.eventName;
@@ -120,8 +140,15 @@ function getContextType(): 'issue' | 'pull_request' | undefined {
 }
 
 /**
- * Scan the local repository for changed files compared to the base branch.
- * Returns a list of files that have been added or modified.
+ * Recursively scan the local repository for files that are new or modified
+ * compared to the base branch.
+ *
+ * Respects `.gitignore` and the additional {@link IGNORE_PATTERNS}. Skips
+ * binary files and files larger than {@link MAX_FILE_SIZE_BYTES}.
+ *
+ * @param baseFiles - Map of base-branch file paths to their SHA and content,
+ *                    used for change detection.
+ * @returns An array of changed file descriptors (path, content, mode).
  */
 async function scanForChanges(
   baseFiles: Map<string, { sha: string; content: string | null }>
@@ -219,8 +246,11 @@ async function scanForChanges(
 }
 
 /**
- * Create blobs and a tree for the changed files.
- * Returns the tree SHA.
+ * Upload changed files as Git blobs and create a tree that references them.
+ *
+ * @param changedFiles - Array of changed file descriptors.
+ * @param baseSha      - SHA of the base commit to use as the tree's parent.
+ * @returns The SHA of the newly created tree.
  */
 async function createBlobsAndTree(
   changedFiles: {
@@ -272,8 +302,13 @@ async function createBlobsAndTree(
 }
 
 /**
- * Create a commit and update the branch reference.
- * Returns the commit SHA.
+ * Create a commit on the given tree and point the branch reference at it.
+ *
+ * @param treeSha    - SHA of the tree containing the changed files.
+ * @param baseSha    - SHA of the parent commit.
+ * @param branchName - Name of the branch to update.
+ * @param title      - Commit message (typically the PR title).
+ * @returns The SHA of the new commit.
  */
 async function createCommitAndUpdateBranch(
   treeSha: string,
@@ -313,7 +348,13 @@ async function createCommitAndUpdateBranch(
 }
 
 /**
- * Create a pull request on GitHub.
+ * Create a pull request via the GitHub REST API.
+ *
+ * @param title      - PR title.
+ * @param body       - PR body in Markdown.
+ * @param baseBranch - Target (base) branch name.
+ * @param headBranch - Source (head) branch name.
+ * @returns An object containing the PR number, URL, and branch refs.
  */
 async function createPullRequestOnGitHub(
   title: string,
@@ -348,9 +389,16 @@ async function createPullRequestOnGitHub(
 }
 
 /**
- * Create a pull request.
- * This function handles the entire flow: determining base branch, scanning for changes,
- * creating blobs, trees, commits, and finally the pull request.
+ * Create a pull request end-to-end.
+ *
+ * Orchestrates the full flow: determines the base branch, scans for changed
+ * files, creates a branch, commits, and opens the PR. When `dryRun` is `true`
+ * the operation is simulated and no GitHub resources are created.
+ *
+ * @param params - Parameters controlling title, body, base branch, and dry-run.
+ * @returns The tool result containing a human-readable message and structured
+ *          details about the created PR (or dry-run output).
+ * @throws {Error} If no changed files are detected or the GitHub API call fails.
  */
 export async function createPullRequest(
   params: CreatePullRequestParams

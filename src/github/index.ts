@@ -1,3 +1,10 @@
+/**
+ * @file GitHub module barrel export.
+ *
+ * Re-exports every public symbol from the sub-modules so that consumers can
+ * import from `./github` (or `./github/index`) in a single statement.
+ */
+
 // Octokit client singleton
 export { getOctokit } from './octokit.js';
 

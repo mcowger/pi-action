@@ -1,3 +1,17 @@
+/**
+ * @file Pi extension factory – registers custom tools with the agent.
+ *
+ * Defines two tools that extend Pi's built-in capabilities:
+ *
+ * - **`create_pull_request`** – creates a GitHub pull request with the current
+ *   working-tree changes.
+ * - **`get_issue_or_pr_thread`** – fetches the full comment thread of an issue
+ *   or pull request for context.
+ *
+ * The exported {@link extFactory} function is passed to the Pi SDK resource
+ * loader so that the tools are available during agent sessions.
+ */
+
 import { Type } from '@mariozechner/pi-ai';
 import * as core from '@actions/core';
 import { createPullRequest, getIssueOrPRThread } from './github/index';
@@ -25,8 +39,12 @@ import type { ExtensionAPI, ToolDefinition } from '@mariozechner/pi-coding-agent
 import type { CreatePullRequestParams, GetIssueOrPRThreadParams, IssueOrPRThread } from './github/index';
 
 /**
- * Helper to handle common tool execution setup: logging and cancellation check.
- * Returns true if execution should stop (cancelled), false to continue.
+ * Log the start of a tool execution and check for cancellation.
+ *
+ * @param toolName - Name of the tool being invoked (used in log output).
+ * @param signal   - Optional `AbortSignal` to check for cancellation.
+ * @returns `true` if the tool was cancelled and execution should stop,
+ *          `false` to continue.
  */
 function handleToolStart(toolName: string, signal: AbortSignal | undefined): boolean {
   console.info(`\n=== ${toolName} tool called ===`);
@@ -92,6 +110,12 @@ const createPRTool: ToolDefinition = {
   },
 };
 
+/**
+ * Format an {@link IssueOrPRThread} into a human-readable text summary.
+ *
+ * @param thread - The thread data to format.
+ * @returns A multi-line string representation of the thread.
+ */
 function formatThreadAsText(thread: IssueOrPRThread): string {
   const lines: string[] = [
     `${thread.is_pull_request ? 'Pull Request' : 'Issue'} #${thread.number}: ${thread.title}`,
@@ -202,6 +226,14 @@ const getIssueOrPRThreadTool: ToolDefinition = {
   },
 };
 
+/**
+ * Extension factory that registers all custom tools with the Pi agent.
+ *
+ * Called by the Pi SDK resource loader during session initialisation. Registers
+ * the `create_pull_request` and `get_issue_or_pr_thread` tools.
+ *
+ * @param pi - The Pi extension API used to register tools.
+ */
 export const extFactory = (pi: ExtensionAPI): void => {
   const tools = [createPRTool, getIssueOrPRThreadTool];
   tools.forEach(tool => {

@@ -1,3 +1,11 @@
+/**
+ * @file GitHub context extraction and issue/PR thread retrieval.
+ *
+ * Reads the current GitHub Actions context (issue, pull request, or comment)
+ * and provides helpers to build the prompt sent to the Pi agent, as well as a
+ * richer `getIssueOrPRThread` function used by the `get_issue_or_pr_thread` tool.
+ */
+
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { getOctokit } from './octokit.js';
@@ -52,7 +60,9 @@ export interface GetIssueOrPRThreadParams {
 
 /**
  * Determine if the current GitHub context is a pull request.
- * @returns true if the event type is 'pull_request' or if the context payload contains a pull_request object
+ *
+ * @returns `true` if the event type is `pull_request` or the payload contains a
+ *          `pull_request` object.
  */
 export function isPR(): boolean {
   const eventType = github.context.eventName;
@@ -60,8 +70,11 @@ export function isPR(): boolean {
 }
 
 /**
- * Get the event type for the current context.
- * @returns 'issue' | 'pull_request' | undefined
+ * Determine whether the current context originated from an issue or a pull
+ * request.
+ *
+ * @returns `'issue'`, `'pull_request'`, or `undefined` if the context cannot be
+ *          classified.
  */
 export function getContextType(): 'issue' | 'pull_request' | undefined {
   if (isPR()) {
@@ -73,6 +86,13 @@ export function getContextType(): 'issue' | 'pull_request' | undefined {
   return undefined;
 }
 
+/**
+ * Extract a lightweight context object (title, body, number) from the current
+ * GitHub issue or pull request.
+ *
+ * @returns The context data, or `undefined` if the payload does not contain a
+ *          recognised issue or PR.
+ */
 export function getIssueOrPullRequestContext(): IssueOrPullRequestContext | undefined {
   const contextType = getContextType();
   const payload = github.context.payload;
@@ -106,6 +126,15 @@ export function getIssueOrPullRequestContext(): IssueOrPullRequestContext | unde
   return undefined;
 }
 
+/**
+ * Build the full prompt that will be sent to the Pi agent.
+ *
+ * The triggering comment body is used as the instruction. If an associated issue
+ * or PR is available in the current context, its title and description are
+ * prepended for additional context.
+ *
+ * @returns The assembled prompt string, or `undefined` if no comment was found.
+ */
 export async function getPrompt(): Promise<string | undefined> {
   const comment = await getComment();
   if (!comment) {
@@ -302,6 +331,14 @@ function buildThreadResult(
   };
 }
 
+/**
+ * Fetch the complete thread (metadata + comments) for a GitHub issue or PR.
+ *
+ * @param params - Optional parameters to override the default owner, repo,
+ *                 issue number, or comment limit.
+ * @returns The full thread data, or `undefined` if the issue/PR could not be
+ *          resolved or was not found (404).
+ */
 export async function getIssueOrPRThread(
   params?: GetIssueOrPRThreadParams
 ): Promise<IssueOrPRThread | undefined> {

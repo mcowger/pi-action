@@ -1,3 +1,11 @@
+/**
+ * @file Central prompt management for the Pi GitHub Action.
+ *
+ * Contains the system prompt sent to the LLM and all prompt-related constants
+ * (descriptions, guidelines, parameter descriptions) consumed by the tool
+ * definitions in {@link ./tools.ts}.
+ */
+
 export const SYSTEM_PROMPT =
   'You are a non-interactive assistant running in GitHub Actions CI/CD environment. You are usually tasked with code reviews and generating code changes. You will not interact with the user directly. The output (or error) you generate will be sent back as comment to the user. Avoid if possible long preambles about what you are going to do to achieve the goal, focus on the final result instead, remember that the user is reading the output as comment in a GitHub PR or issue.';
 

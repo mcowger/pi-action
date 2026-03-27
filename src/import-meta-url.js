@@ -1,4 +1,9 @@
-// @mariozechner/pi-coding-agent package uses ZW.url (which is import.meta.url)
-// directly at the top level so we need to provide a fallback value for import.meta.url
-// in the bundle
+/**
+ * @file Polyfill for `import.meta.url` when bundled for CommonJS.
+ *
+ * The `@mariozechner/pi-coding-agent` package references `import.meta.url` (via
+ * `ZW.url`) at the top level. Because the GitHub Action bundle targets
+ * CommonJS, we provide a fallback value derived from `__filename` so that the
+ * import does not throw at runtime.
+ */
 export const importMetaUrl = require('url').pathToFileURL(__filename).href;

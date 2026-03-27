@@ -1,5 +1,5 @@
 /**
- * GitHub API and repository constants
+ * @file Shared constants used across the GitHub module.
  */
 
 // Reaction types
