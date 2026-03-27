@@ -17,27 +17,7 @@ import {
   getPrompt,
   getStartTimeFromContext,
 } from './github/index';
-import type { CreateReactionType, CommentMetadata } from './github/index';
-
-/**
- * Build the metadata object for the final comment.
- *
- * @param params - Metadata parameters
- * @returns The metadata object
- */
-function buildMetadata(params: {
-  provider: string;
-  model: string;
-  thinkingLevel: string;
-  executionDuration: Temporal.Duration;
-}): CommentMetadata {
-  return {
-    provider: params.provider,
-    model: params.model,
-    thinkingLevel: params.thinkingLevel,
-    executionDuration: params.executionDuration,
-  };
-}
+import type { CreateReactionType } from './github/index';
 
 /**
  * Run the Pi coding agent end-to-end.
@@ -84,10 +64,12 @@ export async function run() {
     if (reaction) {
       await deleteReaction(reaction);
     }
-    await createFinalComment(
-      e instanceof Error ? e.message : String(e),
-      buildMetadata({ provider, model, thinkingLevel: thinkingInput, executionDuration })
-    );
+    await createFinalComment(e instanceof Error ? e.message : String(e), {
+      provider,
+      model,
+      thinkingLevel: thinkingInput,
+      executionDuration,
+    });
     throw e;
   }
 
@@ -97,8 +79,10 @@ export async function run() {
   if (reaction) {
     await deleteReaction(reaction);
   }
-  await createFinalComment(
-    result,
-    buildMetadata({ provider, model, thinkingLevel: thinkingInput, executionDuration })
-  );
+  await createFinalComment(result, {
+    provider,
+    model,
+    thinkingLevel: thinkingInput,
+    executionDuration,
+  });
 }
