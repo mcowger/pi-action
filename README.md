@@ -13,6 +13,10 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 
 ## Usage
 
+- create a GitHub workflow e.g. [triggered by `if`](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idif)
+- add `actions/checkout` and `actions/setup-node` as pre-requisite steps
+- finally, add `shaftoe/pi-coding-agent-action` 
+
 Example:
 
 ```yaml
@@ -28,7 +32,7 @@ Example:
 
 ### Quick Start
 
-Create a workflow file like `.github/workflows/pi-agent.yml`. See the [example](./.github/workflows/pi.yml) file in this very repository to get started.
+Create a workflow file, e.g. `.github/workflows/pi-agent.yml`. See the [example](./.github/workflows/pi.yml) file in this very repository to get started.
 
 ## Inputs
 
@@ -53,6 +57,27 @@ Create a workflow file like `.github/workflows/pi-agent.yml`. See the [example](
    - Pushes to remote
    - Creates a new PR
 6. Posts result as a comment
+
+## Architecture
+
+The action is built on top of the [Pi coding agent](https://pi.dev) framework and consists of several key components:
+
+### Core Components
+
+- **`run.ts`** - Main entry point that orchestrates the GitHub workflow integration, manages the agent lifecycle, and handles user prompts
+- **`pi.ts`** - Pi integration, setup the agent using its [SDK](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/sdk.md)
+- **`github.ts`** - GitHub API interaction layer that provides context enrichment, issue/PR thread retrieval, reaction management, and pull request creation
+- **`tools.ts`** - Extension factory that registers custom tools with the Pi agent
+- **`prompt.ts`** - Prompt definitions including system prompts and tool-specific guidelines
+
+### Custom Tools
+
+The action extends Pi with two internal tools:
+
+| Tool | Description |
+|------|-------------|
+| `create_pull_request` | Creates a new pull request by detecting file changes, creating a branch, committing changes via GitHub API, and opening the PR. Supports `dry_run` mode for testing without actual PR creation. |
+| `get_issue_or_pr_thread` | Retrieves the full thread of an issue or pull request including title, body, state, labels, branch info (for PRs), and all comments. Useful for understanding the full context before making changes. |
 
 ## Development
 
