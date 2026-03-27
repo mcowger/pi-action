@@ -25,3 +25,9 @@ export const IGNORE_PATTERNS = [
   '.git',
   '.github/workflows/*/pi.yml', // Don't include the workflow that runs this action
 ] as const;
+
+// Default trigger string
+export const DEFAULT_TRIGGER = '/pi';
+
+// GitHub max comments limit
+export const MAX_COMMENTS = 100;
