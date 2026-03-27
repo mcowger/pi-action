@@ -1,6 +1,6 @@
 import { Type } from '@mariozechner/pi-ai';
 import * as core from '@actions/core';
-import { createPullRequest, getIssueOrPRThread } from './github';
+import { createPullRequest, getIssueOrPRThread } from './github/index';
 import {
   CREATE_PULL_REQUEST_PROMPT_SNIPPET,
   CREATE_PULL_REQUEST_PROMPT_GUIDELINES,
@@ -18,7 +18,7 @@ import {
   GET_ISSUE_PR_THREAD_PARAM_MAX_COMMENTS_DESCRIPTION,
 } from './prompt';
 import type { ExtensionAPI, ToolDefinition } from '@mariozechner/pi-coding-agent';
-import type { CreatePullRequestParams, GetIssueOrPRThreadParams, IssueOrPRThread } from './github';
+import type { CreatePullRequestParams, GetIssueOrPRThreadParams, IssueOrPRThread } from './github/index';
 
 /**
  * Helper to handle common tool execution setup: logging and cancellation check.

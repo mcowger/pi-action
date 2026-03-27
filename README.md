@@ -66,7 +66,7 @@ The action is built on top of the [Pi coding agent](https://pi.dev) framework an
 
 - **`run.ts`** - Main entry point that orchestrates the GitHub workflow integration, manages the agent lifecycle, and handles user prompts
 - **`pi.ts`** - Pi integration, setup the agent using its [SDK](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/sdk.md)
-- **`github.ts`** - GitHub API interaction layer that provides context enrichment, issue/PR thread retrieval, reaction management, and pull request creation
+- **`github`** - GitHub API interaction layer that provides context enrichment, issue/PR thread retrieval, reaction management, and pull request creation
 - **`tools.ts`** - Extension factory that registers custom tools with the Pi agent
 - **`prompt.ts`** - Prompt definitions including system prompts and tool-specific guidelines
 

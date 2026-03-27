@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import { Client } from './pi';
-import { addReaction, deleteReaction, createFinalComment, getPrompt } from './github';
-import type { createReactionType } from './github';
+import { addReaction, deleteReaction, createFinalComment, getPrompt } from './github/index';
+import type { CreateReactionType } from './github/index';
 
 export async function run() {
   const provider = core.getInput('provider');
@@ -15,7 +15,7 @@ export async function run() {
   }
 
   // add eyes reaction to the comment, will be removed before final comment
-  let reaction: createReactionType | undefined;
+  let reaction: CreateReactionType | undefined;
   let result: string;
 
   try {
