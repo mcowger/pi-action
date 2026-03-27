@@ -142,7 +142,8 @@ export class Client {
     }
 
     core.info('[prompt] ' + text);
-    core.info('thinking...\n\n' + text);
+    core.info('[thinking...]');
+    core.info('');
 
     await this.session.prompt(text);
     process.stdout.write('\n'); // ensure new line after prompt, usually missing from agent

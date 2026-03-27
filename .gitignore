@@ -23,4 +23,3 @@ dist/*.map
 .env.*
 *.tgz
 *.tmp
-scripts

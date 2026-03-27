@@ -11,6 +11,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import { Temporal } from '@js-temporal/polyfill';
 import ignore from 'ignore';
 import { getOctokit } from './octokit.js';
 import {
@@ -413,7 +414,7 @@ export async function createPullRequest(
 
   // Auto-generate branch name
   const issueNumber = github.context.issue?.number ?? 'unknown';
-  const timestamp = Date.now();
+  const timestamp = Temporal.Now.instant().epochMilliseconds;
   const head = `${BRANCH_PREFIX}${issueNumber}-${timestamp}`;
 
   debug(`Title: ${title}`);

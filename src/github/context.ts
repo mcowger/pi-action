@@ -8,8 +8,41 @@
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import { Temporal } from '@js-temporal/polyfill';
 import { getOctokit } from './octokit.js';
 import { DEFAULT_TRIGGER, MAX_COMMENTS } from './constants.js';
+
+/**
+ * Extract the start timestamp from the GitHub event payload.
+ *
+ * Uses the timestamp of the triggering event (comment creation, issue opening,
+ * or PR opening) to measure the total time from user action to completion.
+ *
+ * @returns The start instant, or `undefined` if it cannot be determined.
+ */
+export function getStartTimeFromContext(): Temporal.Instant | undefined {
+  const { eventName, payload } = github.context;
+
+  // For issue_comment events, use the comment's created_at timestamp
+  if (eventName === 'issue_comment' && payload.comment?.created_at) {
+    return Temporal.Instant.from(payload.comment.created_at);
+  }
+
+  // For issues events (opened/edited), use the issue's created_at timestamp
+  if (eventName === 'issues' && payload.issue?.created_at) {
+    return Temporal.Instant.from(payload.issue.created_at);
+  }
+
+  // For pull_request events, use the PR's created_at timestamp
+  if (eventName === 'pull_request' && payload.pull_request?.created_at) {
+    return Temporal.Instant.from(payload.pull_request.created_at);
+  }
+
+  core.debug(
+    `[getStartTimeFromContext] Could not determine start time from event type: ${eventName}`
+  );
+  return undefined;
+}
 
 const trigger = core.getInput('trigger') || DEFAULT_TRIGGER;
 const octokit = getOctokit();

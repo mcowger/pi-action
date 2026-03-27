@@ -15,6 +15,7 @@ export {
   getIssueOrPullRequestContext,
   getPrompt,
   getIssueOrPRThread,
+  getStartTimeFromContext,
   type IssueOrPullRequestContext,
   type ThreadComment,
   type IssueOrPRThread,
@@ -30,7 +31,7 @@ export {
 } from './reactions.js';
 
 // Comment creation functions
-export { createFinalComment, type CreateCommentType } from './comments.js';
+export { createFinalComment, type CreateCommentType, type CommentMetadata } from './comments.js';
 
 // Pull request creation functions
 export {

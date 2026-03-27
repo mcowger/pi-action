@@ -8,9 +8,36 @@
  */
 
 import * as core from '@actions/core';
+import { Temporal } from '@js-temporal/polyfill';
 import { Client } from './pi';
-import { addReaction, deleteReaction, createFinalComment, getPrompt } from './github/index';
-import type { CreateReactionType } from './github/index';
+import {
+  addReaction,
+  deleteReaction,
+  createFinalComment,
+  getPrompt,
+  getStartTimeFromContext,
+} from './github/index';
+import type { CreateReactionType, CommentMetadata } from './github/index';
+
+/**
+ * Build the metadata object for the final comment.
+ *
+ * @param params - Metadata parameters
+ * @returns The metadata object
+ */
+function buildMetadata(params: {
+  provider: string;
+  model: string;
+  thinkingLevel: string;
+  executionDuration: Temporal.Duration;
+}): CommentMetadata {
+  return {
+    provider: params.provider,
+    model: params.model,
+    thinkingLevel: params.thinkingLevel,
+    executionDuration: params.executionDuration,
+  };
+}
 
 /**
  * Run the Pi coding agent end-to-end.
@@ -33,6 +60,14 @@ export async function run() {
     return;
   }
 
+  // Use the event timestamp from GitHub context to measure total time from user action
+  let startTime = getStartTimeFromContext();
+  if (startTime !== undefined) {
+    core.info(`[trigger time] ${startTime.toString()}`);
+  } else {
+    startTime = Temporal.Now.instant();
+  }
+
   let reaction: CreateReactionType | undefined;
   let result: string;
 
@@ -43,15 +78,27 @@ export async function run() {
     const pi = await new Client(model, provider, token, thinkingInput).ready();
     result = await pi.prompt(prompt);
   } catch (e) {
+    const endTime = Temporal.Now.instant();
+    const executionDuration = startTime.until(endTime);
+
     if (reaction) {
       await deleteReaction(reaction);
     }
-    await createFinalComment(e instanceof Error ? e.message : String(e));
+    await createFinalComment(
+      e instanceof Error ? e.message : String(e),
+      buildMetadata({ provider, model, thinkingLevel: thinkingInput, executionDuration })
+    );
     throw e;
   }
+
+  const endTime = Temporal.Now.instant();
+  const executionDuration = startTime.until(endTime);
 
   if (reaction) {
     await deleteReaction(reaction);
   }
-  await createFinalComment(result);
+  await createFinalComment(
+    result,
+    buildMetadata({ provider, model, thinkingLevel: thinkingInput, executionDuration })
+  );
 }

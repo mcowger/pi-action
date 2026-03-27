@@ -1,10 +1,10 @@
 {
   "name": "pi-coding-agent-action",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "GitHub Action that runs the pi coding agent on issues and pull requests",
   "main": "dist/index.js",
   "scripts": {
-    "package": "esbuild src/index.ts --bundle --platform=node --target=node24 --outfile=dist/index.js --format=cjs --minify --define:import.meta.url=importMetaUrl --inject:src/import-meta-url.js",
+    "package": "./scripts/package.sh",
     "prepare": "bun run package",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
@@ -27,6 +27,7 @@
   "dependencies": {
     "@actions/core": "^3.0.0",
     "@actions/github": "^9.0.0",
+    "@js-temporal/polyfill": "^0.5.1",
     "@mariozechner/pi-coding-agent": "^0.63.1",
     "@sinclair/typebox": "^0.34.48",
     "ignore": "^7.0.5"

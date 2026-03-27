@@ -32,3 +32,5 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
 2. **Extension Pattern**: The action extends Pi with a custom tool (`create_pull_request`) via the `ExtensionAPI` in `src/tools.ts`.
 
 3. **Test Coverage**: The project uses `bun test` for testing. Maintain and expand test coverage when making changes.
+
+4. **Prefer Bun package manager over npm or others**

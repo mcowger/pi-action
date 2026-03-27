@@ -14,11 +14,9 @@
 
 import { Type } from '@mariozechner/pi-ai';
 import * as core from '@actions/core';
+import { Temporal } from '@js-temporal/polyfill';
 import { createPullRequest, getIssueOrPRThread } from './github/index';
-import {
-  CANCELLATION_MESSAGE_CREATE_PR,
-  CANCELLATION_MESSAGE_GET_THREAD,
-} from './github/index';
+import { CANCELLATION_MESSAGE_CREATE_PR, CANCELLATION_MESSAGE_GET_THREAD } from './github/index';
 import {
   CREATE_PULL_REQUEST_PROMPT_SNIPPET,
   CREATE_PULL_REQUEST_PROMPT_GUIDELINES,
@@ -36,7 +34,11 @@ import {
   GET_ISSUE_PR_THREAD_PARAM_MAX_COMMENTS_DESCRIPTION,
 } from './prompt';
 import type { ExtensionAPI, ToolDefinition } from '@mariozechner/pi-coding-agent';
-import type { CreatePullRequestParams, GetIssueOrPRThreadParams, IssueOrPRThread } from './github/index';
+import type {
+  CreatePullRequestParams,
+  GetIssueOrPRThreadParams,
+  IssueOrPRThread,
+} from './github/index';
 
 /**
  * Log the start of a tool execution and check for cancellation.
@@ -125,18 +127,18 @@ function formatThreadAsText(thread: IssueOrPRThread): string {
   ];
 
   if (thread.created_at) {
-    lines.push(`Created: ${new Date(thread.created_at).toISOString()}`);
+    lines.push(`Created: ${Temporal.Instant.from(thread.created_at).toString()}`);
   }
 
   if (thread.updated_at) {
-    lines.push(`Updated: ${new Date(thread.updated_at).toISOString()}`);
+    lines.push(`Updated: ${Temporal.Instant.from(thread.updated_at).toString()}`);
   }
 
   if (thread.closed_at) {
-    lines.push(`Closed: ${new Date(thread.closed_at).toISOString()}`);
+    lines.push(`Closed: ${Temporal.Instant.from(thread.closed_at).toString()}`);
   }
   if (thread.merged_at) {
-    lines.push(`Merged: ${new Date(thread.merged_at).toISOString()}`);
+    lines.push(`Merged: ${Temporal.Instant.from(thread.merged_at).toString()}`);
   }
 
   if (thread.labels.length > 0) {
@@ -163,7 +165,7 @@ function formatThreadAsText(thread: IssueOrPRThread): string {
     const triggerMark = comment.is_triggering_comment ? ' [📍 triggering comment]' : '';
     lines.push(
       `  ${i + 1}. @${comment.author}${comment.author_type === 'bot' ? ' (bot)' : ''}${triggerMark}`,
-      `     ${new Date(comment.created_at).toISOString()}`,
+      `     ${Temporal.Instant.from(comment.created_at).toString()}`,
       `     ${comment.body}`
     );
   });

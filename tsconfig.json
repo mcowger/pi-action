@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "NodeNext",
-    "lib": ["ES2022"],
+    "lib": ["ESNext"],
     "types": ["bun-types"],
     "outDir": "./dist",
     "rootDir": "./src",
