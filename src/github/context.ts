@@ -366,6 +366,26 @@ async function fetchThreadComments(
   return comments;
 }
 
+/**
+ * Determine the state of an issue or pull request.
+ *
+ * Returns 'merged' for closed PRs that have a merged_at timestamp,
+ * otherwise returns the raw issue state.
+ *
+ * @param issueState - The raw issue state ('open' or 'closed').
+ * @param prData - Optional PR data containing the merged_at timestamp.
+ * @returns The determined state: 'open', 'closed', or 'merged'.
+ */
+function determineThreadState(
+  issueState: string,
+  prData?: Awaited<ReturnType<typeof octokit.rest.pulls.get>>['data']
+): 'open' | 'closed' | 'merged' {
+  if (issueState === 'closed' && prData?.merged_at) {
+    return 'merged';
+  }
+  return issueState as 'open' | 'closed' | 'merged';
+}
+
 function buildThreadResult(
   issue: Awaited<ReturnType<typeof octokit.rest.issues.get>>['data'],
   isPullRequest: boolean,
@@ -376,10 +396,7 @@ function buildThreadResult(
     number: issue.number,
     title: issue.title,
     body: issue.body,
-    state: (issue.state === 'closed' && prData?.merged_at ? 'merged' : issue.state) as
-      | 'open'
-      | 'closed'
-      | 'merged',
+    state: determineThreadState(issue.state, prData),
     author: issue.user?.login ?? 'unknown',
     author_type: issue.user?.type === 'Bot' ? 'bot' : 'user',
     created_at: issue.created_at,

@@ -5,6 +5,9 @@
 // Reaction types
 export const REACTION_TYPE_EYES = 'eyes' as const;
 
+// Validation constants
+export const MAX_TITLE_LENGTH = 255;
+
 // Git file modes
 export const FILE_MODE_REGULAR = '100644' as const; // Regular file, not executable
 export const FILE_MODE_EXECUTABLE = '100755' as const; // Executable file

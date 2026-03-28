@@ -10,6 +10,7 @@
 
 import * as github from '@actions/github';
 import { getOctokit } from './octokit.js';
+import { MAX_TITLE_LENGTH } from './constants.js';
 import {
   createLogger,
   scanForChanges,
@@ -92,6 +93,31 @@ async function updatePullRequestMetadata(
 }
 
 /**
+ * Validate pull request update parameters.
+ *
+ * @param params - The pull request update parameters to validate.
+ * @throws {Error} If validation fails.
+ */
+function validateUpdatePullRequestParams(params: UpdatePullRequestParams): void {
+  if (params.title !== undefined && params.title.length > MAX_TITLE_LENGTH) {
+    throw new Error(
+      `Pull request title exceeds maximum length of ${MAX_TITLE_LENGTH} characters (got ${params.title.length})`
+    );
+  }
+
+  // Ensure at least one update parameter is provided (besides dryRun)
+  const { title, body, message, pull_number } = params;
+  const hasContentUpdate = title !== undefined || body !== undefined || message !== undefined;
+  const hasPRContext = pull_number !== undefined || github.context.issue.number;
+
+  if (!hasContentUpdate && !hasPRContext) {
+    throw new Error(
+      'At least one update parameter (title, body, message, or pull_number) must be provided'
+    );
+  }
+}
+
+/**
  * Update a pull request end-to-end.
  *
  * Orchestrates the full flow: fetches the PR and its branch, scans for changed
@@ -109,6 +135,9 @@ export async function updatePullRequest(
   params: UpdatePullRequestParams
 ): Promise<UpdatePullRequestResult> {
   const { pull_number, title, body, message, dryRun } = params;
+
+  // Validate input parameters early
+  validateUpdatePullRequestParams(params);
 
   // Resolve PR number from context if not provided
   const resolvedPullNumber = pull_number ?? github.context.issue.number;

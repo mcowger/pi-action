@@ -2,7 +2,7 @@
  * @file update_pull_request tool definition.
  */
 
-import { Type } from '@sinclair/typebox';
+import { Type, Static } from '@sinclair/typebox';
 import {
   UPDATE_PULL_REQUEST_PROMPT_SNIPPET,
   UPDATE_PULL_REQUEST_PROMPT_GUIDELINES,
@@ -53,6 +53,11 @@ const updatePullRequestSchema = Type.Object({
 });
 
 /**
+ * Runtime type for the update_pull_request tool parameters.
+ */
+type UpdatePullRequestToolParams = Static<typeof updatePullRequestSchema>;
+
+/**
  * Tool definition for updating a pull request.
  */
 export const updatePullRequestTool: ToolDefinition = {
@@ -86,7 +91,7 @@ export const updatePullRequestTool: ToolDefinition = {
       };
     }
 
-    const { pull_number, title, body, message, dryRun } = params as UpdatePullRequestParams;
+    const { pull_number, title, body, message, dryRun } = params as UpdatePullRequestToolParams;
 
     // Delegate to the GitHub-specific implementation
     const updateParams: UpdatePullRequestParams = {};

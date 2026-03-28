@@ -10,7 +10,7 @@
 import * as github from '@actions/github';
 import { Temporal } from '@js-temporal/polyfill';
 import { getOctokit } from './octokit.js';
-import { BRANCH_PREFIX } from './constants.js';
+import { BRANCH_PREFIX, MAX_TITLE_LENGTH } from './constants.js';
 import {
   createLogger,
   scanForChanges,
@@ -123,6 +123,24 @@ function getContextType(): 'issue' | 'pull_request' | undefined {
 }
 
 /**
+ * Validate pull request creation parameters.
+ *
+ * @param params - The pull request parameters to validate.
+ * @throws {Error} If validation fails.
+ */
+function validateCreatePullRequestParams(params: CreatePullRequestParams): void {
+  if (!params.title || params.title.trim() === '') {
+    throw new Error('Pull request title is required and cannot be empty');
+  }
+
+  if (params.title.length > MAX_TITLE_LENGTH) {
+    throw new Error(
+      `Pull request title exceeds maximum length of ${MAX_TITLE_LENGTH} characters (got ${params.title.length})`
+    );
+  }
+}
+
+/**
  * Create a pull request via the GitHub REST API.
  *
  * @param title - PR title.
@@ -175,6 +193,9 @@ export async function createPullRequest(
   params: CreatePullRequestParams
 ): Promise<CreatePullRequestResult> {
   const { title, body, base, dryRun } = params;
+
+  // Validate input parameters early
+  validateCreatePullRequestParams(params);
 
   // Auto-generate branch name
   const issueNumber = github.context.issue?.number ?? 'unknown';

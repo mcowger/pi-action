@@ -2,7 +2,7 @@
  * @file get_issue_or_pr_thread tool definition.
  */
 
-import { Type } from '@sinclair/typebox';
+import { Type, Static } from '@sinclair/typebox';
 import {
   GET_ISSUE_PR_THREAD_PROMPT_SNIPPET,
   GET_ISSUE_PR_THREAD_PROMPT_GUIDELINES,
@@ -15,7 +15,6 @@ import {
 import {
   getIssueOrPRThread,
   CANCELLATION_MESSAGE_GET_THREAD,
-  type GetIssueOrPRThreadParams,
 } from '../../github/index';
 import { formatThreadAsText } from './common';
 import type { ToolDefinition, AgentToolResult } from '@mariozechner/pi-coding-agent';
@@ -45,6 +44,11 @@ const getIssueOrPRThreadSchema = Type.Object({
     })
   ),
 });
+
+/**
+ * Runtime type for the get_issue_or_pr_thread tool parameters.
+ */
+type GetIssueOrPRThreadToolParams = Static<typeof getIssueOrPRThreadSchema>;
 
 /**
  * Tool definition for fetching issue or PR thread.
@@ -91,7 +95,7 @@ export const getIssueOrPRThreadTool: ToolDefinition = {
       };
     }
 
-    const result = await getIssueOrPRThread(params as GetIssueOrPRThreadParams);
+    const result = await getIssueOrPRThread(params as GetIssueOrPRThreadToolParams);
 
     if (!result) {
       return {

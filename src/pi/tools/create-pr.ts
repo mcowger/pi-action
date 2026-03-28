@@ -2,7 +2,7 @@
  * @file create_pull_request tool definition.
  */
 
-import { Type } from '@sinclair/typebox';
+import { Type, Static } from '@sinclair/typebox';
 import {
   CREATE_PULL_REQUEST_PROMPT_SNIPPET,
   CREATE_PULL_REQUEST_PROMPT_GUIDELINES,
@@ -45,6 +45,11 @@ const createPullRequestSchema = Type.Object({
 });
 
 /**
+ * Runtime type for the create_pull_request tool parameters.
+ */
+type CreatePullRequestToolParams = Static<typeof createPullRequestSchema>;
+
+/**
  * Tool definition for creating a pull request.
  */
 export const createPRTool: ToolDefinition = {
@@ -78,7 +83,7 @@ export const createPRTool: ToolDefinition = {
       };
     }
 
-    const { title, body, base, dryRun } = params as CreatePullRequestParams;
+    const { title, body, base, dryRun } = params as CreatePullRequestToolParams;
 
     // Delegate to the GitHub-specific implementation
     const prParams: CreatePullRequestParams = { title };
