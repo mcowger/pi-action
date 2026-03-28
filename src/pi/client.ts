@@ -120,14 +120,6 @@ export class Client {
       throw new Error('no text, skipping prompt');
     }
 
-    core.info('::group::🤖 Agent prompt');
-    core.info(text);
-    core.info('::endgroup::');
-
-    core.info('');
-    core.info('🚀 Agent session starting...');
-    core.info('');
-
     await this.session.prompt(text);
     process.stdout.write('\n'); // ensure new line after prompt, usually missing from agent
     core.info('');
