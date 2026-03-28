@@ -12,7 +12,7 @@
  * loader so that the tools are available during agent sessions.
  */
 
-import { Type } from '@mariozechner/pi-ai';
+import { Type } from '@sinclair/typebox';
 import * as core from '@actions/core';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPullRequest, getIssueOrPRThread } from './github/index';
@@ -40,6 +40,56 @@ import type {
   GetIssueOrPRThreadParams,
   IssueOrPRThread,
 } from './github/index';
+
+/**
+ * Schema for the create_pull_request tool.
+ */
+const createPullRequestSchema = Type.Object({
+  title: Type.String({
+    description: CREATE_PULL_REQUEST_PARAM_TITLE_DESCRIPTION,
+  }),
+  body: Type.Optional(
+    Type.String({
+      description: CREATE_PULL_REQUEST_PARAM_BODY_DESCRIPTION,
+    })
+  ),
+  base: Type.Optional(
+    Type.String({
+      description: CREATE_PULL_REQUEST_PARAM_BASE_DESCRIPTION,
+    })
+  ),
+  dryRun: Type.Optional(
+    Type.Boolean({
+      description: CREATE_PULL_REQUEST_PARAM_DRY_RUN_DESCRIPTION,
+    })
+  ),
+});
+
+/**
+ * Schema for the get_issue_or_pr_thread tool.
+ */
+const getIssueOrPRThreadSchema = Type.Object({
+  owner: Type.Optional(
+    Type.String({
+      description: GET_ISSUE_PR_THREAD_PARAM_OWNER_DESCRIPTION,
+    })
+  ),
+  repo: Type.Optional(
+    Type.String({
+      description: GET_ISSUE_PR_THREAD_PARAM_REPO_DESCRIPTION,
+    })
+  ),
+  issue_number: Type.Optional(
+    Type.Integer({
+      description: GET_ISSUE_PR_THREAD_PARAM_ISSUE_NUMBER_DESCRIPTION,
+    })
+  ),
+  max_comments: Type.Optional(
+    Type.Integer({
+      description: GET_ISSUE_PR_THREAD_PARAM_MAX_COMMENTS_DESCRIPTION,
+    })
+  ),
+});
 
 /**
  * Log the start of a tool execution and check for cancellation.
@@ -73,26 +123,8 @@ const createPRTool: ToolDefinition = {
   description: CREATE_PULL_REQUEST_DESCRIPTION,
   promptSnippet: CREATE_PULL_REQUEST_PROMPT_SNIPPET,
   promptGuidelines: CREATE_PULL_REQUEST_PROMPT_GUIDELINES,
-  parameters: Type.Object({
-    title: Type.String({
-      description: CREATE_PULL_REQUEST_PARAM_TITLE_DESCRIPTION,
-    }),
-    body: Type.Optional(
-      Type.String({
-        description: CREATE_PULL_REQUEST_PARAM_BODY_DESCRIPTION,
-      })
-    ),
-    base: Type.Optional(
-      Type.String({
-        description: CREATE_PULL_REQUEST_PARAM_BASE_DESCRIPTION,
-      })
-    ),
-    dryRun: Type.Optional(
-      Type.Boolean({
-        description: CREATE_PULL_REQUEST_PARAM_DRY_RUN_DESCRIPTION,
-      })
-    ),
-  }),
+  // @ts-expect-error - TypeBox Symbol property not recognized by TypeScript
+  parameters: createPullRequestSchema,
 
   async execute(
     _toolCallId,
@@ -206,28 +238,8 @@ const getIssueOrPRThreadTool: ToolDefinition = {
   description: GET_ISSUE_PR_THREAD_DESCRIPTION,
   promptSnippet: GET_ISSUE_PR_THREAD_PROMPT_SNIPPET,
   promptGuidelines: GET_ISSUE_PR_THREAD_PROMPT_GUIDELINES,
-  parameters: Type.Object({
-    owner: Type.Optional(
-      Type.String({
-        description: GET_ISSUE_PR_THREAD_PARAM_OWNER_DESCRIPTION,
-      })
-    ),
-    repo: Type.Optional(
-      Type.String({
-        description: GET_ISSUE_PR_THREAD_PARAM_REPO_DESCRIPTION,
-      })
-    ),
-    issue_number: Type.Optional(
-      Type.Integer({
-        description: GET_ISSUE_PR_THREAD_PARAM_ISSUE_NUMBER_DESCRIPTION,
-      })
-    ),
-    max_comments: Type.Optional(
-      Type.Integer({
-        description: GET_ISSUE_PR_THREAD_PARAM_MAX_COMMENTS_DESCRIPTION,
-      })
-    ),
-  }),
+  // @ts-expect-error - TypeBox Symbol property not recognized by TypeScript
+  parameters: getIssueOrPRThreadSchema,
 
   async execute(
     _toolCallId,
