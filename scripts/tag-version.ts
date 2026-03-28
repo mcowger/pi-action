@@ -39,16 +39,61 @@ function updatePackageJson(version: string): void {
   writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + '\n', 'utf-8');
 }
 
-async function createGitTag(tag: string): Promise<void> {
+async function createReleaseCommit(version: string): Promise<string> {
   try {
     const dir = process.cwd();
-    const oid = await git.resolveRef({ fs, dir, ref: 'HEAD' });
+    const message = `chore: release v${version}`;
+
+    await git.add({
+      fs,
+      dir,
+      filepath: 'package.json',
+    });
+
+    await git.add({
+      fs,
+      dir,
+      filepath: 'VERSION',
+    });
+
+    const authorName = await git.getConfig({
+      fs,
+      dir,
+      path: 'user.name',
+    });
+
+    const authorEmail = await git.getConfig({
+      fs,
+      dir,
+      path: 'user.email',
+    });
+
+    const commitOid = await git.commit({
+      fs,
+      dir,
+      message,
+      author: {
+        name: authorName || 'Release Bot',
+        email: authorEmail || 'release@bot.local',
+      },
+    });
+
+    return commitOid;
+  } catch (error) {
+    console.error('Error: Failed to create release commit', error);
+    process.exit(1);
+  }
+}
+
+async function createGitTag(tag: string, targetOid: string): Promise<void> {
+  try {
+    const dir = process.cwd();
 
     await git.tag({
       fs,
       dir,
       ref: tag,
-      object: oid,
+      object: targetOid,
     });
   } catch (error) {
     console.error('Error: Failed to create git tag', error);
@@ -65,12 +110,15 @@ async function main(): Promise<void> {
   updatePackageJson(version);
   console.log(`✓ Version updated to ${version}`);
 
+  console.log(`Creating release commit...`);
+  const commitOid = await createReleaseCommit(version);
+  console.log(`✓ Release commit created: ${commitOid}`);
+
   console.log(`Creating git tag ${tag}...`);
-  await createGitTag(tag);
-  console.log(`✓ Git tag ${tag} created (targeting HEAD)`);
+  await createGitTag(tag, commitOid);
+  console.log(`✓ Git tag ${tag} created`);
 
   console.log('\nNext steps:');
-  console.log(`  git commit -am "Release ${tag}"`);
   console.log('  git push && git push --tags');
 }
 
