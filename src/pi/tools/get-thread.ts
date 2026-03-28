@@ -17,7 +17,7 @@ import {
   CANCELLATION_MESSAGE_GET_THREAD,
   type GetIssueOrPRThreadParams,
 } from '../../github/index';
-import { handleToolStart, formatThreadAsText } from './common';
+import { formatThreadAsText } from './common';
 import type { ToolDefinition, AgentToolResult } from '@mariozechner/pi-coding-agent';
 
 /**
@@ -65,9 +65,8 @@ export const getIssueOrPRThreadTool: ToolDefinition = {
     _onUpdate,
     _ctx
   ): Promise<AgentToolResult<unknown>> {
-    const [cancelled, cleanup] = handleToolStart('get_issue_or_pr_thread', signal);
-
-    if (cancelled) {
+    // Check for cancellation
+    if (signal?.aborted) {
       return {
         content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_GET_THREAD }],
         details: {
@@ -92,41 +91,37 @@ export const getIssueOrPRThreadTool: ToolDefinition = {
       };
     }
 
-    try {
-      const result = await getIssueOrPRThread(params as GetIssueOrPRThreadParams);
+    const result = await getIssueOrPRThread(params as GetIssueOrPRThreadParams);
 
-      if (!result) {
-        return {
-          content: [{ type: 'text' as const, text: 'Issue or pull request not found' }],
-          details: {
-            number: 0,
-            title: 'Not Found',
-            body: null,
-            state: 'closed',
-            author: 'unknown',
-            author_type: 'user',
-            created_at: undefined,
-            updated_at: undefined,
-            closed_at: undefined,
-            merged_at: undefined,
-            labels: [],
-            is_pull_request: false,
-            head_branch: undefined,
-            base_branch: undefined,
-            head_sha: undefined,
-            comments: [],
-          },
-        };
-      }
-
-      const threadSummary = formatThreadAsText(result);
-
+    if (!result) {
       return {
-        content: [{ type: 'text' as const, text: threadSummary }],
-        details: result,
+        content: [{ type: 'text' as const, text: 'Issue or pull request not found' }],
+        details: {
+          number: 0,
+          title: 'Not Found',
+          body: null,
+          state: 'closed',
+          author: 'unknown',
+          author_type: 'user',
+          created_at: undefined,
+          updated_at: undefined,
+          closed_at: undefined,
+          merged_at: undefined,
+          labels: [],
+          is_pull_request: false,
+          head_branch: undefined,
+          base_branch: undefined,
+          head_sha: undefined,
+          comments: [],
+        },
       };
-    } finally {
-      cleanup();
     }
+
+    const threadSummary = formatThreadAsText(result);
+
+    return {
+      content: [{ type: 'text' as const, text: threadSummary }],
+      details: result,
+    };
   },
 };

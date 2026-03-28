@@ -6,35 +6,6 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { IssueOrPRThread } from '../../github/index';
 
 /**
- * Log the start of a tool execution and check for cancellation.
- *
- * @param toolName - Name of the tool being invoked (used in log output).
- * @param signal   - Optional `AbortSignal` to check for cancellation.
- * @returns A tuple of [isCancelled, cleanupFn] where cleanupFn closes the group.
- */
-export function handleToolStart(
-  toolName: string,
-  signal: AbortSignal | undefined
-): [boolean, () => void] {
-  console.info('\n');
-  console.info('::group::🔧 Tool Execution');
-  console.info(`Tool called: ${toolName}`);
-
-  if (signal?.aborted) {
-    console.warn(`⚠️ Tool execution cancelled: ${toolName}`);
-    console.info('::endgroup::');
-    return [true, () => undefined];
-  }
-
-  const cleanup = (): void => {
-    console.info('execution completed');
-    console.info('::endgroup::');
-  };
-
-  return [false, cleanup];
-}
-
-/**
  * Format an {@link IssueOrPRThread} into a human-readable text summary.
  *
  * @param thread - The thread data to format.

@@ -19,7 +19,6 @@ import {
   type UpdatePullRequestParams,
   type UpdatePullRequestDetails,
 } from '../../github/index';
-import { handleToolStart } from './common';
 import type { ToolDefinition, AgentToolResult } from '@mariozechner/pi-coding-agent';
 
 /**
@@ -72,9 +71,8 @@ export const updatePullRequestTool: ToolDefinition = {
     _onUpdate,
     _ctx
   ): Promise<AgentToolResult<UpdatePullRequestDetails>> {
-    const [cancelled, cleanup] = handleToolStart('update_pull_request', signal);
-
-    if (cancelled) {
+    // Check for cancellation
+    if (signal?.aborted) {
       return {
         content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_UPDATE_PR }],
         details: {
@@ -88,30 +86,26 @@ export const updatePullRequestTool: ToolDefinition = {
       };
     }
 
-    try {
-      const { pull_number, title, body, message, dryRun } = params as UpdatePullRequestParams;
+    const { pull_number, title, body, message, dryRun } = params as UpdatePullRequestParams;
 
-      // Delegate to the GitHub-specific implementation
-      const updateParams: UpdatePullRequestParams = {};
-      if (pull_number !== undefined) {
-        updateParams.pull_number = pull_number;
-      }
-      if (title !== undefined) {
-        updateParams.title = title;
-      }
-      if (body !== undefined) {
-        updateParams.body = body;
-      }
-      if (message !== undefined) {
-        updateParams.message = message;
-      }
-      if (dryRun !== undefined) {
-        updateParams.dryRun = dryRun;
-      }
-
-      return await updatePullRequest(updateParams);
-    } finally {
-      cleanup();
+    // Delegate to the GitHub-specific implementation
+    const updateParams: UpdatePullRequestParams = {};
+    if (pull_number !== undefined) {
+      updateParams.pull_number = pull_number;
     }
+    if (title !== undefined) {
+      updateParams.title = title;
+    }
+    if (body !== undefined) {
+      updateParams.body = body;
+    }
+    if (message !== undefined) {
+      updateParams.message = message;
+    }
+    if (dryRun !== undefined) {
+      updateParams.dryRun = dryRun;
+    }
+
+    return await updatePullRequest(updateParams);
   },
 };

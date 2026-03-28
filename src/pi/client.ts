@@ -122,8 +122,6 @@ export class Client {
 
     await this.session.prompt(text);
     process.stdout.write('\n'); // ensure new line after prompt, usually missing from agent
-    core.info('');
-    core.info('✅ Agent session completed');
 
     return this.outputChunks.join('');
   }

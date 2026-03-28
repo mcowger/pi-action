@@ -18,7 +18,6 @@ import {
   type CreatePullRequestParams,
   type CreatePullRequestDetails,
 } from '../../github/index';
-import { handleToolStart } from './common';
 import type { ToolDefinition, AgentToolResult } from '@mariozechner/pi-coding-agent';
 
 /**
@@ -64,9 +63,8 @@ export const createPRTool: ToolDefinition = {
     _onUpdate,
     _ctx
   ): Promise<AgentToolResult<CreatePullRequestDetails>> {
-    const [cancelled, cleanup] = handleToolStart('create_pull_request', signal);
-
-    if (cancelled) {
+    // Check for cancellation
+    if (signal?.aborted) {
       return {
         content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_CREATE_PR }],
         details: {
@@ -80,24 +78,20 @@ export const createPRTool: ToolDefinition = {
       };
     }
 
-    try {
-      const { title, body, base, dryRun } = params as CreatePullRequestParams;
+    const { title, body, base, dryRun } = params as CreatePullRequestParams;
 
-      // Delegate to the GitHub-specific implementation
-      const prParams: CreatePullRequestParams = { title };
-      if (body !== undefined) {
-        prParams.body = body;
-      }
-      if (base !== undefined) {
-        prParams.base = base;
-      }
-      if (dryRun !== undefined) {
-        prParams.dryRun = dryRun;
-      }
-
-      return await createPullRequest(prParams);
-    } finally {
-      cleanup();
+    // Delegate to the GitHub-specific implementation
+    const prParams: CreatePullRequestParams = { title };
+    if (body !== undefined) {
+      prParams.body = body;
     }
+    if (base !== undefined) {
+      prParams.base = base;
+    }
+    if (dryRun !== undefined) {
+      prParams.dryRun = dryRun;
+    }
+
+    return await createPullRequest(prParams);
   },
 };

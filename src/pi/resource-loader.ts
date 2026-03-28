@@ -11,8 +11,8 @@
 
 import { DefaultResourceLoader } from '@mariozechner/pi-coding-agent';
 import { SYSTEM_PROMPT } from '../prompt';
-import { contextVisualizerFactory } from './context-visualizer';
-import { extFactory } from './tools/index';
+import { loggingFactory } from './logging';
+import { extensionsFactory } from './tools/index';
 
 /**
  * Create and configure the resource loader used by the agent session.
@@ -21,7 +21,7 @@ import { extFactory } from './tools/index';
  */
 export async function getResourceLoader(): Promise<DefaultResourceLoader> {
   const loader = new DefaultResourceLoader({
-    extensionFactories: [extFactory, contextVisualizerFactory],
+    extensionFactories: [extensionsFactory, loggingFactory],
     systemPromptOverride: () => SYSTEM_PROMPT,
     appendSystemPromptOverride: agentsFiles => {
       if (agentsFiles.length === 0) {

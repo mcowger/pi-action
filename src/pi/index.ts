@@ -9,7 +9,7 @@
 export { Client } from './client.js';
 
 // Extension factory for registering custom tools
-export { extFactory } from './tools/index.js';
+export { extensionsFactory } from './tools/index.js';
 
 // Resource loader
 export { getResourceLoader } from './resource-loader.js';
