@@ -36,7 +36,7 @@ export const loggingFactory = (pi: ExtensionAPI) => {
     // Model configuration
     const model = ctx.model;
     const thinkingLevel = pi.getThinkingLevel();
-    core.info('📊 Configuration');
+    core.info('📊 LLM');
     if (model) {
       core.info(`  Model:            ${model.provider}/${model.id}`);
       core.info(`  Reasoning:        ${model.reasoning}`);
