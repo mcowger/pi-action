@@ -1,0 +1,138 @@
+/**
+ * @file Pi coding agent client wrapper.
+ *
+ * Provides the `Client` class that wraps the Pi SDK, handling model resolution,
+ * authentication, agent session creation, and prompt execution. Designed for
+ * headless / non-interactive use inside GitHub Actions.
+ */
+
+import * as core from '@actions/core';
+import { AuthStorage, createAgentSession, ModelRegistry } from '@mariozechner/pi-coding-agent';
+import { getResourceLoader } from './resource-loader';
+import type { AgentSession } from '@mariozechner/pi-coding-agent';
+import type { Api, Model } from '@mariozechner/pi-ai';
+import type { ThinkingLevel } from '@mariozechner/pi-agent-core';
+
+/**
+ * Pi coding agent client for headless execution inside GitHub Actions.
+ *
+ * Wraps model resolution, authentication, agent session lifecycle, and prompt
+ * execution into a simple interface: construct → {@link ready} → {@link prompt}.
+ */
+export class Client {
+  private model: Model<Api>;
+  private authStorage: AuthStorage = AuthStorage.create();
+  private modelRegistry: ModelRegistry;
+  private session!: AgentSession;
+  private modelStr: string;
+  private provider: string;
+  private token: string;
+  private thinkingLevel: ThinkingLevel;
+  private outputChunks: string[] = [];
+
+  /**
+   * Create a new Pi client.
+   *
+   * @param modelStr   - Model identifier (e.g. `"claude-sonnet-4-20250514"`).
+   * @param provider   - Provider name as expected by the model registry
+   *                      (e.g. `"anthropic"`, `"openai"`).
+   * @param token      - API key for the provider. When non-empty it is stored in
+   *                      the auth storage automatically.
+   * @param level      - Thinking/reasoning level for the model
+   *                      (default `'off'`).
+   * @throws {Error}   If the requested model cannot be found in the registry.
+   */
+  constructor(modelStr: string, provider: string, token: string, level = 'off') {
+    this.modelStr = modelStr;
+    this.provider = provider;
+    this.token = token;
+    this.thinkingLevel = level as ThinkingLevel;
+    this.modelRegistry = new ModelRegistry(this.authStorage);
+
+    if (this.token) {
+      core.debug(`[auth] Setting api_key token for ${this.provider} provider`);
+      this.authStorage.set(this.provider, {
+        type: 'api_key',
+        key: this.token,
+      });
+    }
+
+    const foundModel = this.modelRegistry.find(this.provider, this.modelStr);
+
+    if (foundModel) {
+      this.model = foundModel;
+      let msg = `🤖 Model: ${this.model.provider}/${this.model.id}`;
+      if (this.thinkingLevel !== 'off') {
+        msg += ` (thinking: ${this.thinkingLevel})`;
+      }
+      core.info(msg);
+    } else {
+      throw new Error('Model not found: ' + this.provider + '/' + this.modelStr);
+    }
+  }
+
+  /**
+   * Initialise the underlying agent session and subscribe to streaming events.
+   *
+   * Text deltas are collected into an internal buffer that is returned by
+   * {@link prompt}. Thinking deltas are written to `stdout` in real time.
+   *
+   * @returns The client instance itself, for chaining.
+   */
+  async ready(): Promise<Client> {
+    const { session } = await createAgentSession({
+      model: this.model,
+      thinkingLevel: this.thinkingLevel,
+      authStorage: this.authStorage,
+      modelRegistry: this.modelRegistry,
+      resourceLoader: await getResourceLoader(),
+    });
+    this.session = session;
+
+    this.session.subscribe(event => {
+      if (event.type !== 'message_update') {
+        return;
+      }
+      switch (event.assistantMessageEvent.type) {
+        case 'text_delta':
+          this.outputChunks.push(event.assistantMessageEvent.delta);
+          break;
+        case 'thinking_delta':
+          process.stdout.write(event.assistantMessageEvent.delta);
+          break;
+        default:
+          break;
+      }
+    });
+
+    return this;
+  }
+
+  /**
+   * Send a prompt to the agent session and return the accumulated text response.
+   *
+   * @param text - The prompt text to send. Must be non-empty.
+   * @returns The full assistant text response joined from streamed chunks.
+   * @throws {Error} If `text` is falsy.
+   */
+  async prompt(text: string | undefined): Promise<string> {
+    if (!text) {
+      throw new Error('no text, skipping prompt');
+    }
+
+    core.info('::group::🤖 Agent prompt');
+    core.info(text);
+    core.info('::endgroup::');
+
+    core.info('');
+    core.info('🚀 Agent session starting...');
+    core.info('');
+
+    await this.session.prompt(text);
+    process.stdout.write('\n'); // ensure new line after prompt, usually missing from agent
+    core.info('');
+    core.info('✅ Agent session completed');
+
+    return this.outputChunks.join('');
+  }
+}

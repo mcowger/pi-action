@@ -15,10 +15,20 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
 
 - `src/` - TypeScript source code
   - `run.ts` - Main entry point for the action
-  - `github.ts` - GitHub API interactions and context enrichment
-  - `tools.ts` - Extension factory that registers the `create_pull_request` tool
+  - `pi/` - Pi client library and tool definitions
+    - `index.ts` - Main entry point (exports Client and extFactory)
+    - `client.ts` - Pi client wrapper class
+    - `resource-loader.ts` - Resource loader configuration
+    - `tools/` - Custom tool implementations
+      - `index.ts` - Tool registration factory (extFactory)
+      - `common.ts` - Shared utilities (handleToolStart, formatThreadAsText)
+      - `create-pr.ts` - create_pull_request tool definition
+      - `get-thread.ts` - get_issue_or_pr_thread tool definition
+      - `update-pr.ts` - update_pull_request tool definition
+    - `tools.test.ts` - Tests for tool definitions
+  - `github/` - GitHub API interactions and context enrichment
   - `prompt.ts` - Central place for all prompt management (system prompt, tool prompts)
-  - `github.test.ts`, `run.test.ts`, `tools.test.ts` - Test files
+  - `github.test.ts`, `run.test.ts`, `prompt.test.ts` - Test files
 - `.github/workflows/` - Workflow definitions
 
 ## Important Notes for Agents
@@ -29,7 +39,7 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
    ```
    This runs: Prettier formatting, ESLint, TypeScript type checking, tests, and build.
 
-2. **Extension Pattern**: The action extends Pi with a custom tool (`create_pull_request`) via the `ExtensionAPI` in `src/tools.ts`.
+2. **Extension Pattern**: The action extends Pi with custom tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`) via the `ExtensionAPI` in `src/pi/tools/index.ts`.
 
 3. **Test Coverage**: The project uses `bun test` for testing. Maintain and expand test coverage when making changes.
 
