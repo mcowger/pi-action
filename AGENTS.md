@@ -30,7 +30,6 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
     - `tools.test.ts` - Tests for tool definitions
     - `prompt.test.ts` - Tests for prompt definitions
   - `github/` - GitHub API interactions and context enrichment
-  - `github.test.ts`, `run.test.ts` - Test files
 - `scripts/` - Utilities, helpers, etc.
 
 ## Important Notes for Agents
