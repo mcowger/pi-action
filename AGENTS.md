@@ -19,7 +19,8 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
     - `index.ts` - Main entry point (exports Client and extFactory)
     - `client.ts` - Pi client wrapper class
     - `resource-loader.ts` - Resource loader configuration
-    - `context-visualizer.ts` - Context and tool execution logging via SDK events
+    - `prompt.ts` - Central place for all prompt management (system prompt, tool prompts)
+    - `logging.ts` - Context and tool execution logging via SDK events
     - `tools/` - Custom tool implementations
       - `index.ts` - Tool registration factory (extFactory)
       - `common.ts` - Shared utilities (formatThreadAsText for thread formatting)
@@ -27,10 +28,10 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
       - `get-thread.ts` - get_issue_or_pr_thread tool definition
       - `update-pr.ts` - update_pull_request tool definition
     - `tools.test.ts` - Tests for tool definitions
+    - `prompt.test.ts` - Tests for prompt definitions
   - `github/` - GitHub API interactions and context enrichment
-  - `prompt.ts` - Central place for all prompt management (system prompt, tool prompts)
-  - `github.test.ts`, `run.test.ts`, `prompt.test.ts` - Test files
-- `.github/workflows/` - Workflow definitions
+  - `github.test.ts`, `run.test.ts` - Test files
+- `scripts/` - Utilities, helpers, etc.
 
 ## Important Notes for Agents
 
@@ -42,7 +43,7 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
 
 2. **Extension Pattern**: The action extends Pi with custom tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`) via the `ExtensionAPI` in `src/pi/tools/index.ts`.
 
-3. **Centralized Logging**: Tool execution logging is centralized in `src/pi/context-visualizer.ts` using SDK events (`tool_execution_start`, `tool_execution_end`). Tools check `signal?.aborted` directly and return `details.cancelled: true` for cancellations.
+3. **Centralized Logging**: Tool execution logging is centralized in `src/pi/logging.ts` using SDK events (`tool_execution_start`, `tool_execution_end`). Tools check `signal?.aborted` directly and return `details.cancelled: true` for cancellations.
 
 4. **Test Coverage**: The project uses `bun test` for testing. Maintain and expand test coverage when making changes.
 
