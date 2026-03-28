@@ -17,7 +17,6 @@ import {
   FILE_MODE_DIRECTORY,
   FILE_MODE_EXECUTABLE,
   FILE_MODE_REGULAR,
-  MAX_FILE_SIZE_BYTES,
   IGNORE_PATTERNS,
 } from './constants.js';
 
@@ -167,15 +166,8 @@ export async function scanForChanges(
       }
 
       if (entry.isDirectory()) {
-        await scanDirectory(fullPath, relativePath);
+        await scanDirectory(fullPath, relativeFilePath);
       } else if (entry.isFile()) {
-        // Skip files that are too large (>1MB to be safe)
-        const stats = await fs.stat(fullPath);
-        if (stats.size > MAX_FILE_SIZE_BYTES) {
-          log.debug(`Skipping large file (>1MB): ${relativeFilePath}`);
-          continue;
-        }
-
         // Try to read file content, skip if binary
         let localContent: string;
         try {

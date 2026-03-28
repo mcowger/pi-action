@@ -13,9 +13,6 @@ export const FILE_MODE_REGULAR = '100644' as const; // Regular file, not executa
 export const FILE_MODE_EXECUTABLE = '100755' as const; // Executable file
 export const FILE_MODE_DIRECTORY = '040000' as const; // Directory
 
-// File size limits
-export const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1MB
-
 // Branch naming patterns
 export const BRANCH_PREFIX = 'pi/issue' as const;
 
