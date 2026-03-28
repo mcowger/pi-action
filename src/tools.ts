@@ -46,20 +46,25 @@ import type {
  *
  * @param toolName - Name of the tool being invoked (used in log output).
  * @param signal   - Optional `AbortSignal` to check for cancellation.
- * @returns `true` if the tool was cancelled and execution should stop,
- *          `false` to continue.
+ * @returns A tuple of [isCancelled, cleanupFn] where cleanupFn closes the group.
  */
-function handleToolStart(toolName: string, signal: AbortSignal | undefined): boolean {
+function handleToolStart(toolName: string, signal: AbortSignal | undefined): [boolean, () => void] {
   console.info('\n');
-  console.info(`\n[tool called] === ${toolName} ===`);
-  console.info('\n');
+  console.info('::group::🔧 Tool Execution');
+  console.info(`Tool called: ${toolName}`);
 
   if (signal?.aborted) {
-    console.warn(`[${toolName}] Tool execution cancelled`);
-    return true;
+    console.warn(`⚠️ Tool execution cancelled: ${toolName}`);
+    console.info('::endgroup::');
+    return [true, () => undefined];
   }
 
-  return false;
+  const cleanup = (): void => {
+    console.info('execution completed');
+    console.info('::endgroup::');
+  };
+
+  return [false, cleanup];
 }
 
 const createPRTool: ToolDefinition = {
@@ -96,7 +101,9 @@ const createPRTool: ToolDefinition = {
     _onUpdate,
     _ctx
   ): Promise<AgentToolResult<CreatePullRequestDetails>> {
-    if (handleToolStart('create_pull_request', signal)) {
+    const [cancelled, cleanup] = handleToolStart('create_pull_request', signal);
+
+    if (cancelled) {
       return {
         content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_CREATE_PR }],
         details: {
@@ -110,21 +117,25 @@ const createPRTool: ToolDefinition = {
       };
     }
 
-    const { title, body, base, dryRun } = params as CreatePullRequestParams;
+    try {
+      const { title, body, base, dryRun } = params as CreatePullRequestParams;
 
-    // Delegate to the GitHub-specific implementation
-    const prParams: CreatePullRequestParams = { title };
-    if (body !== undefined) {
-      prParams.body = body;
-    }
-    if (base !== undefined) {
-      prParams.base = base;
-    }
-    if (dryRun !== undefined) {
-      prParams.dryRun = dryRun;
-    }
+      // Delegate to the GitHub-specific implementation
+      const prParams: CreatePullRequestParams = { title };
+      if (body !== undefined) {
+        prParams.body = body;
+      }
+      if (base !== undefined) {
+        prParams.base = base;
+      }
+      if (dryRun !== undefined) {
+        prParams.dryRun = dryRun;
+      }
 
-    return await createPullRequest(prParams);
+      return await createPullRequest(prParams);
+    } finally {
+      cleanup();
+    }
   },
 };
 
@@ -225,7 +236,9 @@ const getIssueOrPRThreadTool: ToolDefinition = {
     _onUpdate,
     _ctx
   ): Promise<AgentToolResult<IssueOrPRThread>> {
-    if (handleToolStart('get_issue_or_pr_thread', signal)) {
+    const [cancelled, cleanup] = handleToolStart('get_issue_or_pr_thread', signal);
+
+    if (cancelled) {
       return {
         content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_GET_THREAD }],
         details: {
@@ -250,38 +263,42 @@ const getIssueOrPRThreadTool: ToolDefinition = {
       };
     }
 
-    const result = await getIssueOrPRThread(params as GetIssueOrPRThreadParams);
+    try {
+      const result = await getIssueOrPRThread(params as GetIssueOrPRThreadParams);
 
-    if (!result) {
+      if (!result) {
+        return {
+          content: [{ type: 'text' as const, text: 'Issue or pull request not found' }],
+          details: {
+            number: 0,
+            title: 'Not Found',
+            body: null,
+            state: 'closed',
+            author: 'unknown',
+            author_type: 'user',
+            created_at: undefined,
+            updated_at: undefined,
+            closed_at: undefined,
+            merged_at: undefined,
+            labels: [],
+            is_pull_request: false,
+            head_branch: undefined,
+            base_branch: undefined,
+            head_sha: undefined,
+            comments: [],
+          },
+        };
+      }
+
+      const threadSummary = formatThreadAsText(result);
+
       return {
-        content: [{ type: 'text' as const, text: 'Issue or pull request not found' }],
-        details: {
-          number: 0,
-          title: 'Not Found',
-          body: null,
-          state: 'closed',
-          author: 'unknown',
-          author_type: 'user',
-          created_at: undefined,
-          updated_at: undefined,
-          closed_at: undefined,
-          merged_at: undefined,
-          labels: [],
-          is_pull_request: false,
-          head_branch: undefined,
-          base_branch: undefined,
-          head_sha: undefined,
-          comments: [],
-        },
+        content: [{ type: 'text' as const, text: threadSummary }],
+        details: result,
       };
+    } finally {
+      cleanup();
     }
-
-    const threadSummary = formatThreadAsText(result);
-
-    return {
-      content: [{ type: 'text' as const, text: threadSummary }],
-      details: result,
-    };
   },
 };
 
@@ -297,6 +314,6 @@ export const extFactory = (pi: ExtensionAPI): void => {
   const tools = [createPRTool, getIssueOrPRThreadTool];
   tools.forEach(tool => {
     pi.registerTool(tool);
-    core.debug(`[${tool.name}] Tool registered successfully`);
+    core.debug(`🔧 [${tool.name}] Tool registered successfully`);
   });
 };

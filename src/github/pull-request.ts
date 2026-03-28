@@ -25,6 +25,17 @@ import {
 
 const octokit = getOctokit();
 
+/**
+ * Logging helpers with emoji labels for pull-request operations.
+ */
+function prDebug(msg: string): void {
+  core.debug(`🔀 ${msg}`);
+}
+
+function prInfo(msg: string): void {
+  core.info(`🔀 ${msg}`);
+}
+
 export interface CreatePullRequestParams {
   title: string;
   body?: string;
@@ -64,27 +75,23 @@ export type FileMode =
  * @returns The resolved base branch name.
  */
 async function determineBaseBranch(providedBase: string | undefined): Promise<string> {
-  const debug = (msg: string) => {
-    core.debug(`[pull-request] ${msg}`);
-  };
-
   let baseBranch: string;
   if (providedBase) {
     // Explicitly provided by caller
     baseBranch = providedBase;
-    debug(`Using provided base branch: ${baseBranch}`);
+    prDebug(`Using provided base branch: ${baseBranch}`);
     return baseBranch;
   }
 
   if (github.context.payload.repository?.default_branch) {
     // Available in context
     baseBranch = github.context.payload.repository.default_branch;
-    debug(`Using default branch from context: ${baseBranch}`);
+    prDebug(`Using default branch from context: ${baseBranch}`);
     return baseBranch;
   }
 
   // Fetch from GitHub API
-  debug(`Fetching repository default branch from GitHub API...`);
+  prDebug(`Fetching repository default branch from GitHub API...`);
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
   const repoData = await octokit.rest.repos.get({
@@ -92,7 +99,7 @@ async function determineBaseBranch(providedBase: string | undefined): Promise<st
     repo,
   });
   baseBranch = repoData.data.default_branch;
-  debug(`Fetched default branch: ${baseBranch}`);
+  prDebug(`Fetched default branch: ${baseBranch}`);
   return baseBranch;
 }
 
@@ -106,10 +113,6 @@ async function determineBaseBranch(providedBase: string | undefined): Promise<st
  * @returns The final Markdown body string.
  */
 function generatePullRequestBody(providedBody: string | undefined): string {
-  const debug = (msg: string) => {
-    core.debug(`[pull-request] ${msg}`);
-  };
-
   let bodyText = providedBody ?? '';
   if (!bodyText && github.context.issue?.number) {
     const contextType = getContextType();
@@ -119,7 +122,7 @@ function generatePullRequestBody(providedBody: string | undefined): string {
     } else if (contextType === 'pull_request') {
       bodyText = `Related to #${issueNum}\n\nCreated by pi coding agent.`;
     }
-    debug(`Auto-generated body from issue #${issueNum}`);
+    prDebug(`Auto-generated body from issue #${issueNum}`);
   }
 
   return bodyText;
@@ -161,11 +164,7 @@ async function scanForChanges(
     mode: FileMode;
   }[]
 > {
-  const debug = (msg: string) => {
-    core.debug(`[pull-request] ${msg}`);
-  };
-
-  debug(`Scanning local files for changes...`);
+  prDebug(`Scanning local files for changes...`);
 
   const repoRoot = process.env.GITHUB_WORKSPACE ?? process.cwd();
 
@@ -193,7 +192,7 @@ async function scanForChanges(
       const relativeFilePath = relativePath ? path.join(relativePath, entry.name) : entry.name;
 
       if (ig.ignores(relativeFilePath)) {
-        debug(`Ignored: ${relativeFilePath}`);
+        prDebug(`Ignored: ${relativeFilePath}`);
         continue;
       }
 
@@ -203,7 +202,7 @@ async function scanForChanges(
         // Skip files that are too large (>1MB to be safe)
         const stats = await fs.stat(fullPath);
         if (stats.size > MAX_FILE_SIZE_BYTES) {
-          debug(`Skipping large file (>1MB): ${relativeFilePath}`);
+          prDebug(`Skipping large file (>1MB): ${relativeFilePath}`);
           continue;
         }
 
@@ -212,7 +211,7 @@ async function scanForChanges(
         try {
           localContent = await fs.readFile(fullPath, 'utf-8');
         } catch (_e) {
-          debug(`Skipping file (likely binary): ${relativeFilePath}`);
+          prDebug(`Skipping file (likely binary): ${relativeFilePath}`);
           continue;
         }
 
@@ -223,11 +222,11 @@ async function scanForChanges(
         if (!baseFile) {
           // New file
           isChanged = true;
-          debug(`New file: ${relativeFilePath}`);
+          prDebug(`New file: ${relativeFilePath}`);
         } else if (baseFile.content !== null && baseFile.content !== localContent) {
           // Modified file
           isChanged = true;
-          debug(`Modified file: ${relativeFilePath}`);
+          prDebug(`Modified file: ${relativeFilePath}`);
         }
 
         if (isChanged) {
@@ -243,7 +242,7 @@ async function scanForChanges(
 
   await scanDirectory(repoRoot, '');
 
-  debug(`Found ${changedFiles.length} changed file(s)`);
+  prDebug(`Found ${changedFiles.length} changed file(s)`);
   return changedFiles;
 }
 
@@ -262,14 +261,10 @@ async function createBlobsAndTree(
   }[],
   baseSha: string
 ): Promise<string> {
-  const debug = (msg: string) => {
-    core.debug(`[pull-request] ${msg}`);
-  };
-
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
 
-  debug(`Creating blobs for changed files...`);
+  prDebug(`Creating blobs for changed files...`);
 
   // Create blobs for all changed files and map their paths to SHAs
   const blobShaMap = new Map<string, string>();
@@ -281,12 +276,12 @@ async function createBlobsAndTree(
       encoding: 'base64',
     });
     blobShaMap.set(file.path, blob.data.sha);
-    debug(`Created blob for ${file.path}: ${blob.data.sha}`);
+    prDebug(`Created blob for ${file.path}: ${blob.data.sha}`);
   }
-  debug(`Created ${blobShaMap.size} blob(s)`);
+  prDebug(`Created ${blobShaMap.size} blob(s)`);
 
   // Create tree with all the blob references
-  debug(`Creating tree with changes...`);
+  prDebug(`Creating tree with changes...`);
   const tree = await octokit.rest.git.createTree({
     owner,
     repo,
@@ -298,7 +293,7 @@ async function createBlobsAndTree(
       sha,
     })),
   });
-  debug(`Created tree: ${tree.data.sha}`);
+  prDebug(`Created tree: ${tree.data.sha}`);
 
   return tree.data.sha;
 }
@@ -318,15 +313,11 @@ async function createCommitAndUpdateBranch(
   branchName: string,
   title: string
 ): Promise<string> {
-  const debug = (msg: string) => {
-    core.debug(`[pull-request] ${msg}`);
-  };
-
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
 
   // Create a single commit with the new tree
-  debug(`Creating commit...`);
+  prDebug(`Creating commit...`);
   const commit = await octokit.rest.git.createCommit({
     owner,
     repo,
@@ -334,17 +325,17 @@ async function createCommitAndUpdateBranch(
     tree: treeSha,
     parents: [baseSha],
   });
-  debug(`Created commit: ${commit.data.sha}`);
+  prDebug(`Created commit: ${commit.data.sha}`);
 
   // Update the branch reference to point to the new commit
-  debug(`Updating branch reference...`);
+  prDebug(`Updating branch reference...`);
   await octokit.rest.git.updateRef({
     owner,
     repo,
     ref: `heads/${branchName}`,
     sha: commit.data.sha,
   });
-  debug(`Branch updated successfully`);
+  prDebug(`Branch updated successfully`);
 
   return commit.data.sha;
 }
@@ -364,14 +355,10 @@ async function createPullRequestOnGitHub(
   baseBranch: string,
   headBranch: string
 ): Promise<{ number: number; url: string; headRef: string; baseRef: string }> {
-  const debug = (msg: string) => {
-    core.debug(`[pull-request] ${msg}`);
-  };
-
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
 
-  debug(`Creating pull request...`);
+  prDebug(`Creating pull request...`);
 
   const result = await octokit.rest.pulls.create({
     owner,
@@ -406,22 +393,16 @@ export async function createPullRequest(
   params: CreatePullRequestParams
 ): Promise<CreatePullRequestResult> {
   const { title, body, base, dryRun } = params;
-  const info = (msg: string) => {
-    core.info(`[pull-request] ${msg}`);
-  };
-  const debug = (msg: string) => {
-    core.debug(`[pull-request] ${msg}`);
-  };
 
   // Auto-generate branch name
   const issueNumber = github.context.issue?.number ?? 'unknown';
   const timestamp = Temporal.Now.instant().epochMilliseconds;
   const head = `${BRANCH_PREFIX}${issueNumber}-${timestamp}`;
 
-  debug(`Title: ${title}`);
-  debug(`Auto-generated branch: ${head}`);
-  debug(`Base: ${base ?? 'default'}`);
-  debug(`DryRun: ${dryRun ?? false}`);
+  prDebug(`Title: ${title}`);
+  prDebug(`Auto-generated branch: ${head}`);
+  prDebug(`Base: ${base ?? 'default'}`);
+  prDebug(`DryRun: ${dryRun ?? false}`);
 
   // Determine base branch
   const baseBranch = await determineBaseBranch(base);
@@ -432,7 +413,7 @@ export async function createPullRequest(
   // Dry run mode
   if (dryRun) {
     const message = `[DRY RUN] Would create pull request:\n- Title: ${title}\n- Body: ${bodyText || '(empty)'}\n- Base: ${baseBranch}\n- Head: ${head}`;
-    debug(message);
+    prDebug(message);
 
     return {
       content: [{ type: 'text' as const, text: message }],
@@ -447,24 +428,24 @@ export async function createPullRequest(
   }
 
   // Create and push the new branch via GitHub API
-  debug(`Preparing branch and changes via GitHub API...`);
+  prDebug(`Preparing branch and changes via GitHub API...`);
 
   try {
     const owner = github.context.repo.owner;
     const repo = github.context.repo.repo;
 
     // Get base branch reference
-    debug(`Getting base branch "${baseBranch}" reference...`);
+    prDebug(`Getting base branch "${baseBranch}" reference...`);
     const baseRef = await octokit.rest.git.getRef({
       owner,
       repo,
       ref: `heads/${baseBranch}`,
     });
     const baseSha = baseRef.data.object.sha;
-    debug(`Base branch SHA: ${baseSha}`);
+    prDebug(`Base branch SHA: ${baseSha}`);
 
     // Get files that exist in the base branch tree (for comparison)
-    debug(`Getting base branch tree...`);
+    prDebug(`Getting base branch tree...`);
     const baseTree = await octokit.rest.git.getTree({
       owner,
       repo,
@@ -492,7 +473,7 @@ export async function createPullRequest(
         baseFiles.set(item.path, { sha: item.sha, content });
       }
     }
-    debug(`Found ${baseFiles.size} files in base branch`);
+    prDebug(`Found ${baseFiles.size} files in base branch`);
 
     // Scan for changes
     const changedFiles = await scanForChanges(baseFiles);
@@ -504,14 +485,14 @@ export async function createPullRequest(
     }
 
     // Create new branch reference from base branch
-    debug(`Creating new branch "${head}"...`);
+    prDebug(`Creating new branch "${head}"...`);
     await octokit.rest.git.createRef({
       owner,
       repo,
       ref: `refs/heads/${head}`,
       sha: baseSha,
     });
-    debug(`Branch created successfully`);
+    prDebug(`Branch created successfully`);
 
     // Create blobs and tree
     const treeSha = await createBlobsAndTree(changedFiles, baseSha);
@@ -524,7 +505,7 @@ export async function createPullRequest(
 
     const successMessage = `Pull request #${prResult.number} created: ${prResult.url}`;
 
-    info(`SUCCESS: ${successMessage}`);
+    prInfo(`SUCCESS: ${successMessage}`);
 
     const details: CreatePullRequestDetails = {
       pullRequestNumber: prResult.number,
@@ -540,7 +521,6 @@ export async function createPullRequest(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const errorMsg = `[pull-request] Failed to create pull request: ${message}`;
-    throw new Error(errorMsg);
+    throw new Error(`[pull-request] Failed to create pull request: ${message}`);
   }
 }

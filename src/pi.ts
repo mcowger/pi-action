@@ -84,7 +84,7 @@ export class Client {
 
     if (foundModel) {
       this.model = foundModel;
-      let msg = `[model] ${this.model.provider}/${this.model.id}`;
+      let msg = `🤖 Model: ${this.model.provider}/${this.model.id}`;
       if (this.thinkingLevel !== 'off') {
         msg += ` (thinking: ${this.thinkingLevel})`;
       }
@@ -143,19 +143,18 @@ export class Client {
       throw new Error('no text, skipping prompt');
     }
 
-    core.info('[prompt]');
-    text.split('\n').forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed.length > 0) {
-        core.info(' =====> ' + trimmed);
-      }
-    });
-    core.info('[agent session starting...]');
+    core.info('::group::🤖 Agent prompt');
+    core.info(text);
+    core.info('::endgroup::');
+
+    core.info('');
+    core.info('🚀 Agent session starting...');
     core.info('');
 
     await this.session.prompt(text);
     process.stdout.write('\n'); // ensure new line after prompt, usually missing from agent
-    core.info('[agent session completed]');
+    core.info('');
+    core.info('✅ Agent session completed');
 
     return this.outputChunks.join('');
   }

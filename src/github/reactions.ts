@@ -10,6 +10,13 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import RestEndpointMethodTypes from '@octokit/plugin-rest-endpoint-methods';
+
+/**
+ * Debug logging helper.
+ */
+function debug(msg: string): void {
+  core.debug(msg);
+}
 import { getOctokit } from './octokit.js';
 import { REACTION_TYPE_EYES } from './constants.js';
 
@@ -30,7 +37,7 @@ export type DeleteReactionType =
 export async function addReaction(): Promise<CreateReactionType | undefined> {
   const comment = github.context.payload.comment;
   if (!comment) {
-    core.debug('no comment found, skipping reaction');
+    debug('[reactions] no comment found, skipping reaction');
     return;
   }
 

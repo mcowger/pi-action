@@ -37,7 +37,7 @@ export async function run() {
 
   let startTime = getStartTimeFromContext();
   if (startTime !== undefined) {
-    core.info(`[trigger time] ${startTime.toString()}`);
+    core.info(`🕐 Trigger time: ${startTime.toString()}`);
   } else {
     startTime = Temporal.Now.instant();
   }

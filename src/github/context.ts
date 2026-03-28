@@ -13,6 +13,13 @@ import { getOctokit } from './octokit.js';
 import { DEFAULT_TRIGGER, MAX_COMMENTS } from './constants.js';
 
 /**
+ * Debug logging helper.
+ */
+function debug(msg: string): void {
+  core.debug(msg);
+}
+
+/**
  * Extract the start timestamp from the GitHub event payload.
  *
  * Uses the timestamp of the triggering event (comment creation, issue opening,
@@ -38,9 +45,7 @@ export function getStartTimeFromContext(): Temporal.Instant | undefined {
     return Temporal.Instant.from(payload.pull_request.created_at);
   }
 
-  core.debug(
-    `[getStartTimeFromContext] Could not determine start time from event type: ${eventName}`
-  );
+  debug(`[getStartTimeFromContext] Could not determine start time from event type: ${eventName}`);
   return undefined;
 }
 
@@ -246,7 +251,7 @@ function resolveThreadParams(
   const resolvedIssueNumber = issue_number ?? github.context.issue.number;
 
   if (!resolvedOwner || !resolvedRepo || !resolvedIssueNumber) {
-    core.debug('[getIssueOrPRThread] Missing owner, repo, or issue_number');
+    debug(`[getIssueOrPRThread] Missing owner, repo, or issue_number`);
     return undefined;
   }
 
@@ -291,7 +296,7 @@ async function fetchPRData(
     });
     return prData.data;
   } catch (_e) {
-    core.debug('[getIssueOrPRThread] Failed to fetch PR data, continuing');
+    debug(`[getIssueOrPRThread] Failed to fetch PR data, continuing`);
     return undefined;
   }
 }
@@ -418,7 +423,7 @@ export async function getIssueOrPRThread(
     return buildThreadResult(issue, isPullRequest, prData, comments);
   } catch (error) {
     if (error instanceof Error && 'status' in error && error.status === 404) {
-      core.debug(`[getIssueOrPRThread] Issue/PR #${issueNumber} not found`);
+      debug(`[getIssueOrPRThread] Issue/PR #${issueNumber} not found`);
       return undefined;
     }
     throw error;
