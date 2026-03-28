@@ -118,11 +118,12 @@ The action is built on top of the [Pi coding agent](https://pi.dev) framework an
 
 ### Custom Tools
 
-The action extends Pi with two internal tools:
+The action extends Pi with three internal tools:
 
 | Tool | Description |
 |------|-------------|
 | `create_pull_request` | Creates a new pull request by detecting file changes, creating a branch, committing changes via GitHub API, and opening the PR. Supports `dry_run` mode for testing without actual PR creation. |
+| `update_pull_request` | Updates an existing pull request by pushing new commits to the PR branch and optionally updating the title and/or description. Supports `dry_run` mode for testing without actual modifications. |
 | `get_issue_or_pr_thread` | Retrieves the full thread of an issue or pull request including title, body, state, labels, branch info (for PRs), and all comments. Useful for understanding the full context before making changes. |
 
 ## Development
