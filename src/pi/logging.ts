@@ -23,17 +23,13 @@ export const loggingFactory = (pi: ExtensionAPI) => {
     if (cancelled) {
       core.warning(`⚠️ Tool execution cancelled: ${event.toolName}`);
     } else if (event.isError) {
-      core.warning(`❌ Tool execution failed: ${event.toolName}`);
+      core.info(`❌ Tool execution failed: ${event.toolName}`);
     }
   });
 
   pi.on('before_agent_start', async (event, ctx) => {
-    core.info('::group::🤖 Agent Configuration');
-    core.info('╔════════════════════════════════════════════════════════════════╗');
-    core.info('║                  🤖 AGENT SESSION CONTEXT                      ║');
-    core.info('╚════════════════════════════════════════════════════════════════╝');
+    core.info('::group::🤖 Agent Session settings');
 
-    // Model configuration
     const model = ctx.model;
     const thinkingLevel = pi.getThinkingLevel();
     core.info('📊 LLM');
@@ -46,7 +42,6 @@ export const loggingFactory = (pi: ExtensionAPI) => {
     core.info(`  Thinking Level:   ${thinkingLevel}`);
     core.info('─────────────────────────────────────────────────────────────────────');
 
-    // Available tools
     const allTools = pi.getAllTools();
     if (allTools.length > 0) {
       core.info('🔧 Available Tools');
@@ -60,7 +55,6 @@ export const loggingFactory = (pi: ExtensionAPI) => {
       core.info('─────────────────────────────────────────────────────────────────────');
     }
 
-    // System prompt
     const systemPrompt = ctx.getSystemPrompt();
     core.info('📝 System Prompt');
     const displaySystemPrompt = truncateText(systemPrompt, 1000);
@@ -70,7 +64,6 @@ export const loggingFactory = (pi: ExtensionAPI) => {
     }
     core.info('─────────────────────────────────────────────────────────────────────');
 
-    // Current user prompt
     core.info('👤 User Prompt');
     core.info(truncateText(event.prompt, 500));
     if (event.images && event.images.length > 0) {
@@ -83,7 +76,6 @@ export const loggingFactory = (pi: ExtensionAPI) => {
     core.info('════════════════════════════════════════════════════════════════');
   });
 
-  // Show completion after agent finishes
   pi.on('agent_end', async () => {
     core.info('\n');
     core.info('════════════════════════════════════════════════════════════════');
