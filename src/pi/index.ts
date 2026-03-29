@@ -2,5 +2,5 @@
  * @file Pi module barrel export.
  */
 
-// Main client
-export { Client } from './client.js';
+// Main agent
+export { Agent } from './agent.js';

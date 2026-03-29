@@ -14,10 +14,37 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
 ## Codebase Structure
 
 - `src/` - TypeScript action source code
-  - `run.ts` - Main entry point for the action
-  - `pi/` - Pi client library and tool definitions
+  - `run.ts` - Main entry point for the action (simplified orchestrator creation)
+  - `orchestrator.ts` - Business logic orchestration with testable adapter pattern
+  - `types.ts` - Shared type definitions and adapter interfaces
+  - `adapters/` - Production implementations of adapter interfaces
+    - `core-adapter.ts` - GitHub Actions Core operations
+    - `github-adapter.ts` - GitHub API operations
+    - `pi-agent-adapter.ts` - Pi agent factory
+  - `pi/` - Pi agent library and tool definitions
   - `github/` - GitHub API interactions and context enrichment
 - `scripts/` - Utilities, helpers, etc.
+
+## Architecture Overview
+
+The action uses a **testable adapter pattern** to separate business logic from external dependencies:
+
+1. **Orchestrator** (`ActionOrchestrator`) - Contains all business logic:
+   - Configuration gathering from inputs
+   - Prompt retrieval from GitHub
+   - Reaction lifecycle management
+   - Pi agent execution
+   - Error handling and finalization
+
+2. **Adapters** - Abstract external dependencies:
+   - `CoreAdapter` - Wraps `@actions/core` operations
+   - `GitHubAdapter` - Wraps GitHub API operations
+   - `PiAgentFactory` - Creates Pi agent instances
+
+3. **Testability** - The orchestrator can be tested with mock adapters, enabling:
+   - Unit testing of orchestration flow
+   - Verification of error handling behavior
+   - Testing of edge cases without external dependencies
 
 ## Important Notes for Agents
 
@@ -27,10 +54,12 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
    ```
    This runs: Prettier formatting, ESLint, TypeScript type checking, tests, and build.
 
-2. **Extension Pattern**: The action extends Pi with custom tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`) via the `ExtensionAPI` in `src/pi/tools/index.ts`.
+2. **Orchestrator Testing**: Business logic is tested in `src/orchestrator.test.ts`. When modifying orchestration behavior, update these tests. Do **not** test mocks directly—test the actual business logic flow.
 
-3. **Centralized Logging**: Tool execution logging is centralized in `src/pi/logging.ts` using SDK events (`tool_execution_start`, `tool_execution_end`). Tools check `signal?.aborted` directly and return `details.cancelled: true` for cancellations.
+3. **Extension Pattern**: The action extends Pi with custom tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`) via the `ExtensionAPI` in `src/pi/tools/index.ts`.
 
-4. **Test Coverage**: The project uses `bun test` for testing. Maintain and expand test coverage when making changes.
+4. **Centralized Logging**: Tool execution logging is centralized in `src/pi/logging.ts` using SDK events (`tool_execution_start`, `tool_execution_end`). Tools check `signal?.aborted` directly and return `details.cancelled: true` for cancellations.
 
-5. **Prefer Bun package manager over npm or others**
+5. **Test Coverage**: The project uses `bun test` for testing. Maintain and expand test coverage when making changes. Focus on behavior verification, not implementation details.
+
+6. **Prefer Bun package manager over npm or others**

@@ -86,8 +86,8 @@ Create a workflow file, e.g., `.github/workflows/pi-agent.yml`. See the [interac
 | `provider` | LLM provider (anthropic, openai, google, etc.) | Yes | - |
 | `model` | Model to use (e.g., claude-sonnet-4-5, gpt-4o, gemini-2.5-pro) | Yes | - |
 | `token` | Provider API token | Yes | - |
-| `thinking_level` | Model thinking level | No | off |
-| `trigger` | Trigger phrase to invoke the action | No | /pi |
+| `thinking_level` | Model thinking level (off|low|medium|high) | No | off |
+| `trigger` | Trigger phrase used to invoke the action | No | /pi |
 | `prompt` | Optional prompt to send to the agent (skips comment extraction) | No | - |
 
 Refer to [Pi documentation](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) for the current list of supported providers / models / etc.
@@ -113,10 +113,16 @@ The action is built on top of the [Pi coding agent](https://pi.dev) framework an
 
 ```
 src/
-├── run.ts                     # Main entry point and orchestration
+├── run.ts                     # Main entry point (creates adapters and orchestrator)
+├── orchestrator.ts            # Business logic orchestration with adapter pattern
+├── types.ts                   # Shared type definitions and adapter interfaces
+├── adapters/                  # Production implementations of adapter interfaces
+│   ├── core-adapter.ts        # GitHub Actions Core operations
+│   ├── github-adapter.ts      # GitHub API operations
+│   └── pi-agent-adapter.ts    # Pi agent factory
 ├── pi/                        # Pi integration layer
 │   ├── index.ts               # Barrel export for pi module
-│   ├── client.ts              # Pi SDK wrapper for session management
+│   ├── agent.ts               # Pi SDK wrapper for session management (Agent class)
 │   ├── prompt.ts              # System prompt and tool prompt definitions
 │   ├── logging.ts             # Centralized logging via SDK events
 │   ├── resource-loader.ts     # Resource loader configuration
@@ -149,12 +155,12 @@ The action extends Pi with three custom tools:
 | `update_pull_request` | Updates an existing pull request by pushing new commits to the PR branch and optionally updating the title and/or description. Supports `dry_run` mode for testing without actual modifications. |
 | `get_issue_or_pr_thread` | Retrieves the full thread of an issue or pull request including title, body, state, labels, branch info (for PRs), and all comments. Useful for understanding the full context before making changes. |
 
-### Data Flow
+### Data Flow via comment trigger
 
 1. **Trigger Detection**: Action reads GitHub event payload to determine if triggered by comment or direct prompt
 2. **Context Extraction**: `github/context.ts` extracts issue/PR metadata and enriches prompt
 3. **Reaction Management**: `github/reactions.ts` adds "eyes" reaction for visual feedback
-4. **Session Initialization**: `pi/client.ts` creates Pi agent session with model, auth, and resource loader
+4. **Session Initialization**: `pi/agent.ts` creates Pi agent session with model, auth, and resource loader
 5. **Prompt Execution**: User prompt sent to agent with streaming output
 6. **Tool Invocations**: Custom tools invoked via `pi/tools/` extensions:
    - `get_issue_or_pr_thread` for context
@@ -197,6 +203,24 @@ bun run test:coverage
 # Watch mode for development
 bun run test:watch
 ```
+
+#### Test Architecture
+
+The test suite emphasizes **behavior verification** over implementation details:
+
+- **Orchestrator tests** (`src/orchestrator.test.ts`) - Tests business logic flow:
+  - Configuration gathering from inputs
+  - Prompt retrieval and validation
+  - Reaction lifecycle management
+  - Pi agent execution
+  - Error handling and finalization
+  - Early exit scenarios
+
+- **GitHub tests** (`src/github.test.ts`) - Tests GitHub API integration
+- **Pi tools tests** (`src/pi/tools.test.ts`) - Tests custom tool behavior
+- **Git utils tests** (`src/github/git-utils.test.ts`) - Tests Git operations
+
+**Key principle**: Tests verify the orchestration flow and business logic, not the behavior of mocks. The adapter pattern enables testing the actual behavior of the action without requiring external services.
 
 ### Project Guidelines
 
