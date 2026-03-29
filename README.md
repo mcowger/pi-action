@@ -113,96 +113,32 @@ The action is built on top of the [Pi coding agent](https://pi.dev) framework an
 
 ```
 src/
-├── run.ts                    # Main entry point and orchestration
-├── index.ts                  # Action entry point for dist/
-├── pi/                       # Pi integration layer
-│   ├── index.ts              # Barrel export for pi module
-│   ├── client.ts             # Pi SDK wrapper for session management
-│   ├── prompt.ts             # System prompt and tool prompt definitions
-│   ├── logging.ts            # Centralized logging via SDK events
-│   ├── resource-loader.ts    # Resource loader configuration
-│   └── tools/                # Custom Pi tool extensions
-│       ├── index.ts          # Extension factory registration
-│       ├── create-pr.ts      # create_pull_request tool
-│       ├── update-pr.ts      # update_pull_request tool
-│       ├── get-thread.ts     # get_issue_or_pr_thread tool
-│       ├── common.ts         # Shared tool utilities
-│       └── tools.test.ts     # Tool tests
-└── github/                   # GitHub API integration
-    ├── index.ts              # Barrel export for github module
-    ├── context.ts            # Context extraction and thread retrieval
-    ├── octokit.ts            # Shared Octokit client singleton
-    ├── reactions.ts          # Reaction management (add/remove eyes)
-    ├── comments.ts           # Comment creation with metadata footer
-    ├── git-utils.ts          # Git operations (scanning, blobs, commits)
-    ├── pull-request.ts       # PR creation logic
+├── run.ts                     # Main entry point and orchestration
+├── index.ts                   # Action entry point for dist/
+├── pi/                        # Pi integration layer
+│   ├── index.ts               # Barrel export for pi module
+│   ├── client.ts              # Pi SDK wrapper for session management
+│   ├── prompt.ts              # System prompt and tool prompt definitions
+│   ├── logging.ts             # Centralized logging via SDK events
+│   ├── resource-loader.ts     # Resource loader configuration
+│   └── tools/                 # Custom Pi tool extensions
+│       ├── index.ts           # Extension factory registration
+│       ├── create-pr.ts       # create_pull_request tool
+│       ├── update-pr.ts       # update_pull_request tool
+│       ├── get-thread.ts      # get_issue_or_pr_thread tool
+│       ├── common.ts          # Shared tool utilities
+│       └── tools.test.ts      # Tool tests
+└── github/                    # GitHub API integration
+    ├── index.ts               # Barrel export for github module
+    ├── context.ts             # Context extraction and thread retrieval
+    ├── octokit.ts             # Shared Octokit client singleton
+    ├── reactions.ts           # Reaction management (add/remove eyes)
+    ├── comments.ts            # Comment creation with metadata footer
+    ├── git-utils.ts           # Git operations (scanning, blobs, commits)
+    ├── pull-request.ts        # PR creation logic
     ├── pull-request-update.ts # PR update logic
-    └── constants.ts          # GitHub-related constants
+    └── constants.ts           # GitHub-related constants
 ```
-
-### Core Components
-
-#### `src/run.ts`
-Main orchestration logic that:
-- Reads action inputs (provider, model, token, thinking_level)
-- Fetches user prompt from GitHub comment or uses direct prompt input
-- Initializes Pi client session
-- Manages agent lifecycle (start, prompt, finalize)
-- Handles reaction management for user feedback
-- Posts final results with metadata footer
-
-#### `src/pi/client.ts`
-Wraps the Pi SDK for headless execution:
-- Model resolution via `ModelRegistry`
-- Authentication via `AuthStorage`
-- Agent session creation and lifecycle
-- Streaming event handling (text and thinking deltas)
-- Prompt execution with response collection
-
-#### `src/pi/prompt.ts`
-Central prompt management containing:
-- System prompt for GitHub Actions context
-- Tool-specific prompt descriptions and guidelines
-- Parameter descriptions for all custom tools
-- Prompt snippets and best practices
-
-#### `src/pi/logging.ts`
-Context visualization and logging:
-- Subscribes to Pi SDK events (`tool_execution_start`, `tool_execution_end`, `before_agent_start`, `agent_end`)
-- Logs available tools and configuration before session
-- Displays truncated system prompt and user prompt
-- Reports tool execution status and errors
-
-#### `src/pi/resource-loader.ts`
-Configures the Pi agent resource loader:
-- Registers custom extension factories (tools + logging)
-- Overrides default system prompt with GitHub Actions version
-- Appends AGENTS.md content for project context
-
-#### `src/pi/tools/`
-Custom tools that extend Pi's capabilities:
-
-- **`create-pr.ts`** - Creates new pull requests by detecting file changes, creating branches, committing via Git Data API, and opening PRs. Supports dry-run mode.
-- **`update-pr.ts`** - Updates existing PRs by pushing new commits to PR branch and optionally updating title/description. Supports dry-run mode.
-- **`get-thread.ts`** - Retrieves full issue/PR thread including metadata, comments, labels, and PR-specific info.
-- **`common.ts`** - Shared utilities for tools (error handling, abort checking).
-- **`index.ts`** - Extension factory that registers all tools with Pi SDK.
-
-#### `src/github/`
-GitHub API interaction layer:
-
-- **`context.ts`** - Extracts GitHub context (issue/PR metadata, comments), determines event types, and provides `getIssueOrPRThread()` for rich context retrieval.
-- **`octokit.ts`** - Lazy-initialized shared Octokit client singleton.
-- **`reactions.ts`** - Adds/removes "eyes" (👀) reaction for visual feedback.
-- **`comments.ts`** - Creates comments with automatic metadata footer (action run link, model info, execution time).
-- **`git-utils.ts`** - Git operations via Git Data API:
-  - File change scanning (new, modified, deleted files)
-  - Respects `.gitignore` and built-in ignore patterns
-  - Blob and tree creation
-  - Commit creation and branch updates
-- **`pull-request.ts`** - High-level PR creation orchestrating git-utils.
-- **`pull-request-update.ts`** - High-level PR update orchestrating git-utils.
-- **`constants.ts`** - Constants for file modes, ignore patterns, reaction types.
 
 ### Custom Tools
 
@@ -270,6 +206,16 @@ bun run test:watch
 - Update documentation as needed
 - Use `bun` as the package manager (preferred over npm)
 - Run `bun run validate` before committing
+
+### Releasing
+
+Update [`VERSION`](./VERSION) with the new value, then
+
+```bash
+bun run tag
+```
+
+to create release commit and tag to be pushed.
 
 ## License
 
