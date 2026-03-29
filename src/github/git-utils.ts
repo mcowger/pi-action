@@ -115,6 +115,148 @@ export interface ChangeScanResult {
 }
 
 /**
+ * Check if a file should be ignored based on ignore patterns.
+ *
+ * @param relativePath - Relative file path to check.
+ * @param ig - Ignore instance with loaded patterns.
+ * @returns True if the file should be ignored, false otherwise.
+ */
+function isFileIgnored(relativePath: string, ig: ignore.Ignore): boolean {
+  return ig.ignores(relativePath);
+}
+
+/**
+ * Read file content, safely handling binary files and read errors.
+ *
+ * @param fullPath - Absolute path to the file.
+ * @param relativePath - Relative path for logging.
+ * @param log - Logger instance for debug output.
+ * @returns File content as string, or null if binary/unreadable.
+ */
+async function readFileContentSafely(
+  fullPath: string,
+  relativePath: string,
+  log: ReturnType<typeof createLogger>
+): Promise<string | null> {
+  try {
+    return await fs.readFile(fullPath, 'utf-8');
+  } catch (_e) {
+    log.debug(`Skipping file (likely binary): ${relativePath}`);
+    return null;
+  }
+}
+
+/**
+ * Compare local file content with reference file to determine if changed.
+ *
+ * @param localContent - Content of the local file.
+ * @param refFile - Reference file data, undefined if file is new.
+ * @param relativePath - Relative path for logging.
+ * @param log - Logger instance for debug output.
+ * @returns True if file is new or modified, false otherwise.
+ */
+function compareFileWithReference(
+  localContent: string,
+  refFile: { sha: string; content: string | null } | undefined,
+  relativePath: string,
+  log: ReturnType<typeof createLogger>
+): boolean {
+  if (!refFile) {
+    log.debug(`New file: ${relativePath}`);
+    return true;
+  }
+  if (refFile.content !== null && refFile.content !== localContent) {
+    log.debug(`Modified file: ${relativePath}`);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Process a single file entry to determine if it has changed.
+ *
+ * @param fullPath - Absolute path to the file.
+ * @param relativePath - Relative path within the repository.
+ * @param referenceFiles - Map of reference files for comparison.
+ * @param log - Logger instance for debug output.
+ * @returns File object if changed, null otherwise.
+ */
+async function processFileEntry(
+  fullPath: string,
+  relativePath: string,
+  referenceFiles: Map<string, { sha: string; content: string | null }>,
+  log: ReturnType<typeof createLogger>
+): Promise<{ path: string; content: string; mode: FileMode } | null> {
+  const localContent = await readFileContentSafely(fullPath, relativePath, log);
+  if (localContent === null) {
+    return null;
+  }
+
+  const refFile = referenceFiles.get(relativePath);
+  const isChanged = compareFileWithReference(localContent, refFile, relativePath, log);
+
+  if (isChanged) {
+    return {
+      path: relativePath,
+      content: localContent,
+      mode: FILE_MODE_REGULAR,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Recursively scan a directory for files and determine changes.
+ *
+ * @param dir - Absolute path to the directory to scan.
+ * @param relativePath - Relative path within the repository.
+ * @param referenceFiles - Map of reference files for comparison.
+ * @param ig - Ignore instance with loaded patterns.
+ * @param log - Logger instance for debug output.
+ * @returns Changed files and all encountered files.
+ */
+export async function scanDirectory(
+  dir: string,
+  relativePath: string,
+  referenceFiles: Map<string, { sha: string; content: string | null }>,
+  ig: ignore.Ignore,
+  log: ReturnType<typeof createLogger>
+): Promise<{
+  changedFiles: { path: string; content: string; mode: FileMode }[];
+  encounteredFiles: Set<string>;
+}> {
+  const changedFiles: { path: string; content: string; mode: FileMode }[] = [];
+  const encounteredFiles = new Set<string>();
+
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    const relativeFilePath = relativePath ? path.join(relativePath, entry.name) : entry.name;
+
+    if (isFileIgnored(relativeFilePath, ig)) {
+      log.debug(`Ignored: ${relativeFilePath}`);
+      continue;
+    }
+
+    if (entry.isDirectory()) {
+      const subDirResult = await scanDirectory(fullPath, relativeFilePath, referenceFiles, ig, log);
+      changedFiles.push(...subDirResult.changedFiles);
+      subDirResult.encounteredFiles.forEach(file => encounteredFiles.add(file));
+    } else if (entry.isFile()) {
+      const fileResult = await processFileEntry(fullPath, relativeFilePath, referenceFiles, log);
+      if (fileResult) {
+        changedFiles.push(fileResult);
+      }
+      encounteredFiles.add(relativeFilePath);
+    }
+  }
+
+  return { changedFiles, encounteredFiles };
+}
+
+/**
  * Recursively scan the local repository for files that are new or modified
  * compared to a reference set of files. Also tracks files that have been deleted.
  *
@@ -144,68 +286,14 @@ export async function scanForChanges(
   // Add additional patterns to always ignore
   ig.add(IGNORE_PATTERNS);
 
-  const changedFiles: {
-    path: string;
-    content: string;
-    mode: FileMode;
-  }[] = [];
-
-  // Track all files we encounter locally to detect deletions
-  const localFilesEncountered = new Set<string>();
-
-  async function scanDirectory(dir: string, relativePath = '') {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      const relativeFilePath = relativePath ? path.join(relativePath, entry.name) : entry.name;
-
-      if (ig.ignores(relativeFilePath)) {
-        log.debug(`Ignored: ${relativeFilePath}`);
-        continue;
-      }
-
-      if (entry.isDirectory()) {
-        await scanDirectory(fullPath, relativeFilePath);
-      } else if (entry.isFile()) {
-        // Try to read file content, skip if binary
-        let localContent: string;
-        try {
-          localContent = await fs.readFile(fullPath, 'utf-8');
-        } catch (_e) {
-          log.debug(`Skipping file (likely binary): ${relativeFilePath}`);
-          continue;
-        }
-
-        const refFile = referenceFiles.get(relativeFilePath);
-
-        // Check if file is new or modified
-        let isChanged = false;
-        if (!refFile) {
-          // New file
-          isChanged = true;
-          log.debug(`New file: ${relativeFilePath}`);
-        } else if (refFile.content !== null && refFile.content !== localContent) {
-          // Modified file
-          isChanged = true;
-          log.debug(`Modified file: ${relativeFilePath}`);
-        }
-
-        if (isChanged) {
-          changedFiles.push({
-            path: relativeFilePath,
-            content: localContent,
-            mode: FILE_MODE_REGULAR,
-          });
-        }
-
-        // Track that we found this file locally
-        localFilesEncountered.add(relativeFilePath);
-      }
-    }
-  }
-
-  await scanDirectory(repoRoot, '');
+  // Scan directory recursively
+  const { changedFiles, encounteredFiles: localFilesEncountered } = await scanDirectory(
+    repoRoot,
+    '',
+    referenceFiles,
+    ig,
+    log
+  );
 
   // Detect deleted files by comparing reference files with what we found locally
   const deletedFiles: string[] = [];

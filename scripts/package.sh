@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-esbuild src/index.ts \
+esbuild src/run.ts \
   --bundle \
   --platform=node \
   --target=node24 \

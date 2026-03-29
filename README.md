@@ -107,14 +107,13 @@ Refer to [Pi documentation](https://github.com/badlogic/pi-mono/tree/main/packag
 
 ## Architecture
 
-The action is built on top of the [Pi coding agent](https://pi.dev) framework and consists of several key modules organized in a modular, well-structured TypeScript codebase.
+The action is built on top of the [Pi coding agent](https://pi.dev) framework and consists of several key modules.
 
 ### Directory Structure
 
 ```
 src/
 ├── run.ts                     # Main entry point and orchestration
-├── index.ts                   # Action entry point for dist/
 ├── pi/                        # Pi integration layer
 │   ├── index.ts               # Barrel export for pi module
 │   ├── client.ts              # Pi SDK wrapper for session management

@@ -1,10 +1,11 @@
 /**
- * @file Main orchestration logic for the Pi GitHub Action.
+ * @file GitHub Action entry point and orchestration logic.
  *
  * Reads action inputs (provider, model, token, thinking_level), fetches the
  * user prompt from the triggering GitHub comment, initialises a Pi client
  * session, sends the prompt, and posts the result (or error) back as a GitHub
  * comment. An "eyes" reaction is added while processing to give visual feedback.
+ * Any unhandled errors are reported back to GitHub via `core.setFailed`.
  */
 
 import * as core from '@actions/core';
@@ -96,3 +97,7 @@ async function finalize(
     executionDuration: startTime.until(Temporal.Now.instant()),
   });
 }
+
+run().catch(error => {
+  core.setFailed(error as Error);
+});
