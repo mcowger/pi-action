@@ -31,8 +31,8 @@ jobs:
         uses: shaftoe/pi-coding-agent-action@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: zai
-          model: glm-4.7
-          token: ${{ secrets.ZAI_API_KEY }}
-          thinking_level: high
+          provider: ${{ vars.PROVIDER }}
+          model: ${{ vars.MODEL }}
+          token: ${{ secrets.API_KEY }}
+          thinking_level: ${{ vars.THINKING_LEVEL }}
           prompt: This is a GitHub PR (#${{ github.event.pull_request.number }}) that needs code review. Focus on identifying issues, bugs, security concerns, and improvements.

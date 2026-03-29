@@ -1,29 +1,25 @@
 version: 2
 updates:
-  # Enable version updates for Bun dependencies
-  - package-ecosystem: "bun"
-    directory: "/"
-    # Check for updates once a week
+  - package-ecosystem: 'bun'
+    directory: '/'
     schedule:
-      interval: "weekly"
-    # Limit the number of open pull requests for version updates
+      interval: 'weekly'
     open-pull-requests-limit: 10
-    # Group dependencies to reduce noise
     groups:
       production-dependencies:
         patterns:
-          - "@actions/*"
-          - "@js-temporal/*"
-          - "@mariozechner/*"
-          - "@sinclair/typebox"
-          - "ignore"
+          - '@actions/*'
+          - '@js-temporal/*'
+          - '@mariozechner/*'
+          - '@sinclair/typebox'
+          - 'ignore'
       development-dependencies:
         patterns:
-          - "@types/*"
-          - "bun-types"
-          - "eslint"
-          - "eslint-*"
-          - "prettier"
-          - "typescript"
-          - "esbuild"
-          - "isomorphic-git"
+          - '@types/*'
+          - 'bun-types'
+          - 'eslint'
+          - 'eslint-*'
+          - 'prettier'
+          - 'typescript'
+          - 'esbuild'
+          - 'isomorphic-git'
