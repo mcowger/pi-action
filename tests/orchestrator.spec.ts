@@ -10,9 +10,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import { Temporal } from '@js-temporal/polyfill';
-import { ActionOrchestrator } from './orchestrator';
-import type { CoreAdapter, GitHubAdapter, PiAgent } from './types';
-import type { CreateReactionType } from './github/reactions';
+import { ActionOrchestrator } from '../src/orchestrator';
+import type { CoreAdapter, GitHubAdapter, PiAgent } from '../src/types';
+import type { CreateReactionType } from '../src/github/reactions';
 
 describe('ActionOrchestrator', () => {
   let mockCore: CoreAdapter;

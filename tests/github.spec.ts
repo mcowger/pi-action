@@ -50,8 +50,8 @@ process.env.GITHUB_EVENT_PATH = path.join(os.tmpdir(), `gh-event-${Date.now()}.j
 fs.writeFileSync(process.env.GITHUB_EVENT_PATH, '{}');
 
 // Dynamic import to ensure env vars are set before module loads
-const githubModule = import('./github/index.js');
-const contextModule = import('./github/context.js');
+const githubModule = import('../src/github/index');
+const contextModule = import('../src/github/context');
 const [
   {
     getPrompt,

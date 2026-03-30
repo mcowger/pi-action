@@ -37,8 +37,10 @@ export type CreateCommentType =
  *
  * @param duration - Execution time as Temporal.Duration
  * @returns Formatted string (e.g., "1s", "1m 30s", "1h 5m 30s")
+ *
+ * @internal Exported for testing purposes only.
  */
-function formatExecutionTime(duration: Temporal.Duration): string {
+export function formatExecutionTime(duration: Temporal.Duration): string {
   const rounded = duration.round({ largestUnit: 'hour', smallestUnit: 'second' });
   const parts: string[] = [];
 

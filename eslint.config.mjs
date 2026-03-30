@@ -60,13 +60,13 @@ export default [
     },
   },
   {
-    files: ["src/**/*.test.ts"],
+    files: ["tests/**/*.spec.ts"],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
-        project: path.join(__dirname, "tsconfig.test.json"),
+        project: path.join(__dirname, "tests/tsconfig.json"),
       },
       globals: {
         node: true,

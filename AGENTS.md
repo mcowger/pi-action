@@ -23,6 +23,10 @@ This is a GitHub Action that integrates the [Pi coding agent](https://pi.dev) wi
     - `pi-agent-adapter.ts` - Pi agent factory
   - `pi/` - Pi agent library and tool definitions
   - `github/` - GitHub API interactions and context enrichment
+- `tests/` - Bun test files (following Bun convention)
+  - `*.spec.ts` - Test files named with `.spec.ts` extension
+  - `github/` - Tests for GitHub-related modules
+  - `pi/` - Tests for Pi agent integration
 - `scripts/` - Utilities, helpers, etc.
 
 ## Architecture Overview
@@ -54,12 +58,14 @@ The action uses a **testable adapter pattern** to separate business logic from e
    ```
    This runs: Prettier formatting, ESLint, TypeScript type checking, tests, and build.
 
-2. **Orchestrator Testing**: Business logic is tested in `src/orchestrator.test.ts`. When modifying orchestration behavior, update these tests. Do **not** test mocks directly—test the actual business logic flow.
+2. **Test Convention**: All test files are located under `./tests` and follow the Bun naming convention `*.spec.ts`. When adding new tests, create them in the appropriate subdirectory under `tests/` (e.g., `tests/github/`, `tests/pi/`) and use the `.spec.ts` extension.
 
-3. **Extension Pattern**: The action extends Pi with custom tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`) via the `ExtensionAPI` in `src/pi/tools/index.ts`.
+3. **Orchestrator Testing**: Business logic is tested in `tests/orchestrator.spec.ts`. When modifying orchestration behavior, update these tests. Do **not** test mocks directly—test the actual business logic flow.
 
-4. **Centralized Logging**: Tool execution logging is centralized in `src/pi/logging.ts` using SDK events (`tool_execution_start`, `tool_execution_end`). Tools check `signal?.aborted` directly and return `details.cancelled: true` for cancellations.
+4. **Extension Pattern**: The action extends Pi with custom tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`) via the `ExtensionAPI` in `src/pi/tools/index.ts`.
 
-5. **Test Coverage**: The project uses `bun test` for testing. Maintain and expand test coverage when making changes. Focus on behavior verification, not implementation details.
+5. **Centralized Logging**: Tool execution logging is centralized in `src/pi/logging.ts` using SDK events (`tool_execution_start`, `tool_execution_end`). Tools check `signal?.aborted` directly and return `details.cancelled: true` for cancellations.
 
-6. **Prefer Bun package manager over npm or others**
+6. **Test Coverage**: The project uses `bun test` for testing. Maintain and expand test coverage when making changes. Focus on behavior verification, not implementation details.
+
+7. **Prefer Bun package manager over npm or others**
