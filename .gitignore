@@ -23,3 +23,6 @@ dist/*.map
 .env.*
 *.tgz
 *.tmp
+
+# Coverage reports
+coverage/
