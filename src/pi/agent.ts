@@ -48,7 +48,7 @@ export class Agent {
     this.provider = provider;
     this.token = token;
     this.thinkingLevel = level as ThinkingLevel;
-    this.modelRegistry = new ModelRegistry(this.authStorage);
+    this.modelRegistry = ModelRegistry.inMemory(this.authStorage);
 
     if (this.token) {
       core.debug(`[auth] Setting api_key token for ${this.provider} provider`);
