@@ -18,6 +18,8 @@ export interface CoreAdapter {
   getInput(name: string): string;
   /** Mark the workflow run as failed with an error message. */
   setFailed(error: Error): void;
+  /** Log a notice message. */
+  notice(message: string): void;
 }
 
 /**

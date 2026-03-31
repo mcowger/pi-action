@@ -34,9 +34,11 @@ describe('ActionOrchestrator', () => {
     });
 
     const setFailedMock = mock();
+    const noticeMock = mock();
     mockCore = {
       getInput: getInputMock,
       setFailed: setFailedMock,
+      notice: noticeMock,
     } as any;
 
     // Create mock github adapter

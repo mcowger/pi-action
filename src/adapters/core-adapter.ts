@@ -18,4 +18,8 @@ export class RealCoreAdapter implements CoreAdapter {
   setFailed(error: Error): void {
     core.setFailed(error);
   }
+
+  notice(message: string): void {
+    core.notice(message);
+  }
 }

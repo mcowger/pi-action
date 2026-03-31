@@ -52,8 +52,9 @@ export class ActionOrchestrator {
 
       try {
         reaction = await this.github.addReaction();
-      } catch {
-        // Silently ignore reaction errors - don't stop execution
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        this.core.notice(`failed to add reaction: ${errorMessage}`);
       }
 
       const pi = this.piAgentFactory(config);
@@ -100,8 +101,9 @@ export class ActionOrchestrator {
       if (reaction) {
         await this.github.deleteReaction(reaction);
       }
-    } catch {
-      // Silently ignore reaction deletion errors - don't stop execution
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      this.core.notice(`failed to delete reaction: ${errorMessage}`);
     }
 
     const metadata: CommentMetadata = {

@@ -37,16 +37,23 @@ export interface ChangeScanResult {
  * @param sha - Blob SHA.
  * @returns The decoded UTF-8 content, or null if fetching fails.
  */
-async function fetchBlobContent(owner: string, repo: string, sha: string): Promise<string | null> {
+async function fetchBlobContent(
+  owner: string,
+  repo: string,
+  sha: string,
+  log: ReturnType<typeof createLogger>
+): Promise<string | null> {
   try {
     const blob = await octokit.rest.git.getBlob({
       owner,
       repo,
       file_sha: sha,
     });
-    return Buffer.from(blob.data.content, 'base64').toString('utf-8');
+    const content = Buffer.from(blob.data.content, 'base64').toString('utf-8');
+    log.debug(`Fetched blob content: ${sha}`);
+    return content;
   } catch (_e) {
-    // Could not fetch blob content
+    log.debug(`Failed to fetch blob content: ${sha}`);
     return null;
   }
 }
@@ -62,10 +69,13 @@ async function fetchBlobContent(owner: string, repo: string, sha: string): Promi
  */
 export async function buildFileMap(
   treeSha: string,
-  fetchContents = true
+  fetchContents = true,
+  log = createLogger()
 ): Promise<Map<string, { sha: string; content: string | null }>> {
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
+
+  log.debug(`fetching tree: ${treeSha}`);
 
   const tree = await octokit.rest.git.getTree({
     owner,
@@ -74,17 +84,21 @@ export async function buildFileMap(
     recursive: 'true',
   });
 
+  log.debug(`tree contains ${tree.data.tree.length} items`);
+
   const fileMap = new Map<string, { sha: string; content: string | null }>();
 
   for (const item of tree.data.tree) {
     if (item.type === 'blob' && item.sha) {
       let content: string | null = null;
       if (fetchContents) {
-        content = await fetchBlobContent(owner, repo, item.sha);
+        content = await fetchBlobContent(owner, repo, item.sha, log);
       }
       fileMap.set(item.path, { sha: item.sha, content });
     }
   }
+
+  log.debug(`built file map with ${fileMap.size} files`);
 
   return fileMap;
 }
@@ -116,7 +130,7 @@ async function readFileContentSafely(
   try {
     return await fs.readFile(fullPath, 'utf-8');
   } catch (_e) {
-    log.debug(`Skipping file (likely binary): ${relativePath}`);
+    log.debug(`skipping file (likely binary): ${relativePath}`);
     return null;
   }
 }
@@ -137,11 +151,11 @@ function compareFileWithReference(
   log: ReturnType<typeof createLogger>
 ): boolean {
   if (!refFile) {
-    log.debug(`New file: ${relativePath}`);
+    log.debug(`new file: ${relativePath}`);
     return true;
   }
   if (refFile.content !== null && refFile.content !== localContent) {
-    log.debug(`Modified file: ${relativePath}`);
+    log.debug(`modified file: ${relativePath}`);
     return true;
   }
   return false;
@@ -203,9 +217,7 @@ export interface ScanDirectoryParams {
  * @param params - Parameters controlling the scan operation.
  * @returns Changed files and all encountered files.
  */
-export async function scanDirectory(
-  params: ScanDirectoryParams
-): Promise<{
+export async function scanDirectory(params: ScanDirectoryParams): Promise<{
   changedFiles: { path: string; content: string; mode: FileMode }[];
   encounteredFiles: Set<string>;
 }> {
@@ -220,7 +232,7 @@ export async function scanDirectory(
     const relativeFilePath = relativePath ? path.join(relativePath, entry.name) : entry.name;
 
     if (isFileIgnored(relativeFilePath, ig)) {
-      log.debug(`Ignored: ${relativeFilePath}`);
+      log.debug(`ignored: ${relativeFilePath}`);
       continue;
     }
 
@@ -262,7 +274,7 @@ export async function scanForChanges(
   referenceFiles: Map<string, { sha: string; content: string | null }>,
   log = createLogger()
 ): Promise<ChangeScanResult> {
-  log.debug(`Scanning local files for changes...`);
+  log.debug(`scanning local files for changes...`);
 
   const repoRoot = process.env.GITHUB_WORKSPACE ?? process.cwd();
 
@@ -291,12 +303,12 @@ export async function scanForChanges(
     if (!localFilesEncountered.has(refFilePath)) {
       // This file exists in the reference but wasn't found locally - it was deleted
       deletedFiles.push(refFilePath);
-      log.debug(`Deleted file: ${refFilePath}`);
+      log.debug(`deleted file: ${refFilePath}`);
     }
   }
 
   log.debug(
-    `Found ${changedFiles.length} changed file(s) and ${deletedFiles.length} deleted file(s)`
+    `found ${changedFiles.length} changed file(s) and ${deletedFiles.length} deleted file(s)`
   );
   return { changedFiles, deletedFiles };
 }
