@@ -1,6 +1,6 @@
 # Pi Coding Agent GitHub Action
 
-![Codecov](https://codecov.io/gh/shaftoe/pi-coding-agent-action/branch/v2/graph/badge.svg)
+[![Codecov](https://codecov.io/gh/shaftoe/pi-coding-agent-action/branch/v2/graph/badge.svg)](https://app.codecov.io/gh/shaftoe/pi-coding-agent-action/)
 
 This is a GitHub action that uses the [pi coding agent](https://pi.dev) to integrate with GitHub workflows (issues, pull requests, etc.).
 
