@@ -12,7 +12,7 @@ import { getResourceLoader } from './resource-loader';
 import type { AgentSession } from '@mariozechner/pi-coding-agent';
 import type { Api, Model } from '@mariozechner/pi-ai';
 import type { ThinkingLevel } from '@mariozechner/pi-agent-core';
-import type { PromptResult } from '../types.js';
+import type { PromptResult } from '../types';
 
 /**
  * Pi coding agent for headless execution inside GitHub Actions.

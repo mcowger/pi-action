@@ -9,15 +9,15 @@
 
 import * as github from '@actions/github';
 import { Temporal } from '@js-temporal/polyfill';
-import { getOctokit } from './octokit.js';
-import { BRANCH_PREFIX, MAX_TITLE_LENGTH } from './constants.js';
+import { getOctokit } from './octokit';
+import { BRANCH_PREFIX, MAX_TITLE_LENGTH } from './constants';
 import {
   createLogger,
   scanForChanges,
   createBlobsAndTree,
   createCommitAndUpdateBranch,
   buildFileMap,
-} from './git-utils.js';
+} from './git-utils';
 
 const octokit = getOctokit();
 const log = createLogger();

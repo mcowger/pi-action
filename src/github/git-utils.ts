@@ -12,13 +12,13 @@ import * as path from 'node:path';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import ignore from 'ignore';
-import { getOctokit } from './octokit.js';
+import { getOctokit } from './octokit';
 import {
   FILE_MODE_DIRECTORY,
   FILE_MODE_EXECUTABLE,
   FILE_MODE_REGULAR,
   IGNORE_PATTERNS,
-} from './constants.js';
+} from './constants';
 
 const octokit = getOctokit();
 

@@ -9,8 +9,8 @@
 import * as github from '@actions/github';
 import RestEndpointMethodTypes from '@octokit/plugin-rest-endpoint-methods';
 import { Temporal } from '@js-temporal/polyfill';
-import { getOctokit } from './octokit.js';
-import type { SessionStats } from '../types.js';
+import { getOctokit } from './octokit';
+import type { SessionStats } from '../types';
 
 const octokit = getOctokit();
 

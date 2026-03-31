@@ -9,15 +9,15 @@
  */
 
 import * as github from '@actions/github';
-import { getOctokit } from './octokit.js';
-import { MAX_TITLE_LENGTH } from './constants.js';
+import { getOctokit } from './octokit';
+import { MAX_TITLE_LENGTH } from './constants';
 import {
   createLogger,
   scanForChanges,
   createBlobsAndTree,
   createCommitAndUpdateBranch,
   buildFileMap,
-} from './git-utils.js';
+} from './git-utils';
 
 const octokit = getOctokit();
 const log = createLogger();

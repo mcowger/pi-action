@@ -10,8 +10,8 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import RestEndpointMethodTypes from '@octokit/plugin-rest-endpoint-methods';
-import { getOctokit } from './octokit.js';
-import { REACTION_TYPE_EYES } from './constants.js';
+import { getOctokit } from './octokit';
+import { REACTION_TYPE_EYES } from './constants';
 export type CreateReactionType =
   RestEndpointMethodTypes.RestEndpointMethodTypes['reactions']['createForIssueComment']['response'];
 export type DeleteReactionType =

@@ -11,31 +11,31 @@ export {
   getIssueOrPRThread,
   getStartTimeFromContext,
   type IssueOrPRThread,
-} from './context.js';
+} from './context';
 
 // Reaction management functions (used by run.ts)
-export { addReaction, deleteReaction, type CreateReactionType } from './reactions.js';
+export { addReaction, deleteReaction, type CreateReactionType } from './reactions';
 
 // Comment creation functions (used by run.ts)
-export { createFinalComment } from './comments.js';
+export { createFinalComment } from './comments';
 
 // Pull request creation functions (used by pi/tools/create-pr.ts)
 export {
   createPullRequest,
   type CreatePullRequestParams,
   type CreatePullRequestDetails,
-} from './pull-request.js';
+} from './pull-request';
 
 // Pull request update functions (used by pi/tools/update-pr.ts)
 export {
   updatePullRequest,
   type UpdatePullRequestParams,
   type UpdatePullRequestDetails,
-} from './pull-request-update.js';
+} from './pull-request-update';
 
 // Cancellation messages (used by pi/tools)
 export {
   CANCELLATION_MESSAGE_CREATE_PR,
   CANCELLATION_MESSAGE_GET_THREAD,
   CANCELLATION_MESSAGE_UPDATE_PR,
-} from './constants.js';
+} from './constants';

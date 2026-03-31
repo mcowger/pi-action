@@ -1,7 +1,9 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["bun"],
+    "rootDir": ".",
+    "outDir": "./dist",
+    "noEmit": true,
   },
   "include": ["**/*.spec.ts"],
   "exclude": ["../node_modules", "../dist"],

@@ -9,8 +9,8 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Temporal } from '@js-temporal/polyfill';
-import { getOctokit } from './octokit.js';
-import { DEFAULT_TRIGGER, MAX_COMMENTS } from './constants.js';
+import { getOctokit } from './octokit';
+import { DEFAULT_TRIGGER, MAX_COMMENTS } from './constants';
 
 const trigger = core.getInput('trigger') || DEFAULT_TRIGGER;
 const octokit = getOctokit();

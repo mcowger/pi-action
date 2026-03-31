@@ -3,4 +3,4 @@
  */
 
 // Main agent
-export { Agent } from './agent.js';
+export { Agent } from './agent';
