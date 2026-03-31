@@ -13,7 +13,6 @@ export const loggingFactory = (pi: ExtensionAPI) => {
     core.info('\n');
     core.info('::group::🔧 Tool Execution');
     core.info(`Tool called: ${event.toolName}`);
-    core.info('::endgroup::');
   });
 
   pi.on('tool_execution_end', async event => {
@@ -24,7 +23,10 @@ export const loggingFactory = (pi: ExtensionAPI) => {
       core.warning(`⚠️ Tool execution cancelled: ${event.toolName}`);
     } else if (event.isError) {
       core.info(`❌ Tool execution failed: ${event.toolName}`);
+    } else {
+      core.info(`✅ Tool execution succeeded: ${event.toolName}`);
     }
+    core.info('::endgroup::');
   });
 
   pi.on('before_agent_start', async (event, ctx) => {
