@@ -25,8 +25,11 @@ function debug(msg: string): void {
 /**
  * Extract the start timestamp from the GitHub event payload.
  *
- * Uses the timestamp of the triggering event (comment creation, issue opening,
- * or PR opening) to measure the total time from user action to completion.
+ * Uses the timestamp of the triggering event to measure the total time from
+ * user action to completion:
+ * - For issue_comment: uses comment's created_at (when the comment was made)
+ * - For issues: uses issue's updated_at (when the issue was last edited)
+ * - For pull_request: uses PR's updated_at (when the PR was last synchronized)
  *
  * @returns The start instant, or `undefined` if it cannot be determined.
  */
@@ -38,14 +41,16 @@ export function getStartTimeFromContext(): Temporal.Instant | undefined {
     return Temporal.Instant.from(payload.comment.created_at);
   }
 
-  // For issues events (opened/edited), use the issue's created_at timestamp
-  if (eventName === 'issues' && payload.issue?.created_at) {
-    return Temporal.Instant.from(payload.issue.created_at);
+  // For issues events (opened/edited), use the issue's updated_at timestamp
+  // (updated_at matches created_at on first creation, and reflects most recent edit time)
+  if (eventName === 'issues' && payload.issue?.updated_at) {
+    return Temporal.Instant.from(payload.issue.updated_at);
   }
 
-  // For pull_request events, use the PR's created_at timestamp
-  if (eventName === 'pull_request' && payload.pull_request?.created_at) {
-    return Temporal.Instant.from(payload.pull_request.created_at);
+  // For pull_request events, use the PR's updated_at timestamp
+  // (updated_at matches created_at on first creation, and reflects most recent commit/action time)
+  if (eventName === 'pull_request' && payload.pull_request?.updated_at) {
+    return Temporal.Instant.from(payload.pull_request.updated_at);
   }
 
   debug(`[getStartTimeFromContext] Could not determine start time from event type: ${eventName}`);

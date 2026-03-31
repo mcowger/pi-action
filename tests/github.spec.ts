@@ -63,6 +63,7 @@ const [
     getIssueOrPullRequestContext,
     isPR,
     getContextType,
+    getStartTimeFromContext,
   },
 ] = // @ts-expect-error TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
   await Promise.all([githubModule, contextModule]);
@@ -441,5 +442,136 @@ describe('getIssueOrPRThread', () => {
 describe('updatePullRequest', () => {
   test('is exported function', () => {
     expect(typeof updatePullRequest).toBe('function');
+  });
+});
+
+describe('getStartTimeFromContext', () => {
+  beforeEach(() => {
+    github.context.payload = {};
+    github.context.eventName = 'issue_comment';
+  });
+
+  test('is exported function', () => {
+    expect(typeof getStartTimeFromContext).toBe('function');
+  });
+
+  describe('issue_comment events', () => {
+    test('returns comment created_at timestamp for issue_comment events', () => {
+      github.context.eventName = 'issue_comment';
+      github.context.payload = {
+        comment: { id: 1, created_at: '2024-01-15T10:30:00Z' },
+      };
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeDefined();
+      expect(result?.toString()).toBe('2024-01-15T10:30:00Z');
+    });
+
+    test('returns undefined when comment has no created_at', () => {
+      github.context.eventName = 'issue_comment';
+      github.context.payload = {
+        comment: { id: 1 },
+      };
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeUndefined();
+    });
+
+    test('returns undefined when comment is missing', () => {
+      github.context.eventName = 'issue_comment';
+      github.context.payload = {};
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('issues events', () => {
+    test('returns issue updated_at timestamp for issues events', () => {
+      github.context.eventName = 'issues';
+      github.context.payload = {
+        issue: {
+          id: 1,
+          created_at: '2024-01-10T08:00:00Z',
+          updated_at: '2024-01-15T10:30:00Z',
+        },
+      };
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeDefined();
+      expect(result?.toString()).toBe('2024-01-15T10:30:00Z');
+    });
+
+    test('returns undefined when issue has no updated_at', () => {
+      github.context.eventName = 'issues';
+      github.context.payload = {
+        issue: { id: 1 },
+      };
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeUndefined();
+    });
+
+    test('returns undefined when issue is missing', () => {
+      github.context.eventName = 'issues';
+      github.context.payload = {};
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('pull_request events', () => {
+    test('returns PR updated_at timestamp for pull_request events', () => {
+      github.context.eventName = 'pull_request';
+      github.context.payload = {
+        pull_request: {
+          id: 1,
+          number: 123,
+          created_at: '2024-01-10T08:00:00Z',
+          updated_at: '2024-01-15T10:30:00Z',
+        },
+      };
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeDefined();
+      expect(result?.toString()).toBe('2024-01-15T10:30:00Z');
+    });
+
+    test('returns undefined when PR has no updated_at', () => {
+      github.context.eventName = 'pull_request';
+      github.context.payload = {
+        pull_request: { id: 1, number: 123 },
+      };
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeUndefined();
+    });
+
+    test('returns undefined when pull_request is missing', () => {
+      github.context.eventName = 'pull_request';
+      github.context.payload = {};
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('unknown event types', () => {
+    test('returns undefined for unknown event type', () => {
+      github.context.eventName = 'push';
+      github.context.payload = {};
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeUndefined();
+    });
+
+    test('returns undefined for workflow_run event', () => {
+      github.context.eventName = 'workflow_run';
+      github.context.payload = {};
+
+      const result = getStartTimeFromContext();
+      expect(result).toBeUndefined();
+    });
   });
 });
