@@ -22,11 +22,11 @@ export const loggingFactory = (pi: ExtensionAPI) => {
     const cancelled = event.result?.details?.cancelled === true;
 
     if (cancelled) {
-      core.warning(`  ⚠️ cancelled`);
+      core.warning(`  ⚠️ execution cancelled`);
     } else if (event.isError) {
-      core.info(`  ❌ failed`);
+      core.info(`  ❌ execution failed`);
     } else {
-      core.info(`  ✅ succeeded`);
+      core.info(`  ✅ execution succeeded`);
     }
     core.info('::endgroup::');
   });
