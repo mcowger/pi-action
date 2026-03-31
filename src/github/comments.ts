@@ -10,6 +10,7 @@ import * as github from '@actions/github';
 import RestEndpointMethodTypes from '@octokit/plugin-rest-endpoint-methods';
 import { Temporal } from '@js-temporal/polyfill';
 import { getOctokit } from './octokit.js';
+import type { SessionStats } from '../types.js';
 
 const octokit = getOctokit();
 
@@ -25,6 +26,12 @@ export interface CommentMetadata {
   thinkingLevel?: string;
   /** Total execution time as a Temporal Duration */
   executionDuration?: Temporal.Duration;
+  /** Session statistics including token usage */
+  sessionStats?: SessionStats;
+  /** Action version */
+  actionVersion?: string;
+  /** Pi SDK version */
+  piSdkVersion?: string;
 }
 
 export type CreateCommentType =
@@ -81,6 +88,24 @@ async function createComment(body: string): Promise<CreateCommentType | undefine
 }
 
 /**
+ * Format a number with appropriate suffix (K for thousands, M for millions).
+ *
+ * @param value - Number to format
+ * @returns Formatted string (e.g., "1.2K", "1.5M", "500")
+ *
+ * @internal Exported for testing purposes only.
+ */
+export function formatNumber(value: number): string {
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M`;
+  }
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}K`;
+  }
+  return String(value);
+}
+
+/**
  * Post the final result (or error) comment on the current issue or pull request.
  *
  * Automatically appends a "View action run" link pointing to the GitHub Actions
@@ -111,15 +136,25 @@ export async function createFinalComment(
     const metadataParts: string[] = [`[View action run](${actionRunUrl})`];
 
     if (metadata?.provider && metadata.model) {
-      metadataParts.push(`Model: ${metadata.provider}/${metadata.model}`);
-    }
-
-    if (metadata?.thinkingLevel && metadata.thinkingLevel !== 'off') {
-      metadataParts.push(`Thinking: ${metadata.thinkingLevel}`);
+      let modStr = `Model: ${metadata.provider}/${metadata.model}`;
+      if (metadata?.thinkingLevel && metadata.thinkingLevel !== 'off') {
+        modStr = `${modStr} (thinking: ${metadata.thinkingLevel})`;
+      }
+      metadataParts.push(modStr);
     }
 
     if (metadata?.executionDuration !== undefined) {
       metadataParts.push(`Time: ${formatExecutionTime(metadata.executionDuration)}`);
+    }
+
+    // Add token usage if available
+    if (metadata?.sessionStats) {
+      const { totalTokens, cost } = metadata.sessionStats;
+      let tokenInfo = `Tokens: ${formatNumber(totalTokens)}`;
+      if (cost > 0) {
+        tokenInfo += ` ($${cost.toFixed(4)})`;
+      }
+      metadataParts.push(tokenInfo);
     }
 
     finalBody = `${body}\n\n---\n\n${metadataParts.join(' | ')}`;

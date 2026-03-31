@@ -122,4 +122,30 @@ export class Agent {
 
     return this.outputChunks.join('');
   }
+
+  /**
+   * Get session statistics including token usage.
+   *
+   * @returns Session stats or undefined if session not ready or stats unavailable.
+   */
+  getSessionStats():
+    | { inputTokens: number; outputTokens: number; totalTokens: number; cost: number }
+    | undefined {
+    if (!this.session) {
+      return undefined;
+    }
+
+    try {
+      const stats = this.session.getSessionStats();
+      return {
+        inputTokens: stats.tokens.input,
+        outputTokens: stats.tokens.output,
+        totalTokens: stats.tokens.total,
+        cost: stats.cost,
+      };
+    } catch (_error) {
+      // Session stats are metadata - don't fail the action if unavailable
+      return undefined;
+    }
+  }
 }

@@ -7,8 +7,16 @@
  * the external dependencies themselves.
  */
 
+import * as core from '@actions/core';
 import { Temporal } from '@js-temporal/polyfill';
-import type { CoreAdapter, GitHubAdapter, PiAgentFactory, PiConfig } from './types';
+import {
+  type CommentMetadata,
+  type CoreAdapter,
+  type GitHubAdapter,
+  type PiAgentFactory,
+  type PiConfig,
+  type SessionStats,
+} from './types';
 import type { CreateReactionType } from './github/reactions';
 
 /**
@@ -28,15 +36,17 @@ export class ActionOrchestrator {
    * Execute the complete action flow.
    *
    * @throws Rethrows any error from the Pi session after reporting it via core.setFailed.
+   * @throws Rethrows any error from finalize when posting final comment fails.
    */
   async execute(): Promise<void> {
     const startTime = this.github.getStartTime() ?? Temporal.Now.instant();
     const config = this.gatherConfig();
-    const prompt = await this.github.getPrompt(config.promptInput);
     let reaction: CreateReactionType | undefined;
-    let result: string;
+    let prompt: string | undefined;
 
     try {
+      prompt = await this.github.getPrompt(config.promptInput);
+
       if (!prompt) {
         throw new Error('No prompt found - cannot proceed');
       }
@@ -48,14 +58,29 @@ export class ActionOrchestrator {
       }
 
       const pi = this.piAgentFactory(config);
-      result = await pi.prompt(prompt);
+      const result = await pi.prompt(prompt);
+
+      // Get session stats gracefully - don't let errors prevent posting result
+      let sessionStats: SessionStats | undefined;
+      try {
+        sessionStats = pi.getSessionStats();
+      } catch (statsError) {
+        // Stats collection is non-critical - log and continue
+        core.debug(`Failed to retrieve session stats: ${statsError}`);
+      }
+
+      await this.finalize(result, config, startTime, reaction, sessionStats);
     } catch (e) {
-      await this.finalize(e instanceof Error ? e.message : String(e), config, startTime, reaction);
+      const errorMessage = e instanceof Error ? e.message : String(e);
+
+      // Try to post error as comment. If this fails, the action will fail without
+      // a user-facing comment (acceptable - we can't communicate).
+      await this.finalize(errorMessage, config, startTime, reaction, undefined);
+
+      // Mark the action as failed and re-throw the original error
       this.core.setFailed(e as Error);
       throw e;
     }
-
-    await this.finalize(result, config, startTime, reaction);
   }
 
   /**
@@ -78,7 +103,8 @@ export class ActionOrchestrator {
     body: string,
     config: PiConfig,
     startTime: Temporal.Instant,
-    reaction?: CreateReactionType
+    reaction?: CreateReactionType,
+    sessionStats?: SessionStats
   ): Promise<void> {
     try {
       if (reaction) {
@@ -88,11 +114,17 @@ export class ActionOrchestrator {
       // Silently ignore reaction deletion errors - don't stop execution
     }
 
-    await this.github.createFinalComment(body, {
+    const metadata: CommentMetadata = {
       provider: config.provider,
       model: config.model,
       thinkingLevel: config.thinkingLevel,
       executionDuration: startTime.until(Temporal.Now.instant()),
-    });
+    };
+
+    if (sessionStats !== undefined) {
+      metadata.sessionStats = sessionStats;
+    }
+
+    await this.github.createFinalComment(body, metadata);
   }
 }
