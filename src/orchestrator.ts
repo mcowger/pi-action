@@ -7,7 +7,6 @@
  * the external dependencies themselves.
  */
 
-import * as core from '@actions/core';
 import { Temporal } from '@js-temporal/polyfill';
 import {
   type CommentMetadata,
@@ -58,16 +57,7 @@ export class ActionOrchestrator {
       }
 
       const pi = this.piAgentFactory(config);
-      const result = await pi.prompt(prompt);
-
-      // Get session stats gracefully - don't let errors prevent posting result
-      let sessionStats: SessionStats | undefined;
-      try {
-        sessionStats = pi.getSessionStats();
-      } catch (statsError) {
-        // Stats collection is non-critical - log and continue
-        core.debug(`Failed to retrieve session stats: ${statsError}`);
-      }
+      const { result, sessionStats } = await pi.run(prompt);
 
       await this.finalize(result, config, startTime, reaction, sessionStats);
     } catch (e) {

@@ -44,10 +44,8 @@ export interface GitHubAdapter {
  * Provides a simplified interface for Pi prompt execution.
  */
 export interface PiAgent {
-  /** Send a prompt and receive the AI response. */
-  prompt(text: string): Promise<string>;
-  /** Get session statistics including token usage. */
-  getSessionStats(): SessionStats | undefined;
+  /** Run the agent with the given text prompt and receive the AI response with session statistics. */
+  run(text: string): Promise<PromptResult>;
 }
 
 /**
@@ -58,6 +56,16 @@ export interface SessionStats {
   outputTokens: number;
   totalTokens: number;
   cost: number;
+}
+
+/**
+ * Result of running a Pi agent prompt, including the response text and session statistics.
+ */
+export interface PromptResult {
+  /** The text response from the agent */
+  result: string;
+  /** Session statistics including token usage, if available */
+  sessionStats: SessionStats | undefined;
 }
 
 /**

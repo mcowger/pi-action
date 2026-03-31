@@ -12,6 +12,7 @@ import { getResourceLoader } from './resource-loader';
 import type { AgentSession } from '@mariozechner/pi-coding-agent';
 import type { Api, Model } from '@mariozechner/pi-ai';
 import type { ThinkingLevel } from '@mariozechner/pi-agent-core';
+import type { PromptResult } from '../types.js';
 
 /**
  * Pi coding agent for headless execution inside GitHub Actions.
@@ -106,13 +107,13 @@ export class Agent {
   }
 
   /**
-   * Send a prompt to the agent session and return the accumulated text response.
+   * Run the agent with the given prompt and return the accumulated text response with session statistics.
    *
    * @param text - The prompt text to send. Must be non-empty.
-   * @returns The full assistant text response joined from streamed chunks.
+   * @returns The full assistant text response and session statistics.
    * @throws {Error} If `text` is falsy.
    */
-  async prompt(text: string | undefined): Promise<string> {
+  async run(text: string | undefined): Promise<PromptResult> {
     if (!text) {
       throw new Error('no text, skipping prompt');
     }
@@ -120,15 +121,19 @@ export class Agent {
     await this.session.prompt(text);
     process.stdout.write('\n'); // ensure new line after prompt, usually missing from agent
 
-    return this.outputChunks.join('');
+    const result = this.outputChunks.join('');
+    const sessionStats = this.getSessionStats();
+
+    return { result, sessionStats };
   }
 
   /**
    * Get session statistics including token usage.
    *
    * @returns Session stats or undefined if session not ready or stats unavailable.
+   * @private Internal method used by run().
    */
-  getSessionStats():
+  private getSessionStats():
     | { inputTokens: number; outputTokens: number; totalTokens: number; cost: number }
     | undefined {
     if (!this.session) {

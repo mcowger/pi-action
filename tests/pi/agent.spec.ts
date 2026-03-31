@@ -40,133 +40,6 @@ process.env.INPUT_MAX_COMMENTS = '100';
 const { Agent } = await import('../../src/pi/agent');
 
 describe('Agent', () => {
-  describe('getSessionStats', () => {
-    test('returns undefined when session not ready', () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
-      const stats = agent.getSessionStats();
-      expect(stats).toBeUndefined();
-    });
-
-    test('returns correct stats on success', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
-      await agent.ready();
-
-      // Mock the session to return known stats
-      const mockStats = {
-        getSessionStats: () => ({
-          tokens: { input: 100, output: 50, total: 150 },
-          cost: 0.00123,
-        }),
-      };
-      agent['session'] = mockStats as any;
-
-      const stats = agent.getSessionStats();
-      expect(stats).toEqual({
-        inputTokens: 100,
-        outputTokens: 50,
-        totalTokens: 150,
-        cost: 0.00123,
-      });
-    });
-
-    test('returns undefined when SDK throws', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
-      await agent.ready();
-
-      // Mock the session to throw an error
-      const mockSession = {
-        getSessionStats: () => {
-          throw new Error('SDK internal error');
-        },
-        subscribe: () => {},
-        prompt: async () => {},
-      };
-      agent['session'] = mockSession as any;
-
-      const stats = agent.getSessionStats();
-      expect(stats).toBeUndefined();
-    });
-
-    test('returns undefined when SDK throws non-Error', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
-      await agent.ready();
-
-      // Mock the session to throw a non-Error
-      const mockSession = {
-        getSessionStats: () => {
-          throw 'String error from SDK';
-        },
-        subscribe: () => {},
-        prompt: async () => {},
-      };
-      agent['session'] = mockSession as any;
-
-      const stats = agent.getSessionStats();
-      expect(stats).toBeUndefined();
-    });
-
-    test('returns undefined when SDK returns null/undefined stats', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
-      await agent.ready();
-
-      // Mock the session to return null stats (which causes property access to throw)
-      const mockSession = {
-        getSessionStats: () => null as any,
-        subscribe: () => {},
-        prompt: async () => {},
-      };
-      agent['session'] = mockSession as any;
-
-      // Should return undefined gracefully, not throw
-      const stats = agent.getSessionStats();
-      expect(stats).toBeUndefined();
-    });
-
-    test('handles zero tokens and cost', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
-      await agent.ready();
-
-      // Mock the session to return zero values
-      const mockStats = {
-        getSessionStats: () => ({
-          tokens: { input: 0, output: 0, total: 0 },
-          cost: 0,
-        }),
-      };
-      agent['session'] = mockStats as any;
-
-      const stats = agent.getSessionStats();
-      expect(stats).toEqual({
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        cost: 0,
-      });
-    });
-
-    test('handles large token counts', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
-      await agent.ready();
-
-      // Mock the session to return large values
-      const mockStats = {
-        getSessionStats: () => ({
-          tokens: { input: 100000, output: 50000, total: 150000 },
-          cost: 1.2345,
-        }),
-      };
-      agent['session'] = mockStats as any;
-
-      const stats = agent.getSessionStats();
-      expect(stats).toEqual({
-        inputTokens: 100000,
-        outputTokens: 50000,
-        totalTokens: 150000,
-        cost: 1.2345,
-      });
-    });
-  });
-
   describe('constructor', () => {
     test('throws error for non-existent model', () => {
       // Use a provider/model combo that won't exist in the registry
@@ -182,27 +55,129 @@ describe('Agent', () => {
     });
   });
 
-  describe('ready and prompt', () => {
+  describe('ready and run', () => {
     test('ready initializes session', async () => {
       const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
       const result = await agent.ready();
       expect(result).toBe(agent);
     });
 
-    test('prompt throws error for empty text', async () => {
+    test('run throws error for empty text', async () => {
       const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
       await agent.ready();
 
-      await expect(agent.prompt('')).rejects.toThrow('no text, skipping prompt');
+      await expect(agent.run('')).rejects.toThrow('no text, skipping prompt');
     });
 
-    test('prompt throws error for undefined text', async () => {
+    test('run throws error for undefined text', async () => {
       const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
       await agent.ready();
 
-      await expect(agent.prompt(undefined as unknown as string)).rejects.toThrow(
+      await expect(agent.run(undefined as unknown as string)).rejects.toThrow(
         'no text, skipping prompt'
       );
+    });
+
+    test('run returns PromptResult with sessionStats', async () => {
+      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      await agent.ready();
+
+      // Mock the session to return known stats
+      const mockStats = {
+        getSessionStats: () => ({
+          tokens: { input: 100, output: 50, total: 150 },
+          cost: 0.00123,
+        }),
+        prompt: async () => {},
+        subscribe: () => {},
+      };
+      agent['session'] = mockStats as any;
+
+      const result = await agent.run('Hello');
+      expect(result).toEqual({
+        result: '',
+        sessionStats: {
+          inputTokens: 100,
+          outputTokens: 50,
+          totalTokens: 150,
+          cost: 0.00123,
+        },
+      });
+    });
+
+    test('run returns PromptResult with undefined sessionStats when SDK throws', async () => {
+      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      await agent.ready();
+
+      // Mock the session to throw an error on getSessionStats
+      const mockSession = {
+        getSessionStats: () => {
+          throw new Error('SDK internal error');
+        },
+        prompt: async () => {},
+        subscribe: () => {},
+      };
+      agent['session'] = mockSession as any;
+
+      const result = await agent.run('Hello');
+      expect(result).toEqual({
+        result: '',
+        sessionStats: undefined,
+      });
+    });
+
+    test('run returns PromptResult with zero tokens and cost', async () => {
+      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      await agent.ready();
+
+      // Mock the session to return zero values
+      const mockStats = {
+        getSessionStats: () => ({
+          tokens: { input: 0, output: 0, total: 0 },
+          cost: 0,
+        }),
+        prompt: async () => {},
+        subscribe: () => {},
+      };
+      agent['session'] = mockStats as any;
+
+      const result = await agent.run('Hello');
+      expect(result).toEqual({
+        result: '',
+        sessionStats: {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          cost: 0,
+        },
+      });
+    });
+
+    test('run returns PromptResult with large token counts', async () => {
+      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      await agent.ready();
+
+      // Mock the session to return large values
+      const mockStats = {
+        getSessionStats: () => ({
+          tokens: { input: 100000, output: 50000, total: 150000 },
+          cost: 1.2345,
+        }),
+        prompt: async () => {},
+        subscribe: () => {},
+      };
+      agent['session'] = mockStats as any;
+
+      const result = await agent.run('Hello');
+      expect(result).toEqual({
+        result: '',
+        sessionStats: {
+          inputTokens: 100000,
+          outputTokens: 50000,
+          totalTokens: 150000,
+          cost: 1.2345,
+        },
+      });
     });
   });
 });

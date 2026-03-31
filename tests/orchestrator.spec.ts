@@ -55,11 +55,12 @@ describe('ActionOrchestrator', () => {
     };
 
     // Create mock Pi agent
-    const promptMock = mock(async () => 'Here are your tests!');
-    const getSessionStatsMock = mock(() => undefined);
+    const runMock = mock(async () => ({
+      result: 'Here are your tests!',
+      sessionStats: undefined,
+    }));
     mockPiAgent = {
-      prompt: promptMock as any,
-      getSessionStats: getSessionStatsMock as any,
+      run: runMock as any,
     };
 
     mockPiFactory = mock(() => mockPiAgent);
@@ -171,7 +172,7 @@ describe('ActionOrchestrator', () => {
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
       await orchestrator.execute();
 
-      expect(mockPiAgent.prompt).toHaveBeenCalledWith('Write unit tests for this function');
+      expect(mockPiAgent.run).toHaveBeenCalledWith('Write unit tests for this function');
     });
 
     test('deletes reaction after successful execution', async () => {
@@ -186,8 +187,11 @@ describe('ActionOrchestrator', () => {
     });
 
     test('creates final comment with result', async () => {
-      const promptMock = mock(async () => 'Your tests are ready!');
-      mockPiAgent.prompt = promptMock as any;
+      const runMock = mock(async () => ({
+        result: 'Your tests are ready!',
+        sessionStats: undefined,
+      }));
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
       await orchestrator.execute();
@@ -250,10 +254,10 @@ describe('ActionOrchestrator', () => {
   describe('error handling', () => {
     test('catches Pi agent errors and finalizes with error message', async () => {
       const error = new Error('API quota exceeded');
-      const promptMock = mock(async () => {
+      const runMock = mock(async () => {
         throw error;
       });
-      mockPiAgent.prompt = promptMock as any;
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
 
@@ -271,10 +275,10 @@ describe('ActionOrchestrator', () => {
 
     test('calls core.setFailed on error', async () => {
       const error = new Error('Network timeout');
-      const promptMock = mock(async () => {
+      const runMock = mock(async () => {
         throw error;
       });
-      mockPiAgent.prompt = promptMock as any;
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
 
@@ -288,10 +292,10 @@ describe('ActionOrchestrator', () => {
       const addReactionMock = mock(async () => mockReaction);
       mockGithub.addReaction = addReactionMock as any;
 
-      const promptMock = mock(async () => {
+      const runMock = mock(async () => {
         throw new Error('Failed');
       });
-      mockPiAgent.prompt = promptMock as any;
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
 
@@ -301,10 +305,10 @@ describe('ActionOrchestrator', () => {
     });
 
     test('handles non-Error objects thrown by Pi', async () => {
-      const promptMock = mock(async () => {
+      const runMock = mock(async () => {
         throw 'String error';
       });
-      mockPiAgent.prompt = promptMock as any;
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
 
@@ -318,10 +322,10 @@ describe('ActionOrchestrator', () => {
 
     test('re-throws the original error after finalization', async () => {
       const error = new Error('Original error');
-      const promptMock = mock(async () => {
+      const runMock = mock(async () => {
         throw error;
       });
-      mockPiAgent.prompt = promptMock as any;
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
 
@@ -340,7 +344,7 @@ describe('ActionOrchestrator', () => {
       await expect(orchestrator.execute()).resolves.toBeUndefined();
 
       // Reaction error was ignored but Pi was still called
-      expect(mockPiAgent.prompt).toHaveBeenCalled();
+      expect(mockPiAgent.run).toHaveBeenCalled();
       expect(mockGithub.createFinalComment).toHaveBeenCalledWith(
         'Here are your tests!',
         expect.any(Object)
@@ -398,7 +402,7 @@ describe('ActionOrchestrator', () => {
       await expect(orchestrator.execute()).rejects.toThrow();
 
       expect(mockPiFactory).not.toHaveBeenCalled();
-      expect(mockPiAgent.prompt).not.toHaveBeenCalled();
+      expect(mockPiAgent.run).not.toHaveBeenCalled();
     });
   });
 
@@ -417,7 +421,7 @@ describe('ActionOrchestrator', () => {
         expect.any(Object)
       );
       expect(mockPiFactory).not.toHaveBeenCalled();
-      expect(mockPiAgent.prompt).not.toHaveBeenCalled();
+      expect(mockPiAgent.run).not.toHaveBeenCalled();
     });
 
     test('handles reaction returning undefined', async () => {
@@ -452,12 +456,12 @@ describe('ActionOrchestrator', () => {
   });
 
   describe('error handling - session stats', () => {
-    test('continues execution when getSessionStats throws', async () => {
-      const statsError = new Error('Stats API failed');
-      const getSessionStatsMock = mock(() => {
-        throw statsError;
-      });
-      mockPiAgent.getSessionStats = getSessionStatsMock as any;
+    test('continues execution when run returns undefined sessionStats', async () => {
+      const runMock = mock(async () => ({
+        result: 'Here are your tests!',
+        sessionStats: undefined,
+      }));
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
 
@@ -472,18 +476,21 @@ describe('ActionOrchestrator', () => {
       expect(metadata.sessionStats).toBeUndefined();
 
       // Prompt was still called
-      expect(mockPiAgent.prompt).toHaveBeenCalled();
+      expect(mockPiAgent.run).toHaveBeenCalled();
     });
 
-    test('includes session stats when available', async () => {
+    test('includes session stats when available in PromptResult', async () => {
       const sessionStats = {
         inputTokens: 100,
         outputTokens: 50,
         totalTokens: 150,
         cost: 0.001,
       };
-      const getSessionStatsMock = mock(() => sessionStats);
-      mockPiAgent.getSessionStats = getSessionStatsMock as any;
+      const runMock = mock(async () => ({
+        result: 'Here are your tests!',
+        sessionStats,
+      }));
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
 
@@ -495,30 +502,15 @@ describe('ActionOrchestrator', () => {
       const metadata = calls[0][1];
       expect(metadata.sessionStats).toEqual(sessionStats);
     });
-
-    test('handles getSessionStats returning undefined', async () => {
-      const getSessionStatsMock = mock(() => undefined);
-      mockPiAgent.getSessionStats = getSessionStatsMock as any;
-
-      const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
-
-      await expect(orchestrator.execute()).resolves.toBeUndefined();
-
-      // Comment should be created without stats
-      const calls = (mockGithub.createFinalComment as any).mock.calls;
-      expect(calls.length).toBeGreaterThan(0);
-      const metadata = calls[0][1];
-      expect(metadata.sessionStats).toBeUndefined();
-    });
   });
 
   describe('error handling - finalize failures', () => {
     test('re-throws error after finalize succeeds in catch block', async () => {
       const error = new Error('Prompt failed');
-      const promptMock = mock(async () => {
+      const runMock = mock(async () => {
         throw error;
       });
-      mockPiAgent.prompt = promptMock as any;
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
 
@@ -534,10 +526,10 @@ describe('ActionOrchestrator', () => {
     test('fails action when finalize in catch block throws', async () => {
       const error = new Error('Prompt failed');
       const finalizeError = new Error('Failed to post comment');
-      const promptMock = mock(async () => {
+      const runMock = mock(async () => {
         throw error;
       });
-      mockPiAgent.prompt = promptMock as any;
+      mockPiAgent.run = runMock as any;
 
       const createFinalCommentMock = mock(async () => {
         throw finalizeError;
@@ -560,10 +552,10 @@ describe('ActionOrchestrator', () => {
 
     test('calls setFailed after finalize succeeds', async () => {
       const error = new Error('API timeout');
-      const promptMock = mock(async () => {
+      const runMock = mock(async () => {
         throw error;
       });
-      mockPiAgent.prompt = promptMock as any;
+      mockPiAgent.run = runMock as any;
 
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
 
