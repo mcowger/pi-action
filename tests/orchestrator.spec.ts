@@ -8,6 +8,10 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// Provide a default version for tests (build-time constant)
+declare const __VERSION__: string;
+globalThis.__VERSION__ = 'test-version';
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import { Temporal } from '@js-temporal/polyfill';
 import { ActionOrchestrator } from '../src/orchestrator';
@@ -35,10 +39,16 @@ describe('ActionOrchestrator', () => {
 
     const setFailedMock = mock();
     const noticeMock = mock();
+    const infoMock = mock();
+    const debugMock = mock();
+    const warningMock = mock();
     mockCore = {
       getInput: getInputMock,
       setFailed: setFailedMock,
       notice: noticeMock,
+      info: infoMock,
+      debug: debugMock,
+      warning: warningMock,
     } as any;
 
     // Create mock github adapter

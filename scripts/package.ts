@@ -1,6 +1,7 @@
-import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
 import { build } from 'esbuild';
 
+const version = readFileSync('VERSION', 'utf-8').trim();
 const piVersion = JSON.parse(
   readFileSync('node_modules/@mariozechner/pi-coding-agent/package.json', 'utf-8')
 ).version;
@@ -16,6 +17,7 @@ await build({
   define: {
     'import.meta.url': 'importMetaUrl',
     __PI_CODING_AGENT_VERSION__: JSON.stringify(piVersion),
+    __VERSION__: JSON.stringify(version),
   },
   inject: ['src/import-meta-url.js'],
 });

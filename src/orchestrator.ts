@@ -18,6 +18,8 @@ import {
 } from './types';
 import type { CreateReactionType } from './github/reactions';
 
+declare const __VERSION__: string;
+
 /**
  * Orchestrates the GitHub Action execution flow.
  *
@@ -38,6 +40,7 @@ export class ActionOrchestrator {
    * @throws Rethrows any error from finalize when posting final comment fails.
    */
   async execute(): Promise<void> {
+    this.core.info(`running action v${__VERSION__}`);
     const startTime = this.github.getStartTime() ?? Temporal.Now.instant();
     const config = this.gatherConfig();
     let reaction: CreateReactionType | undefined;
@@ -107,6 +110,7 @@ export class ActionOrchestrator {
     }
 
     const metadata: CommentMetadata = {
+      actionVersion: __VERSION__,
       provider: config.provider,
       model: config.model,
       thinkingLevel: config.thinkingLevel,

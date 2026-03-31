@@ -160,6 +160,10 @@ export async function createFinalComment(
       metadataParts.push(`Pi SDK v${metadata.sessionStats.version}`);
     }
 
+    if (metadata?.actionVersion) {
+      metadataParts.push(`Action v${metadata.actionVersion}`);
+    }
+
     finalBody = `${body}\n\n---\n\n${metadataParts.join(' | ')}`;
   }
 
