@@ -39,17 +39,39 @@ process.env.INPUT_MAX_COMMENTS = '100';
 // Dynamic import to ensure mocks are set up before module loads
 const { Agent } = await import('../../src/pi/agent');
 
+// Create a mock CoreAdapter for tests
+const mockCoreAdapter = {
+  getInput: mockGetInput,
+  notice: mock(noop),
+  debug: mock(noop),
+  info: mock(noop),
+  setFailed: mock(noop),
+  warning: mock(noop),
+};
+
 describe('Agent', () => {
   describe('constructor', () => {
     test('throws error for non-existent model', () => {
       // Use a provider/model combo that won't exist in the registry
       expect(() => {
-        const _agent = new Agent('model-name', 'fake-provider', 'test-token');
+        const _agent = new Agent(
+          'model-name',
+          'fake-provider',
+          'test-token',
+          'off',
+          mockCoreAdapter as any
+        );
       }).toThrow('Model not found');
     });
 
     test('stores token in auth storage when provided', () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'sk-12345');
+      const agent = new Agent(
+        'claude-sonnet-4-5',
+        'anthropic',
+        'sk-12345',
+        'off',
+        mockCoreAdapter as any
+      );
       // Agent is created without error
       expect(agent).toBeDefined();
     });
@@ -57,20 +79,38 @@ describe('Agent', () => {
 
   describe('ready and run', () => {
     test('ready initializes session', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      const agent = new Agent(
+        'claude-sonnet-4-5',
+        'anthropic',
+        'test-token',
+        'off',
+        mockCoreAdapter as any
+      );
       const result = await agent.ready();
       expect(result).toBe(agent);
     });
 
     test('run throws error for empty text', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      const agent = new Agent(
+        'claude-sonnet-4-5',
+        'anthropic',
+        'test-token',
+        'off',
+        mockCoreAdapter as any
+      );
       await agent.ready();
 
       await expect(agent.run('')).rejects.toThrow('no text, skipping prompt');
     });
 
     test('run throws error for undefined text', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      const agent = new Agent(
+        'claude-sonnet-4-5',
+        'anthropic',
+        'test-token',
+        'off',
+        mockCoreAdapter as any
+      );
       await agent.ready();
 
       await expect(agent.run(undefined as unknown as string)).rejects.toThrow(
@@ -79,7 +119,13 @@ describe('Agent', () => {
     });
 
     test('run returns PromptResult with sessionStats', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      const agent = new Agent(
+        'claude-sonnet-4-5',
+        'anthropic',
+        'test-token',
+        'off',
+        mockCoreAdapter as any
+      );
       await agent.ready();
 
       // Mock the session to return known stats
@@ -107,7 +153,13 @@ describe('Agent', () => {
     });
 
     test('run returns PromptResult with undefined sessionStats when SDK throws', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      const agent = new Agent(
+        'claude-sonnet-4-5',
+        'anthropic',
+        'test-token',
+        'off',
+        mockCoreAdapter as any
+      );
       await agent.ready();
 
       // Mock the session to throw an error on getSessionStats
@@ -128,7 +180,13 @@ describe('Agent', () => {
     });
 
     test('run returns PromptResult with zero tokens and cost', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      const agent = new Agent(
+        'claude-sonnet-4-5',
+        'anthropic',
+        'test-token',
+        'off',
+        mockCoreAdapter as any
+      );
       await agent.ready();
 
       // Mock the session to return zero values
@@ -156,7 +214,13 @@ describe('Agent', () => {
     });
 
     test('run returns PromptResult with large token counts', async () => {
-      const agent = new Agent('claude-sonnet-4-5', 'anthropic', 'test-token');
+      const agent = new Agent(
+        'claude-sonnet-4-5',
+        'anthropic',
+        'test-token',
+        'off',
+        mockCoreAdapter as any
+      );
       await agent.ready();
 
       // Mock the session to return large values

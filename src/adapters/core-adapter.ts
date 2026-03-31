@@ -22,4 +22,16 @@ export class RealCoreAdapter implements CoreAdapter {
   notice(message: string): void {
     core.notice(message);
   }
+
+  debug(message: string): void {
+    core.debug(message);
+  }
+
+  info(message: string): void {
+    core.info(message);
+  }
+
+  warning(message: string): void {
+    core.warning(message);
+  }
 }

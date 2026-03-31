@@ -5,7 +5,7 @@
  * and after session ends, including system prompt, tools and configuration.
  */
 
-import * as core from '@actions/core';
+import type { CoreAdapter } from '../types';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
 /**
@@ -13,7 +13,7 @@ import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
  */
 declare const __PI_CODING_AGENT_VERSION__: string;
 
-export const loggingFactory = (pi: ExtensionAPI) => {
+export const loggingFactory = (pi: ExtensionAPI, core: CoreAdapter) => {
   pi.on('tool_execution_start', async event => {
     core.info('');
     core.debug(`🔧 Tool Execution started: ${event.toolName} (${event.toolCallId})`);
@@ -114,4 +114,17 @@ function truncateText(text: string, maxLength: number): string {
 
 export function getVersion(): string {
   return typeof __PI_CODING_AGENT_VERSION__ === 'string' ? __PI_CODING_AGENT_VERSION__ : 'unknown';
+}
+
+/**
+ * Create a logging factory bound to a specific CoreAdapter.
+ *
+ * This is a convenience wrapper that curries the CoreAdapter for use with
+ * the Pi SDK's extension system.
+ *
+ * @param core - The CoreAdapter to use for logging.
+ * @returns A factory function compatible with the Pi SDK's extension system.
+ */
+export function createLoggingFactory(core: CoreAdapter) {
+  return (pi: ExtensionAPI) => loggingFactory(pi, core);
 }

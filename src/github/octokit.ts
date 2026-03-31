@@ -6,8 +6,8 @@
  * `github_token` action input on first access.
  */
 
-import * as core from '@actions/core';
 import * as github from '@actions/github';
+import { getCoreAdapter } from './index';
 
 /** Cached Octokit instance (created once on first call to {@link getOctokit}). */
 let _octokit: ReturnType<typeof github.getOctokit> | undefined;
@@ -21,6 +21,6 @@ let _octokit: ReturnType<typeof github.getOctokit> | undefined;
  * @returns An authenticated {@link Octokit} client.
  */
 export function getOctokit() {
-  _octokit ??= github.getOctokit(core.getInput('github_token'));
+  _octokit ??= github.getOctokit(getCoreAdapter().getInput('github_token'));
   return _octokit;
 }

@@ -11,17 +11,19 @@
 
 import { DefaultResourceLoader } from '@mariozechner/pi-coding-agent';
 import { SYSTEM_PROMPT } from './prompt';
-import { loggingFactory } from './logging';
+import { createLoggingFactory } from './logging';
 import { extensionsFactory } from './tools/index';
+import type { CoreAdapter } from '../types';
 
 /**
  * Create and configure the resource loader used by the agent session.
  *
+ * @param core - The CoreAdapter to use for logging within the Pi agent.
  * @returns A fully loaded {@link DefaultResourceLoader} instance.
  */
-export async function getResourceLoader(): Promise<DefaultResourceLoader> {
+export async function getResourceLoader(core: CoreAdapter): Promise<DefaultResourceLoader> {
   const loader = new DefaultResourceLoader({
-    extensionFactories: [extensionsFactory, loggingFactory],
+    extensionFactories: [extensionsFactory, createLoggingFactory(core)],
     systemPromptOverride: () => SYSTEM_PROMPT,
     appendSystemPromptOverride: agentsFiles => {
       if (agentsFiles.length === 0) {

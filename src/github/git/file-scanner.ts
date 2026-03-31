@@ -13,8 +13,6 @@ import { getOctokit } from '../octokit';
 import { FILE_MODE_REGULAR, IGNORE_PATTERNS } from '../constants';
 import { createLogger, FileMode } from './types';
 
-const octokit = getOctokit();
-
 /**
  * Result of scanning for changes in the repository.
  */
@@ -44,6 +42,7 @@ async function fetchBlobContent(
   log: ReturnType<typeof createLogger>
 ): Promise<string | null> {
   try {
+    const octokit = getOctokit();
     const blob = await octokit.rest.git.getBlob({
       owner,
       repo,
@@ -72,6 +71,7 @@ export async function buildFileMap(
   fetchContents = true,
   log = createLogger()
 ): Promise<Map<string, { sha: string; content: string | null }>> {
+  const octokit = getOctokit();
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
 

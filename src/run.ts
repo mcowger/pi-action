@@ -20,7 +20,7 @@ import { createRealPiAgent } from './adapters/pi-agent-adapter';
  */
 export async function run() {
   const coreAdapter = new RealCoreAdapter();
-  const githubAdapter = new RealGitHubAdapter();
+  const githubAdapter = new RealGitHubAdapter(coreAdapter);
   const orchestrator = new ActionOrchestrator(coreAdapter, githubAdapter, createRealPiAgent);
 
   await orchestrator.execute();

@@ -129,13 +129,16 @@ describe('ActionOrchestrator', () => {
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
       await orchestrator.execute();
 
-      expect(mockPiFactory).toHaveBeenCalledWith({
-        provider: 'openai',
-        model: 'gpt-4o',
-        token: 'sk-test-key',
-        thinkingLevel: 'medium',
-        promptInput: '',
-      });
+      expect(mockPiFactory).toHaveBeenCalledWith(
+        {
+          provider: 'openai',
+          model: 'gpt-4o',
+          token: 'sk-test-key',
+          thinkingLevel: 'medium',
+          promptInput: '',
+        },
+        mockCore
+      );
     });
 
     test('defaults thinking_level to off when not provided', async () => {
@@ -158,13 +161,16 @@ describe('ActionOrchestrator', () => {
 
       // Note: The original code uses ?? 'off', which only applies when input is null/undefined
       // If getInput returns empty string, the default won't apply. This is the actual behavior.
-      expect(mockPiFactory).toHaveBeenCalledWith({
-        provider: 'anthropic',
-        model: 'claude-sonnet-4-5',
-        token: 'test-token',
-        thinkingLevel: '', // Empty string, because ?? doesn't apply to empty strings
-        promptInput: '',
-      });
+      expect(mockPiFactory).toHaveBeenCalledWith(
+        {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinkingLevel: '', // Empty string, because ?? doesn't apply to empty strings
+          promptInput: '',
+        },
+        mockCore
+      );
     });
 
     test('sends prompt to Pi agent', async () => {
@@ -453,7 +459,10 @@ describe('ActionOrchestrator', () => {
       const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
       await orchestrator.execute();
 
-      expect(mockPiFactory).toHaveBeenCalledWith(expect.objectContaining({ thinkingLevel: '   ' }));
+      expect(mockPiFactory).toHaveBeenCalledWith(
+        expect.objectContaining({ thinkingLevel: '   ' }),
+        mockCore
+      );
     });
   });
 

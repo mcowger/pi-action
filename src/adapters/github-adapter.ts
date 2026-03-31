@@ -5,15 +5,26 @@
  */
 
 import { Temporal } from '@js-temporal/polyfill';
-import { addReaction, deleteReaction, createFinalComment, getPrompt } from '../github';
+import {
+  addReaction,
+  deleteReaction,
+  createFinalComment,
+  getPrompt,
+  setCoreAdapter,
+} from '../github';
 import { getStartTimeFromContext } from '../github/context';
-import type { GitHubAdapter, CommentMetadata } from '../types';
+import type { GitHubAdapter, CommentMetadata, CoreAdapter } from '../types';
 import type { CreateReactionType } from '../github/reactions';
 
 /**
  * Production adapter for GitHub operations.
  */
 export class RealGitHubAdapter implements GitHubAdapter {
+  constructor(private readonly core: CoreAdapter) {
+    // Set the module-level CoreAdapter for use by github functions and Pi tools
+    setCoreAdapter(core);
+  }
+
   async addReaction() {
     return addReaction();
   }

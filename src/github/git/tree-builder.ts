@@ -9,8 +9,6 @@ import { getOctokit } from '../octokit';
 import { FILE_MODE_REGULAR } from '../constants';
 import { createLogger, FileMode, TreeEntry } from './types';
 
-const octokit = getOctokit();
-
 /**
  * Parameters for blob and tree creation operation.
  */
@@ -39,6 +37,7 @@ export interface CreateBlobsAndTreeParams {
 export async function createBlobsAndTree(params: CreateBlobsAndTreeParams): Promise<string> {
   const { changedFiles, deletedFiles, parentSha, log = createLogger() } = params;
   const owner = github.context.repo.owner;
+  const octokit = getOctokit();
   const repo = github.context.repo.repo;
 
   log.debug(`Creating blobs for changed files...`);

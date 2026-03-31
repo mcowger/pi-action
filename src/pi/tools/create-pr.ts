@@ -13,8 +13,8 @@ import {
   CREATE_PULL_REQUEST_PARAM_DRY_RUN_DESCRIPTION,
 } from '../prompt';
 import { createPullRequest, CANCELLATION_MESSAGE_CREATE_PR } from '../../github/index';
-import type { CreatePullRequestParams } from '../../github/index';
 import { buildTool } from './tool-builder';
+import type { CreatePullRequestParams } from '../../github/index';
 
 /**
  * Schema for the create_pull_request tool.
@@ -58,7 +58,7 @@ export const createPRTool = buildTool({
     baseBranch: '',
     dryRun: false,
   },
-  execute: async (params) => {
+  execute: async params => {
     const { title, body, base, dryRun } = params;
 
     // Delegate to the GitHub-specific implementation

@@ -8,8 +8,6 @@ import * as github from '@actions/github';
 import { getOctokit } from '../octokit';
 import { createLogger } from './types';
 
-const octokit = getOctokit();
-
 /**
  * Parameters for commit creation and branch update operation.
  */
@@ -36,6 +34,7 @@ export async function createCommitAndUpdateBranch(
   params: CreateCommitAndUpdateBranchParams
 ): Promise<string> {
   const { treeSha, parentSha, branchName, message, log = createLogger() } = params;
+  const octokit = getOctokit();
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
 

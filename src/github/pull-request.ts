@@ -20,7 +20,6 @@ import {
   buildFileMap,
 } from './git/index';
 
-const octokit = getOctokit();
 const log = createLogger();
 
 export interface CreatePullRequestParams {
@@ -71,6 +70,7 @@ async function determineBaseBranch(providedBase: string | undefined): Promise<st
 
   // Fetch from GitHub API
   log.debug(`Fetching repository default branch from GitHub API...`);
+  const octokit = getOctokit();
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
   const repoData = await octokit.rest.repos.get({
@@ -145,6 +145,7 @@ async function createPullRequestOnGitHub(
 
   log.debug(`Creating pull request...`);
 
+  const octokit = getOctokit();
   const result = await octokit.rest.pulls.create({
     owner,
     repo,
@@ -219,6 +220,7 @@ export async function createPullRequest(
   log.debug(`Preparing branch and changes via GitHub API...`);
 
   try {
+    const octokit = getOctokit();
     const owner = github.context.repo.owner;
     const repo = github.context.repo.repo;
 

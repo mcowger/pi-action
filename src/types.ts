@@ -11,7 +11,8 @@ import type { CreateReactionType } from './github/reactions';
 /**
  * Adapter interface for @actions/core operations.
  *
- * Provides a testable wrapper around core.getInput() and core.setFailed().
+ * Provides a testable wrapper around core operations including input retrieval,
+ * logging, and workflow status management.
  */
 export interface CoreAdapter {
   /** Retrieve an action input by name. */
@@ -20,6 +21,12 @@ export interface CoreAdapter {
   setFailed(error: Error): void;
   /** Log a notice message. */
   notice(message: string): void;
+  /** Log a debug message (only visible when debug logging is enabled). */
+  debug(message: string): void;
+  /** Log an info message. */
+  info(message: string): void;
+  /** Log a warning message. */
+  warning(message: string): void;
 }
 
 /**
@@ -74,8 +81,10 @@ export interface PromptResult {
 
 /**
  * Factory function for creating Pi agents with the given configuration.
+ *
+ * Accepts CoreAdapter for logging within the Pi agent session.
  */
-export type PiAgentFactory = (config: PiConfig) => PiAgent;
+export type PiAgentFactory = (config: PiConfig, core: CoreAdapter) => PiAgent;
 
 /**
  * Configuration for the Pi agent.

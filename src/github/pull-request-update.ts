@@ -19,7 +19,6 @@ import {
   buildFileMap,
 } from './git/index';
 
-const octokit = getOctokit();
 const log = createLogger();
 
 export interface UpdatePullRequestParams {
@@ -79,6 +78,7 @@ async function updatePullRequestMetadata(
 
   log.debug(`Updating PR #${pullNumber} metadata...`);
 
+  const octokit = getOctokit();
   await octokit.rest.pulls.update({
     owner,
     repo,
@@ -154,6 +154,7 @@ export async function updatePullRequest(
   log.debug(`DryRun: ${dryRun ?? false}`);
 
   // Fetch PR details
+  const octokit = getOctokit();
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
 

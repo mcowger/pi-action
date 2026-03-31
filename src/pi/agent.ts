@@ -6,7 +6,6 @@
  * headless / non-interactive use inside GitHub Actions.
  */
 
-import * as core from '@actions/core';
 import { AuthStorage, createAgentSession, ModelRegistry } from '@mariozechner/pi-coding-agent';
 import { getResourceLoader } from './resource-loader';
 import { getVersion } from './logging';
@@ -14,13 +13,13 @@ import { getVersion } from './logging';
 import type { AgentSession } from '@mariozechner/pi-coding-agent';
 import type { Api, Model } from '@mariozechner/pi-ai';
 import type { ThinkingLevel } from '@mariozechner/pi-agent-core';
-import type { PromptResult, SessionStats } from '../types';
+import type { PromptResult, SessionStats, CoreAdapter } from '../types';
 
 /**
  * Pi coding agent for headless execution inside GitHub Actions.
  *
  * Wraps model resolution, authentication, agent session lifecycle, and prompt
- * execution into a simple interface: construct → {@link ready} → {@link prompt}.
+ * execution into a simple interface: construct → {@link ready} → {@link run}.
  */
 export class Agent {
   private model: Model<Api>;
@@ -32,6 +31,7 @@ export class Agent {
   private token: string;
   private thinkingLevel: ThinkingLevel;
   private outputChunks: string[] = [];
+  private core: CoreAdapter;
 
   /**
    * Create a new Pi agent.
@@ -43,17 +43,19 @@ export class Agent {
    *                      the auth storage automatically.
    * @param level      - Thinking/reasoning level for the model
    *                      (default `'off'`).
+   * @param core       - The CoreAdapter for logging and debug output.
    * @throws {Error}   If the requested model cannot be found in the registry.
    */
-  constructor(modelStr: string, provider: string, token: string, level = 'off') {
+  constructor(modelStr: string, provider: string, token: string, level = 'off', core: CoreAdapter) {
     this.modelStr = modelStr;
     this.provider = provider;
     this.token = token;
     this.thinkingLevel = level as ThinkingLevel;
+    this.core = core;
     this.modelRegistry = ModelRegistry.inMemory(this.authStorage);
 
     if (this.token) {
-      core.debug(`[auth] Setting api_key token for ${this.provider} provider`);
+      this.core.debug(`[auth] Setting api_key token for ${this.provider} provider`);
       this.authStorage.set(this.provider, {
         type: 'api_key',
         key: this.token,
@@ -83,7 +85,7 @@ export class Agent {
       thinkingLevel: this.thinkingLevel,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      resourceLoader: await getResourceLoader(),
+      resourceLoader: await getResourceLoader(this.core),
     });
     this.session = session;
 
@@ -151,6 +153,7 @@ export class Agent {
       };
     } catch (_error) {
       // Session stats are metadata - don't fail the action if unavailable
+      this.core.notice('Failed to get session stats, continuing without stats');
       return undefined;
     }
   }

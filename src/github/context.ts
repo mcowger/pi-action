@@ -6,21 +6,30 @@
  * richer `getIssueOrPRThread` function used by the `get_issue_or_pr_thread` tool.
  */
 
-import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Temporal } from '@js-temporal/polyfill';
 import { getOctokit } from './octokit';
 import { DEFAULT_TRIGGER, MAX_COMMENTS } from './constants';
 import { isPR, getContextType } from './context-utils';
-
-const trigger = core.getInput('trigger') || DEFAULT_TRIGGER;
-const octokit = getOctokit();
+import { getCoreAdapter } from './index';
+import RestEndpointMethodTypes from '@octokit/plugin-rest-endpoint-methods';
 
 /**
  * Debug logging helper.
  */
 function debug(msg: string): void {
-  core.debug(msg);
+  getCoreAdapter().debug(msg);
+}
+
+/**
+ * Get the trigger command for stripping from comments.
+ *
+ * Lazily retrieves the trigger input to avoid module-level evaluation issues.
+ *
+ * @returns The trigger string (default '/pi' if not specified).
+ */
+function getTrigger(): string {
+  return getCoreAdapter().getInput('trigger') || DEFAULT_TRIGGER;
 }
 
 /**
@@ -189,7 +198,7 @@ export async function getPrompt(promptInput?: string): Promise<string | undefine
   if (promptInput) {
     const trimmed = promptInput.trim();
     if (!trimmed) {
-      core.notice('prompt input is empty, skipping');
+      getCoreAdapter().notice('prompt input is empty, skipping');
       return undefined;
     }
     return enrichWithContext(trimmed, 'Instruction');
@@ -198,13 +207,13 @@ export async function getPrompt(promptInput?: string): Promise<string | undefine
   // Fall back to comment-based prompt
   const comment = await getComment();
   if (!comment) {
-    core.notice('no comment found in context, skipping');
+    getCoreAdapter().notice('no comment found in context, skipping');
     return undefined;
   }
 
   const prompt = comment.body;
   if (!prompt) {
-    core.notice('no prompt found in comment, skipping');
+    getCoreAdapter().notice('no prompt found in comment, skipping');
     return undefined;
   }
 
@@ -217,7 +226,7 @@ async function getComment(): Promise<typeof github.context.payload.comment | und
     return;
   }
 
-  comment.body = comment.body.replace(trigger, '').trim();
+  comment.body = comment.body.replace(getTrigger(), '').trim();
 
   return comment;
 }
@@ -249,9 +258,10 @@ async function fetchIssueData(
   repo: string,
   issueNumber: number
 ): Promise<{
-  issue: Awaited<ReturnType<typeof octokit.rest.issues.get>>['data'];
+  issue: RestEndpointMethodTypes.RestEndpointMethodTypes['issues']['get']['response']['data'];
   isPullRequest: boolean;
 }> {
+  const octokit = getOctokit();
   const issueData = await octokit.rest.issues.get({
     owner,
     repo,
@@ -268,8 +278,11 @@ async function fetchPRData(
   owner: string,
   repo: string,
   issueNumber: number
-): Promise<Awaited<ReturnType<typeof octokit.rest.pulls.get>>['data'] | undefined> {
+): Promise<
+  RestEndpointMethodTypes.RestEndpointMethodTypes['pulls']['get']['response']['data'] | undefined
+> {
   try {
+    const octokit = getOctokit();
     const prData = await octokit.rest.pulls.get({
       owner,
       repo,
@@ -319,6 +332,7 @@ async function fetchThreadComments(
   const perPage = Math.min(maxComments, MAX_COMMENTS);
 
   while (comments.length < maxComments) {
+    const octokit = getOctokit();
     const commentsData = await octokit.rest.issues.listComments({
       owner,
       repo,
@@ -359,7 +373,7 @@ async function fetchThreadComments(
  */
 function determineThreadState(
   issueState: string,
-  prData?: Awaited<ReturnType<typeof octokit.rest.pulls.get>>['data']
+  prData?: RestEndpointMethodTypes.RestEndpointMethodTypes['pulls']['get']['response']['data']
 ): 'open' | 'closed' | 'merged' {
   if (issueState === 'closed' && prData?.merged_at) {
     return 'merged';
@@ -368,9 +382,9 @@ function determineThreadState(
 }
 
 function buildThreadResult(
-  issue: Awaited<ReturnType<typeof octokit.rest.issues.get>>['data'],
+  issue: RestEndpointMethodTypes.RestEndpointMethodTypes['issues']['get']['response']['data'],
   isPullRequest: boolean,
-  prData?: Awaited<ReturnType<typeof octokit.rest.pulls.get>>['data'],
+  prData?: RestEndpointMethodTypes.RestEndpointMethodTypes['pulls']['get']['response']['data'],
   comments?: ThreadComment[]
 ): IssueOrPRThread {
   return {

@@ -12,8 +12,6 @@ import { Temporal } from '@js-temporal/polyfill';
 import { getOctokit } from './octokit';
 import type { SessionStats } from '../types';
 
-const octokit = getOctokit();
-
 /**
  * Metadata to include in the comment footer.
  */
@@ -79,6 +77,7 @@ async function createComment(body: string): Promise<CreateCommentType | undefine
     return;
   }
 
+  const octokit = getOctokit();
   return octokit.rest.issues.createComment({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,

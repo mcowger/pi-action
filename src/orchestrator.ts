@@ -57,7 +57,7 @@ export class ActionOrchestrator {
         this.core.notice(`failed to add reaction: ${errorMessage}`);
       }
 
-      const pi = this.piAgentFactory(config);
+      const pi = this.piAgentFactory(config, this.core);
       const { result, sessionStats } = await pi.run(prompt);
 
       await this.finalize(result, config, startTime, reaction, sessionStats);

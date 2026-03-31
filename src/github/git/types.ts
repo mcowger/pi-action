@@ -2,8 +2,8 @@
  * @file Shared types and utilities for Git operations.
  */
 
-import * as core from '@actions/core';
 import { FILE_MODE_DIRECTORY, FILE_MODE_EXECUTABLE, FILE_MODE_REGULAR } from '../constants';
+import { getCoreAdapter } from '../index';
 
 /**
  * Git file mode types
@@ -30,10 +30,13 @@ export interface TreeEntry {
 
 /**
  * Create a logger with a custom emoji prefix.
+ *
+ * The logger lazily fetches the CoreAdapter on first call to avoid
+ * initialization order issues when modules are loaded.
  */
 export function createLogger(emoji = '🔀') {
   return {
-    debug: (msg: string): void => core.debug(`${emoji} ${msg}`),
-    info: (msg: string): void => core.info(`${emoji} ${msg}`),
+    debug: (msg: string): void => getCoreAdapter().debug(`${emoji} ${msg}`),
+    info: (msg: string): void => getCoreAdapter().info(`${emoji} ${msg}`),
   };
 }

@@ -7,23 +7,21 @@
  * was received.
  */
 
-import * as core from '@actions/core';
 import * as github from '@actions/github';
 import RestEndpointMethodTypes from '@octokit/plugin-rest-endpoint-methods';
 import { getOctokit } from './octokit';
 import { REACTION_TYPE_EYES } from './constants';
+import { getCoreAdapter } from './index';
 export type CreateReactionType =
   RestEndpointMethodTypes.RestEndpointMethodTypes['reactions']['createForIssueComment']['response'];
 export type DeleteReactionType =
   RestEndpointMethodTypes.RestEndpointMethodTypes['reactions']['deleteForIssueComment']['response'];
 
-const octokit = getOctokit();
-
 /**
  * Debug logging helper.
  */
 function debug(msg: string): void {
-  core.debug(msg);
+  getCoreAdapter().debug(msg);
 }
 
 /**
@@ -40,6 +38,7 @@ export async function addReaction(): Promise<CreateReactionType | undefined> {
     return;
   }
 
+  const octokit = getOctokit();
   return await octokit.rest.reactions.createForIssueComment({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
@@ -67,6 +66,7 @@ export async function deleteReaction(
     return;
   }
 
+  const octokit = getOctokit();
   return octokit.rest.reactions.deleteForIssueComment({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
