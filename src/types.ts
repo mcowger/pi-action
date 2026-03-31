@@ -58,6 +58,8 @@ export interface SessionStats {
   outputTokens: number;
   totalTokens: number;
   cost: number;
+  /** The version of the Pi agent that generated this result */
+  version: string;
 }
 
 /**

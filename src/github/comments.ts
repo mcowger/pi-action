@@ -157,6 +157,10 @@ export async function createFinalComment(
       metadataParts.push(tokenInfo);
     }
 
+    if (metadata?.sessionStats?.version) {
+      metadataParts.push(`Pi SDK v${metadata.sessionStats.version}`);
+    }
+
     finalBody = `${body}\n\n---\n\n${metadataParts.join(' | ')}`;
   }
 

@@ -101,6 +101,7 @@ describe('Agent', () => {
           outputTokens: 50,
           totalTokens: 150,
           cost: 0.00123,
+          version: expect.any(String),
         },
       });
     });
@@ -149,6 +150,7 @@ describe('Agent', () => {
           outputTokens: 0,
           totalTokens: 0,
           cost: 0,
+          version: expect.any(String),
         },
       });
     });
@@ -176,6 +178,7 @@ describe('Agent', () => {
           outputTokens: 50000,
           totalTokens: 150000,
           cost: 1.2345,
+          version: expect.any(String),
         },
       });
     });

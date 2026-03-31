@@ -9,10 +9,12 @@
 import * as core from '@actions/core';
 import { AuthStorage, createAgentSession, ModelRegistry } from '@mariozechner/pi-coding-agent';
 import { getResourceLoader } from './resource-loader';
+import { getVersion } from './logging';
+
 import type { AgentSession } from '@mariozechner/pi-coding-agent';
 import type { Api, Model } from '@mariozechner/pi-ai';
 import type { ThinkingLevel } from '@mariozechner/pi-agent-core';
-import type { PromptResult } from '../types';
+import type { PromptResult, SessionStats } from '../types';
 
 /**
  * Pi coding agent for headless execution inside GitHub Actions.
@@ -133,9 +135,7 @@ export class Agent {
    * @returns Session stats or undefined if session not ready or stats unavailable.
    * @private Internal method used by run().
    */
-  private getSessionStats():
-    | { inputTokens: number; outputTokens: number; totalTokens: number; cost: number }
-    | undefined {
+  private getSessionStats(): SessionStats | undefined {
     if (!this.session) {
       return undefined;
     }
@@ -147,6 +147,7 @@ export class Agent {
         outputTokens: stats.tokens.output,
         totalTokens: stats.tokens.total,
         cost: stats.cost,
+        version: getVersion(),
       };
     } catch (_error) {
       // Session stats are metadata - don't fail the action if unavailable

@@ -8,6 +8,11 @@
 import * as core from '@actions/core';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
+/**
+ * Injected at build time because Pi SDK 'VERSION' doesn't play well with bundles
+ */
+declare const __PI_CODING_AGENT_VERSION__: string;
+
 export const loggingFactory = (pi: ExtensionAPI) => {
   pi.on('tool_execution_start', async event => {
     core.info('');
@@ -33,6 +38,8 @@ export const loggingFactory = (pi: ExtensionAPI) => {
 
   pi.on('before_agent_start', async (event, ctx) => {
     core.info('::group::🤖 Agent Session settings');
+    core.info(`  Running @mariozechner/pi-coding-agent@${getVersion()}`);
+    core.info('─────────────────────────────────────────────────────────────────────');
 
     const model = ctx.model;
     const thinkingLevel = pi.getThinkingLevel();
@@ -103,4 +110,8 @@ function truncateText(text: string, maxLength: number): string {
     return truncated.substring(0, lastSpace) + '...';
   }
   return truncated + '...';
+}
+
+export function getVersion(): string {
+  return typeof __PI_CODING_AGENT_VERSION__ === 'string' ? __PI_CODING_AGENT_VERSION__ : 'unknown';
 }

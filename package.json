@@ -4,7 +4,7 @@
   "description": "GitHub Action that runs the pi coding agent on issues and pull requests",
   "main": "dist/index.js",
   "scripts": {
-    "package": "./scripts/package.sh",
+    "package": "bun scripts/package.ts",
     "prepare": "bun run package",
     "tag": "bun run scripts/tag-version.ts",
     "test": "bun test",
