@@ -34,12 +34,9 @@ jobs:
         run: bun run test:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           files: ./coverage/lcov.info
           fail_ci_if_error: true
           verbose: true
           use_oidc: true
-
-      - name: Bundle with esbuild
-        run: bun run package
