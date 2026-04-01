@@ -56,7 +56,7 @@ The action uses a **testable adapter pattern** to separate business logic from e
    ```bash
    bun run validate
    ```
-   This runs: Prettier formatting, ESLint, TypeScript type checking, tests, and build.
+   This runs: ESLint, TypeScript type checking, and Prettier formatting.
 
 2. **Test Convention**: All test files are located under `./tests` and follow the Bun naming convention `*.spec.ts`. When adding new tests, create them in the appropriate subdirectory under `tests/` (e.g., `tests/github/`, `tests/pi/`) and use the `.spec.ts` extension.
 

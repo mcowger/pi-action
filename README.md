@@ -2,7 +2,7 @@
 
 [![Codecov](https://codecov.io/gh/shaftoe/pi-coding-agent-action/branch/v2/graph/badge.svg)](https://app.codecov.io/gh/shaftoe/pi-coding-agent-action/)
 
-This is a GitHub action that uses the [pi coding agent](https://pi.dev) to integrate with GitHub workflows (issues, pull requests, etc.).
+This is a GitHub action that integrates [Pi coding agent](https://pi.dev) with GitHub workflows (issues, pull requests, etc.).
 
 Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 
@@ -10,6 +10,7 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 
 - **Issue assistance**: Type `/pi` in an issue comment to have the agent analyze the issue and create a fix
 - **PR assistance**: Type `/pi` in a PR comment to have the agent review and improve the pull request
+- **Code reviews**: Have Pi review every new pull request automatically
 - **Automated commits**: The agent can make changes, commit them, and create PRs automatically
 - **Flexible LLM support**: Support for various providers (Anthropic, OpenAI, Google, etc.)
 
@@ -132,9 +133,7 @@ src/
 │       ├── index.ts           # Extension factory registration
 │       ├── create-pr.ts       # create_pull_request tool
 │       ├── update-pr.ts       # update_pull_request tool
-│       ├── get-thread.ts      # get_issue_or_pr_thread tool
-│       ├── common.ts          # Shared tool utilities
-│       └── tools.test.ts      # Tool tests
+│       └── common.ts          # Shared tool utilities
 └── github/                    # GitHub API integration
     ├── index.ts               # Barrel export for github module
     ├── context.ts             # Context extraction and thread retrieval
@@ -204,13 +203,16 @@ bun run test:coverage
 
 # Watch mode for development
 bun run test:watch
+
+# Run end to end tests (requires env vars properly set, see below)
+bun run test:e2e
 ```
 
 #### Test Architecture
 
 The test suite emphasizes **behavior verification** over implementation details:
 
-- **Orchestrator tests** (`src/orchestrator.test.ts`) - Tests business logic flow:
+- **Orchestrator tests** (`tests/orchestrator.spec.ts`) - Tests business logic flow:
   - Configuration gathering from inputs
   - Prompt retrieval and validation
   - Reaction lifecycle management
@@ -218,9 +220,9 @@ The test suite emphasizes **behavior verification** over implementation details:
   - Error handling and finalization
   - Early exit scenarios
 
-- **GitHub tests** (`src/github.test.ts`) - Tests GitHub API integration
-- **Pi tools tests** (`src/pi/tools.test.ts`) - Tests custom tool behavior
-- **Git utils tests** (`src/github/git-utils.test.ts`) - Tests Git operations
+- **GitHub tests** (`tests/github.spec.ts`) - Tests GitHub API integration
+- **Pi tools tests** (`tests/pi/tools.spec.ts`) - Tests custom tool behavior
+- **Git utils tests** (`tests/github/git.spec.ts`) - Tests Git operations
 
 **Key principle**: Tests verify the orchestration flow and business logic, not the behavior of mocks. The adapter pattern enables testing the actual behavior of the action without requiring external services.
 
@@ -232,7 +234,7 @@ E2E (end-to-end) tests validate that our Pi SDK integration works correctly with
 # Set up E2E tests (example using OpenRouter with free model)
 export E2E_PROVIDER=openrouter
 export E2E_MODEL=google/gemma-3-4b-it:free
-export E2E_TOKEN=sk-or-xxx  # Your OpenRouter API key
+export E2E_TOKEN=sk-or-xxx
 export RUN_E2E_TESTS=1
 bun test tests/e2e/pi-agent.spec.ts
 ```
