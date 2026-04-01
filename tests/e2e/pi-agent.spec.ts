@@ -19,7 +19,7 @@
 
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import type { Agent } from '../../src/pi/agent';
+import type { Agent } from '../../src/pi/agent.js';
 
 // ============================================================================
 // Build-time constants (normally injected by esbuild define)
@@ -31,7 +31,9 @@ const piVersion = JSON.parse(
   readFileSync('node_modules/@mariozechner/pi-coding-agent/package.json', 'utf-8')
 ).version;
 
-declare const __PI_CODING_AGENT_VERSION__: string;
+declare global {
+  var __PI_CODING_AGENT_VERSION__: string;
+}
 globalThis.__PI_CODING_AGENT_VERSION__ = piVersion;
 
 // ============================================================================
@@ -39,7 +41,7 @@ globalThis.__PI_CODING_AGENT_VERSION__ = piVersion;
 // ============================================================================
 
 // Mock @actions/core
-const mockGetInput = mock((name: string) => {
+const mockGetInput = mock((name: string): string => {
   const defaults: Record<string, string> = {
     github_token: 'fake-token',
     trigger: '/pi',
@@ -50,7 +52,7 @@ const mockGetInput = mock((name: string) => {
     thinking_level: '',
     prompt: '',
   };
-  return defaults[name];
+  return defaults[name] ?? '';
 });
 
 const mockSetFailed = mock();
@@ -59,7 +61,9 @@ const mockInfo = mock();
 const mockDebug = mock();
 const mockWarning = mock();
 
-const mockCoreAdapter = {
+import type { CoreAdapter } from '../../src/types.ts';
+
+const mockCoreAdapter: CoreAdapter = {
   getInput: mockGetInput,
   setFailed: mockSetFailed,
   notice: mockNotice,
@@ -172,7 +176,7 @@ function setupDefaultGithubMocks() {
  */
 async function createAgent(): Promise<Agent> {
   const { provider, model, token } = validateE2EEnvVars();
-  const { Agent } = await import('../../src/pi/agent');
+  const { Agent } = await import('../../src/pi/agent.js');
   return new Agent(model, provider, token, 'off', mockCoreAdapter);
 }
 
@@ -244,7 +248,7 @@ describe('E2E: Real Pi Agent with Mocked GitHub', () => {
     }
 
     const { token, provider } = validateE2EEnvVars();
-    const { Agent } = await import('../../src/pi/agent');
+    const { Agent } = await import('../../src/pi/agent.js');
 
     expect(() => {
       new Agent('invalid-model-xyz', provider, token, 'off', mockCoreAdapter);

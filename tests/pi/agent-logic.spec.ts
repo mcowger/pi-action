@@ -37,7 +37,9 @@ process.env.INPUT_GITHUB_TOKEN = 'fake-token';
 process.env.INPUT_MAX_COMMENTS = '100';
 
 // Dynamic import to ensure mocks are set up before module loads
-const { Agent } = await import('../../src/pi/agent');
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
+const { Agent } = await import('../../src/pi/agent.js');
 
 // Create a mock CoreAdapter for tests
 const mockCoreAdapter = {

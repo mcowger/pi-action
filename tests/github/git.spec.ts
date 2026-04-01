@@ -46,7 +46,7 @@ process.env.GITHUB_EVENT_PATH = path.join(os.tmpdir(), `gh-event-${Date.now()}.j
 fs.writeFileSync(process.env.GITHUB_EVENT_PATH, '{}');
 
 // Dynamic import to ensure mocks are set before module loads
-const gitUtilsModule = import('../../src/github/git/index');
+const gitUtilsModule = import('../../src/github/git/index.js');
 
 // Extract functions for convenience (using top-level await pattern)
 const [{ createLogger, scanDirectory, scanForChanges }] = // @ts-expect-error TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
@@ -89,7 +89,7 @@ describe('scanForChanges', () => {
     expect(result.changedFiles).toHaveLength(1);
     expect(result.changedFiles[0]).toBeDefined();
     expect(result.changedFiles[0]?.path).toBe('new-file.txt');
-    expect(result.changedFiles[0]?.content).toBe('new content');
+    expect(result.changedFiles[0]!.content).toBe('new content');
     expect(result.deletedFiles).toHaveLength(0);
   });
 
@@ -105,7 +105,7 @@ describe('scanForChanges', () => {
     expect(result.changedFiles).toHaveLength(1);
     expect(result.changedFiles[0]).toBeDefined();
     expect(result.changedFiles[0]?.path).toBe('test.txt');
-    expect(result.changedFiles[0]?.content).toBe('new content');
+    expect(result.changedFiles[0]!.content).toBe('new content');
     expect(result.deletedFiles).toHaveLength(0);
   });
 
@@ -215,25 +215,40 @@ describe('scanForChanges', () => {
     const filesByPath = new Map(result.changedFiles.map(f => [f.path, f]));
 
     // Root files
-    expect(filesByPath.get('package.json')?.content).toBe('{"name":"test"}');
-    expect(filesByPath.get('README.md')?.content).toBe('# Test');
+    expect((filesByPath.get('package.json') as { content: string } | undefined)?.content).toBe(
+      '{"name":"test"}'
+    );
+    expect((filesByPath.get('README.md') as { content: string } | undefined)?.content).toBe(
+      '# Test'
+    );
 
     // src/ files
-    expect(filesByPath.get(path.join('src', 'index.ts'))?.content).toBe('export {};');
-    expect(filesByPath.get(path.join('src', 'app.ts'))?.content).toBe('console.log("app");');
+    expect(
+      (filesByPath.get(path.join('src', 'index.ts')) as { content: string } | undefined)?.content
+    ).toBe('export {};');
+    expect(
+      (filesByPath.get(path.join('src', 'app.ts')) as { content: string } | undefined)?.content
+    ).toBe('console.log("app");');
 
     // src/utils/ files
-    expect(filesByPath.get(path.join('src', 'utils', 'helper.ts'))?.content).toBe(
-      'export function help() {}'
-    );
+    expect(
+      (filesByPath.get(path.join('src', 'utils', 'helper.ts')) as { content: string } | undefined)
+        ?.content
+    ).toBe('export function help() {}');
 
     // src/components/ files
-    expect(filesByPath.get(path.join('src', 'components', 'Button.tsx'))?.content).toBe(
-      'export const Button = () => null;'
-    );
+    expect(
+      (
+        filesByPath.get(path.join('src', 'components', 'Button.tsx')) as
+          | { content: string }
+          | undefined
+      )?.content
+    ).toBe('export const Button = () => null;');
 
     // tests/ files
-    expect(filesByPath.get(path.join('tests', 'test.ts'))?.content).toBe('it("works", () => {});');
+    expect(
+      (filesByPath.get(path.join('tests', 'test.ts')) as { content: string } | undefined)?.content
+    ).toBe('it("works", () => {});');
 
     // Ensure files are NOT flattened
     expect(filesByPath.has('helper.ts')).toBe(false);
@@ -277,14 +292,21 @@ describe('scanForChanges', () => {
     const changedByPath = new Map(result.changedFiles.map(f => [f.path, f]));
 
     // Modified files
-    expect(changedByPath.get('package.json')?.content).toBe('{"version":"1.0.0"}');
-    expect(changedByPath.get(path.join('src', 'index.ts'))?.content).toBe('export {}; // modified');
-    expect(changedByPath.get(path.join('src', 'utils', 'helper.ts'))?.content).toBe(
-      'export function newHelper() {}'
+    expect((changedByPath.get('package.json') as { content: string } | undefined)?.content).toBe(
+      '{"version":"1.0.0"}'
     );
+    expect(
+      (changedByPath.get(path.join('src', 'index.ts')) as { content: string } | undefined)?.content
+    ).toBe('export {}; // modified');
+    expect(
+      (changedByPath.get(path.join('src', 'utils', 'helper.ts')) as { content: string } | undefined)
+        ?.content
+    ).toBe('export function newHelper() {}');
 
     // New file
-    expect(changedByPath.get(path.join('docs', 'guide.md'))?.content).toBe('# Guide');
+    expect(
+      (changedByPath.get(path.join('docs', 'guide.md')) as { content: string } | undefined)?.content
+    ).toBe('# Guide');
 
     // Deleted files
     expect(result.deletedFiles).toContain(path.join('src', 'app.ts'));
@@ -380,17 +402,17 @@ describe('scanDirectory', () => {
     // Verify each file has the correct nested path
     const rootFile = result.changedFiles.find(f => f.path === 'root.txt');
     expect(rootFile).toBeDefined();
-    expect(rootFile?.content).toBe('root content');
+    expect(rootFile!.content).toBe('root content');
 
     const level1File = result.changedFiles.find(f => f.path === path.join('level1', 'file1.txt'));
     expect(level1File).toBeDefined();
-    expect(level1File?.content).toBe('level1 content');
+    expect(level1File!.content).toBe('level1 content');
 
     const level2File = result.changedFiles.find(
       f => f.path === path.join('level1', 'level2', 'file2.txt')
     );
     expect(level2File).toBeDefined();
-    expect(level2File?.content).toBe('level2 content');
+    expect(level2File!.content).toBe('level2 content');
 
     const level3File = result.changedFiles.find(
       f => f.path === path.join('level1', 'level2', 'level3', 'file3.txt')
@@ -437,7 +459,7 @@ describe('scanDirectory', () => {
     expect(result.changedFiles).toHaveLength(1);
     expect(result.changedFiles[0]).toBeDefined();
     expect(result.changedFiles[0]?.path).toBe(path.join('nested', 'nested.txt'));
-    expect(result.changedFiles[0]?.content).toBe('nested modified');
+    expect(result.changedFiles[0]!.content).toBe('nested modified');
   });
 
   test('detects deleted files in nested directories', async () => {

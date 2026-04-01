@@ -28,7 +28,7 @@ mock.module('@actions/core', () => ({
   getInput: mockGetInput,
   notice: mock(noop),
   info: mock(noop),
-  debug: mock(debugLogger),
+  debug: mock(noop),
   setFailed: mock(noop),
   warning: mock(noop),
 }));
@@ -77,10 +77,10 @@ mock.module('@actions/github', () => ({
 }));
 
 // Dynamic import to ensure mocks are set before module loads
-const pullRequestModulePromise = import('../../src/github/pull-request');
+const pullRequestModulePromise = import('../../src/github/pull-request.js');
 
 // Cache the module after first import
-let pullRequestModule: Awaited<ReturnType<typeof pullRequestModulePromise>> | null = null;
+let pullRequestModule: any | null = null;
 
 async function getModule() {
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
@@ -123,6 +123,7 @@ describe('determineBaseBranch', () => {
     const { determineBaseBranch } = module;
 
     // Remove default_branch from context
+    // @ts-expect-error -- Testing error handling when repository is undefined
     mockContext.payload.repository = undefined;
 
     const result = await determineBaseBranch(undefined);
@@ -157,6 +158,7 @@ describe('determineBaseBranch', () => {
     const module = await getModule();
     const { determineBaseBranch } = module;
 
+    // @ts-expect-error -- Testing error handling when repository is undefined
     mockContext.payload.repository = undefined;
 
     // Debug logging is tested via observable behavior (API calls)
@@ -170,6 +172,7 @@ describe('generatePullRequestBody', () => {
     // Reset to default issue context
     mockContext.issue = { number: 42 };
     mockContext.eventName = 'issue_comment';
+    // @ts-expect-error -- Testing with empty payload
     mockContext.payload = {};
   });
 
@@ -187,6 +190,7 @@ describe('generatePullRequestBody', () => {
     const { generatePullRequestBody } = module;
 
     mockContext.eventName = 'issues';
+    // @ts-expect-error -- Testing with empty payload
     mockContext.payload = {};
 
     const result = generatePullRequestBody(undefined);
@@ -199,6 +203,7 @@ describe('generatePullRequestBody', () => {
     const { generatePullRequestBody } = module;
 
     mockContext.eventName = 'pull_request';
+    // @ts-expect-error -- Testing with empty payload
     mockContext.payload = {};
 
     const result = generatePullRequestBody(undefined);
@@ -211,6 +216,7 @@ describe('generatePullRequestBody', () => {
     const { generatePullRequestBody } = module;
 
     mockContext.eventName = 'issue_comment';
+    // @ts-expect-error -- Testing with empty payload
     mockContext.payload = {};
 
     const result = generatePullRequestBody(undefined);
@@ -231,6 +237,7 @@ describe('generatePullRequestBody', () => {
     const module = await getModule();
     const { generatePullRequestBody } = module;
 
+    // @ts-expect-error -- Testing error handling when issue is undefined
     mockContext.issue = undefined;
 
     const result = generatePullRequestBody(undefined);

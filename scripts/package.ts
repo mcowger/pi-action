@@ -6,6 +6,7 @@ const piVersion = JSON.parse(
   readFileSync('node_modules/@mariozechner/pi-coding-agent/package.json', 'utf-8')
 ).version;
 
+// @ts-ignore -- Top-level await used in build script, Bun handles it
 await build({
   entryPoints: ['src/run.ts'],
   bundle: true,

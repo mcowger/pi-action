@@ -60,11 +60,10 @@ mock.module('@actions/github', () => ({
 }));
 
 // Dynamic import to ensure mocks are set before module loads
-const pullRequestUpdateModulePromise = import('../../src/github/pull-request-update');
+const pullRequestUpdateModulePromise = import('../../src/github/pull-request-update.js');
 
 // Cache the module after first import
-let pullRequestUpdateModule: Awaited<ReturnType<typeof pullRequestUpdateModulePromise>> | null =
-  null;
+let pullRequestUpdateModule: any | null = null;
 
 async function getModule() {
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
@@ -196,7 +195,7 @@ describe('validateUpdatePullRequestParams', () => {
     const module = await getModule();
     const { validateUpdatePullRequestParams } = module;
 
-    // Remove PR number from context
+    // @ts-expect-error -- Testing error handling when issue is undefined
     mockContext.issue = undefined;
 
     expect(() => {
@@ -210,7 +209,7 @@ describe('validateUpdatePullRequestParams', () => {
     const module = await getModule();
     const { validateUpdatePullRequestParams } = module;
 
-    // Remove PR number from context
+    // @ts-expect-error -- Testing error handling when issue is undefined
     mockContext.issue = undefined;
 
     expect(() => {
@@ -266,7 +265,6 @@ describe('validateUpdatePullRequestParams', () => {
     const { validateUpdatePullRequestParams } = module;
 
     // The function doesn't validate dry_run type, so this shouldn't throw
-    // @ts-expect-error - Testing invalid input type
     const invalidParams: _UpdatePullRequestParams = {
       title: 'Test',
       dryRun: 'true' as any,
@@ -281,7 +279,7 @@ describe('validateUpdatePullRequestParams', () => {
     const module = await getModule();
     const { validateUpdatePullRequestParams } = module;
 
-    // Remove PR number from context to test pull_number param
+    // @ts-expect-error -- Testing with undefined issue to test pull_number param
     mockContext.issue = undefined;
 
     expect(() => {

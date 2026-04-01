@@ -71,9 +71,9 @@ fs.writeFileSync(process.env.GITHUB_EVENT_PATH, '{}');
 import { Temporal } from '@js-temporal/polyfill';
 
 // Dynamic import to ensure mocks are set up before module loads
-// @ts-expect-error TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
 const { formatExecutionTime, formatNumber, createFinalComment } =
-  await import('../../src/github/comments');
+  // @ts-expect-error TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
+  await import('../../src/github/comments.js');
 
 describe('formatExecutionTime', () => {
   test('formats seconds only', () => {
@@ -290,10 +290,9 @@ describe('createFinalComment', () => {
     await createFinalComment(body, metadata);
 
     const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
-    expect(call[0]).toMatchObject({
-      body: expect.stringContaining('Tokens: 1.5K'),
-      body: expect.stringContaining('($0.0123)'),
-    });
+    const commentBody = (call[0] as { body: string }).body;
+    expect(commentBody).toContain('Tokens: 1.5K');
+    expect(commentBody).toContain('($0.0123)');
   });
 
   test('handles zero session stats', async () => {
@@ -304,16 +303,16 @@ describe('createFinalComment', () => {
         outputTokens: 0,
         totalTokens: 0,
         cost: 0,
+        version: '1.0.0',
       },
     };
 
     await createFinalComment(body, metadata);
 
     const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
-    expect(call[0]).toMatchObject({
-      body: expect.stringContaining('Tokens: 0'),
-      body: expect.not.stringContaining('($0)'),
-    });
+    const commentBody = (call[0] as { body: string }).body;
+    expect(commentBody).toContain('Tokens: 0');
+    expect(commentBody).not.toContain('($0)');
   });
 
   test('includes action version when provided', async () => {
@@ -368,8 +367,11 @@ describe('createFinalComment', () => {
 
   test('handles missing github context gracefully', async () => {
     github.context.payload = {};
+    // @ts-expect-error -- Setting read-only repo property to test error handling
     github.context.repo = { owner: undefined, repo: undefined };
+    // @ts-expect-error -- Setting read-only serverUrl property to test error handling
     github.context.serverUrl = undefined;
+    // @ts-expect-error -- Setting read-only runId property to test error handling
     github.context.runId = undefined;
 
     const body = 'Test result';

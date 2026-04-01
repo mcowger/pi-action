@@ -50,8 +50,8 @@ process.env.GITHUB_EVENT_PATH = path.join(os.tmpdir(), `gh-event-${Date.now()}.j
 fs.writeFileSync(process.env.GITHUB_EVENT_PATH, '{}');
 
 // Dynamic import to ensure env vars are set before module loads
-const githubModule = import('../src/github/index');
-const contextModule = import('../src/github/context');
+const githubModule = import('../src/github/index.js');
+const contextModule = import('../src/github/context.js');
 const [
   {
     getPrompt,
@@ -491,11 +491,12 @@ describe('getStartTimeFromContext', () => {
       github.context.eventName = 'issues';
       github.context.payload = {
         issue: {
+          number: 1,
           id: 1,
           created_at: '2024-01-10T08:00:00Z',
           updated_at: '2024-01-15T10:30:00Z',
         },
-      };
+      } as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- Testing mock context
 
       const result = getStartTimeFromContext();
       expect(result).toBeDefined();
@@ -505,8 +506,8 @@ describe('getStartTimeFromContext', () => {
     test('returns undefined when issue has no updated_at', () => {
       github.context.eventName = 'issues';
       github.context.payload = {
-        issue: { id: 1 },
-      };
+        issue: { number: 1, id: 1 },
+      } as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- Testing mock context
 
       const result = getStartTimeFromContext();
       expect(result).toBeUndefined();

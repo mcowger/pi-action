@@ -5,7 +5,7 @@
     "lib": ["ESNext"],
     "types": ["bun-types", "node"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -20,6 +20,6 @@
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"],
+  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["node_modules", "dist"],
 }

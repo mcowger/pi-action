@@ -238,7 +238,7 @@ export function createFakeGitHubContext(
   payload?: FakeGitHubPayload,
   overrides?: Partial<FakeGitHubContext>
 ): FakeGitHubContext {
-  return {
+  const baseContext = {
     eventName,
     payload: payload ?? {
       comment: createFakeComment(),
@@ -248,11 +248,16 @@ export function createFakeGitHubContext(
       owner: 'test-owner',
       repo: 'test-repo',
     },
-    issue: payload?.issue ? { number: payload.issue.number } : undefined,
     serverUrl: 'https://github.com',
     runId: 123456789,
-    ...overrides,
   };
+
+  // Only add issue if payload has it
+  const withIssue = payload?.issue
+    ? { ...baseContext, issue: { number: payload.issue.number } }
+    : baseContext;
+
+  return { ...withIssue, ...overrides };
 }
 
 /**
