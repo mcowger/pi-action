@@ -51,8 +51,9 @@ export interface CreatePullRequestDetails {
  *
  * @param providedBase - Optional branch name override.
  * @returns The resolved base branch name.
+ * @internal Exported for testing purposes.
  */
-async function determineBaseBranch(providedBase: string | undefined): Promise<string> {
+export async function determineBaseBranch(providedBase: string | undefined): Promise<string> {
   let baseBranch: string;
   if (providedBase) {
     // Explicitly provided by caller
@@ -90,8 +91,9 @@ async function determineBaseBranch(providedBase: string | undefined): Promise<st
  *
  * @param providedBody - Optional body text from the tool caller.
  * @returns The final Markdown body string.
+ * @internal Exported for testing purposes.
  */
-function generatePullRequestBody(providedBody: string | undefined): string {
+export function generatePullRequestBody(providedBody: string | undefined): string {
   let bodyText = providedBody ?? '';
   if (!bodyText && github.context.issue?.number) {
     const contextType = getContextType();
@@ -112,8 +114,9 @@ function generatePullRequestBody(providedBody: string | undefined): string {
  *
  * @param params - The pull request parameters to validate.
  * @throws {Error} If validation fails.
+ * @internal Exported for testing purposes.
  */
-function validateCreatePullRequestParams(params: CreatePullRequestParams): void {
+export function validateCreatePullRequestParams(params: CreatePullRequestParams): void {
   if (!params.title || params.title.trim() === '') {
     throw new Error('Pull request title is required and cannot be empty');
   }

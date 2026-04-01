@@ -97,8 +97,9 @@ async function updatePullRequestMetadata(
  *
  * @param params - The pull request update parameters to validate.
  * @throws {Error} If validation fails.
+ * @internal Exported for testing purposes.
  */
-function validateUpdatePullRequestParams(params: UpdatePullRequestParams): void {
+export function validateUpdatePullRequestParams(params: UpdatePullRequestParams): void {
   if (params.title !== undefined && params.title.length > MAX_TITLE_LENGTH) {
     throw new Error(
       `Pull request title exceeds maximum length of ${MAX_TITLE_LENGTH} characters (got ${params.title.length})`
@@ -108,7 +109,7 @@ function validateUpdatePullRequestParams(params: UpdatePullRequestParams): void 
   // Ensure at least one update parameter is provided (besides dryRun)
   const { title, body, message, pull_number } = params;
   const hasContentUpdate = title !== undefined || body !== undefined || message !== undefined;
-  const hasPRContext = pull_number !== undefined || github.context.issue.number;
+  const hasPRContext = pull_number !== undefined || github.context.issue?.number;
 
   if (!hasContentUpdate && !hasPRContext) {
     throw new Error(

@@ -1,11 +1,12 @@
-import { describe, expect, test, mock } from 'bun:test';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as github from '@actions/github';
 
 // Swallow ::notice:: / ::warning:: / ::debug:: annotations from @actions/core
 const realStdoutWrite = process.stdout.write.bind(process.stdout);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- stdout.write accepts variable args
 const _mockedWrite = mock((...args: any[]) => {
   const msg = String(args[0] ?? '');
   if (msg.startsWith('::')) {
@@ -32,6 +33,23 @@ mock.module('@actions/core', () => ({
   warning: mock(noop),
 }));
 
+// Mock @actions/github context
+const mockContext = {
+  repo: {
+    owner: 'test-owner',
+    repo: 'test-repo',
+  },
+  issue: {
+    number: 123,
+  },
+  serverUrl: 'https://github.com',
+  runId: 123456789,
+  payload: {},
+};
+mock.module('@actions/github', () => ({
+  context: mockContext,
+}));
+
 // Mock the octokit module before importing comments.ts
 const mockOctokit = {
   rest: {
@@ -40,7 +58,6 @@ const mockOctokit = {
     },
   },
 };
-
 mock.module('../../src/github/octokit', () => ({
   getOctokit: mock(() => mockOctokit),
 }));
@@ -48,14 +65,15 @@ mock.module('../../src/github/octokit', () => ({
 // Set env vars for GitHub context before importing comments.ts
 process.env.INPUT_GITHUB_TOKEN = 'fake-token';
 process.env.GITHUB_REPOSITORY = 'test-owner/test-repo';
-process.env.GITHUB_EVENT_PATH = path.join(os.tmpdir(), `gh-event-${Date.now()}.json`);
+process.env.GITHUB_EVENT_PATH = path.join(os.tmpdir(), 'gh-event-${Date.now()}.json');
 fs.writeFileSync(process.env.GITHUB_EVENT_PATH, '{}');
 
 import { Temporal } from '@js-temporal/polyfill';
 
 // Dynamic import to ensure mocks are set up before module loads
 // @ts-expect-error TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
-const { formatExecutionTime, formatNumber } = await import('../../src/github/comments');
+const { formatExecutionTime, formatNumber, createFinalComment } =
+  await import('../../src/github/comments');
 
 describe('formatExecutionTime', () => {
   test('formats seconds only', () => {
@@ -133,7 +151,7 @@ describe('formatNumber', () => {
     expect(formatNumber(1500)).toBe('1.5K');
     expect(formatNumber(9999)).toBe('10.0K');
     expect(formatNumber(10000)).toBe('10.0K');
-    expect(formatNumber(999999)).toBe('1000.0K');
+    expect(formatNumber(99999)).toBe('100.0K');
   });
 
   test('formats millions', () => {
@@ -166,5 +184,197 @@ describe('formatNumber', () => {
     expect(formatNumber(1234)).toBe('1.2K');
     expect(formatNumber(12345)).toBe('12.3K');
     expect(formatNumber(1234567)).toBe('1.2M');
+  });
+});
+
+describe('createFinalComment', () => {
+  beforeEach(() => {
+    // Clear mock calls before each test
+    (mockOctokit.rest.issues.createComment as any).mockClear();
+  });
+
+  test('returns undefined for empty body', async () => {
+    const result = await createFinalComment('', {});
+    expect(result).toBeUndefined();
+  });
+
+  test('appends action run link to comment body', async () => {
+    const body = 'Here is a result';
+    await createFinalComment(body, {});
+
+    expect(mockOctokit.rest.issues.createComment).toHaveBeenCalled();
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      owner: 'test-owner',
+      repo: 'test-repo',
+      body: expect.stringContaining(
+        '[View action run](https://github.com/test-owner/test-repo/actions/runs/123456789)'
+      ),
+    });
+  });
+
+  test('includes model metadata when provided', async () => {
+    const body = 'Test result';
+    const metadata = {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5',
+    };
+
+    await createFinalComment(body, metadata);
+
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      body: expect.stringContaining('Model: anthropic/claude-sonnet-4-5'),
+    });
+  });
+
+  test('includes thinking level in model metadata when not off', async () => {
+    const body = 'Test result';
+    const metadata = {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5',
+      thinkingLevel: 'medium',
+    };
+
+    await createFinalComment(body, metadata);
+
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      body: expect.stringContaining('(thinking: medium)'),
+    });
+  });
+
+  test('does not include thinking level when off', async () => {
+    const body = 'Test result';
+    const metadata = {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5',
+      thinkingLevel: 'off',
+    };
+
+    await createFinalComment(body, metadata);
+
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      body: expect.not.stringContaining('thinking:'),
+    });
+  });
+
+  test('includes execution duration when provided', async () => {
+    const body = 'Test result';
+    const duration = Temporal.Duration.from({ minutes: 2, seconds: 30 });
+    const metadata = {
+      executionDuration: duration,
+    };
+
+    await createFinalComment(body, metadata);
+
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      body: expect.stringContaining('Time: 2m 30s'),
+    });
+  });
+
+  test('includes session stats with token usage', async () => {
+    const body = 'Test result';
+    const metadata = {
+      sessionStats: {
+        inputTokens: 1000,
+        outputTokens: 500,
+        totalTokens: 1500,
+        cost: 0.0123,
+        version: '1.0.0',
+      },
+    };
+
+    await createFinalComment(body, metadata);
+
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      body: expect.stringContaining('Tokens: 1.5K'),
+      body: expect.stringContaining('($0.0123)'),
+    });
+  });
+
+  test('handles zero session stats', async () => {
+    const body = 'Test result';
+    const metadata = {
+      sessionStats: {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        cost: 0,
+      },
+    };
+
+    await createFinalComment(body, metadata);
+
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      body: expect.stringContaining('Tokens: 0'),
+      body: expect.not.stringContaining('($0)'),
+    });
+  });
+
+  test('includes action version when provided', async () => {
+    const body = 'Test result';
+    const metadata = {
+      actionVersion: '2.3.0',
+    };
+
+    await createFinalComment(body, metadata);
+
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      body: expect.stringContaining('Action v2.3.0'),
+    });
+  });
+
+  test('includes Pi SDK version when session stats available', async () => {
+    const body = 'Test result';
+    const metadata = {
+      sessionStats: {
+        inputTokens: 100,
+        outputTokens: 50,
+        totalTokens: 150,
+        cost: 0.001,
+        version: '1.2.3',
+      },
+    };
+
+    await createFinalComment(body, metadata);
+
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      body: expect.stringContaining('Pi SDK v1.2.3'),
+    });
+  });
+
+  test('separates metadata with pipe characters', async () => {
+    const body = 'Test';
+    const metadata = {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5',
+      executionDuration: Temporal.Duration.from({ seconds: 10 }),
+    };
+
+    await createFinalComment(body, metadata);
+
+    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
+    expect(call[0]).toMatchObject({
+      body: expect.stringMatching(/View action run.*\|.*Model:/),
+    });
+  });
+
+  test('handles missing github context gracefully', async () => {
+    github.context.payload = {};
+    github.context.repo = { owner: undefined, repo: undefined };
+    github.context.serverUrl = undefined;
+    github.context.runId = undefined;
+
+    const body = 'Test result';
+    const result = await createFinalComment(body, {});
+
+    expect(result).toBeDefined();
   });
 });

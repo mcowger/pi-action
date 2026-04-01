@@ -224,6 +224,34 @@ The test suite emphasizes **behavior verification** over implementation details:
 
 **Key principle**: Tests verify the orchestration flow and business logic, not the behavior of mocks. The adapter pattern enables testing the actual behavior of the action without requiring external services.
 
+#### E2E Tests
+
+E2E (end-to-end) tests validate that our Pi SDK integration works correctly with real API calls:
+
+```bash
+# Set up E2E tests (example using OpenRouter with free model)
+export E2E_PROVIDER=openrouter
+export E2E_MODEL=google/gemma-3-4b-it:free
+export E2E_TOKEN=sk-or-xxx  # Your OpenRouter API key
+export RUN_E2E_TESTS=1
+bun test tests/e2e/pi-agent.spec.ts
+```
+
+**Required environment variables:**
+- `RUN_E2E_TESTS=1` - Enables E2E tests (they are skipped by default)
+- `E2E_PROVIDER` - LLM provider (e.g., `openrouter`, `zai`, `anthropic`)
+- `E2E_MODEL` - Model to use (e.g., `google/gemma-3-4b-it:free`, `glm-4.5-air:free`)
+- `E2E_TOKEN` - Your API key for the provider
+
+**What E2E tests cover:**
+- Real Pi SDK initialization with actual model/provider/token
+- Complete agent session lifecycle (ready → run → result)
+- Session stats extraction (tokens, cost, version)
+- Error handling for invalid models, empty prompts, etc.
+- Multiple sequential calls to the same agent
+
+**Note:** E2E tests make real API calls to the LLM provider and may incur costs. You must explicitly set the provider, model, and API key - there are no defaults. Tests are opt-in only and skipped by default.
+
 ### Project Guidelines
 
 - Follow the existing code style and conventions

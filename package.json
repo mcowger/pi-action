@@ -8,6 +8,7 @@
     "prepare": "bun run package",
     "tag": "bun run scripts/tag-version.ts",
     "test": "bun test",
+    "test:e2e": "RUN_E2E_TESTS=1 bun test tests/e2e",
     "test:coverage": "bun test --coverage --coverage-reporter=lcov",
     "test:watch": "bun test --watch",
     "lint": "eslint src tests --ext .ts",
