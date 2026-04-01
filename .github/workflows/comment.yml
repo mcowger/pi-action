@@ -1,0 +1,19 @@
+name: Pi AI Agent
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  pi-agent:
+    uses: ./.github/workflows/pi.yml
+    secrets:
+      gh_token: ${{ secrets.GITHUB_TOKEN }}
+      token: ${{ secrets.API_KEY }}

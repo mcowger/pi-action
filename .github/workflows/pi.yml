@@ -1,10 +1,16 @@
 name: Pi AI Agent
 
 on:
-  issue_comment:
-    types: [created]
-  issues:
-    types: [opened, edited]
+  workflow_call:
+    inputs:
+      prompt:
+        type: string
+        required: false
+    secrets:
+      token:
+        required: true
+      gh_token:
+        required: true
 
 permissions:
   contents: write
@@ -36,8 +42,9 @@ jobs:
       - name: Run Pi agent
         uses: shaftoe/pi-coding-agent-action@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.gh_token }}
           provider: ${{ vars.PROVIDER }}
           model: ${{ vars.MODEL }}
-          token: ${{ secrets.API_KEY }}
+          token: ${{ secrets.token }}
           thinking_level: ${{ vars.THINKING_LEVEL }}
+          prompt: ${{ inputs.prompt }}
