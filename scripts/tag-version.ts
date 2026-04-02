@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import fs from 'node:fs';
 import * as git from 'isomorphic-git';
 import { join } from 'node:path';
+import { buildDist } from './package.js';
 
 function readVersionFile(): string {
   const versionPath = join(process.cwd(), 'VERSION');
@@ -54,6 +55,12 @@ async function createReleaseCommit(version: string): Promise<string> {
       fs,
       dir,
       filepath: 'VERSION',
+    });
+
+    await git.add({
+      fs,
+      dir,
+      filepath: 'dist/index.js',
     });
 
     const authorName = await git.getConfig({
@@ -109,6 +116,10 @@ async function main(): Promise<void> {
   console.log(`Updating package.json version to ${version}...`);
   updatePackageJson(version);
   console.log(`✓ Version updated to ${version}`);
+
+  console.log(`Building dist/...`);
+  await buildDist();
+  console.log(`✓ Build complete`);
 
   console.log(`Creating release commit...`);
   const commitOid = await createReleaseCommit(version);
