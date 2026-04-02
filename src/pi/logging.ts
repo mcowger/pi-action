@@ -98,7 +98,7 @@ export const loggingFactory = (pi: ExtensionAPI, core: CoreAdapter) => {
 /**
  * Truncate text to a maximum length, preserving word boundaries.
  */
-function truncateText(text: string, maxLength: number): string {
+export function truncateText(text: string, maxLength: number): string {
   if (!text || text.length <= maxLength) {
     return text;
   }
