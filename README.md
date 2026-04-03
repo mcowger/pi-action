@@ -14,6 +14,10 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 - **Automated commits**: The agent can make changes, commit them, and create PRs automatically
 - **Flexible LLM support**: Support for various providers (Anthropic, OpenAI, Google, etc.)
 
+## Securing your workflows
+
+**CAUTION**: depending on the permissions assigned to your workflow you should consider restricting who's allowed to trigger it e.g. filtering for GitHub user name or role (`if github.actor == '<my-user>'`).
+
 ## Usage
 
 ### Interactive Workflows
