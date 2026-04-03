@@ -2,7 +2,8 @@
  * @file update_pull_request tool definition.
  */
 
-import { Type } from '@sinclair/typebox';
+import { Type, Static } from '@sinclair/typebox';
+import { defineTool } from '@mariozechner/pi-coding-agent';
 import {
   UPDATE_PULL_REQUEST_PROMPT_SNIPPET,
   UPDATE_PULL_REQUEST_PROMPT_GUIDELINES,
@@ -14,8 +15,7 @@ import {
   UPDATE_PULL_REQUEST_PARAM_DRY_RUN_DESCRIPTION,
 } from '../prompt';
 import { updatePullRequest, CANCELLATION_MESSAGE_UPDATE_PR } from '../../github/index';
-import type { UpdatePullRequestParams } from '../../github/index';
-import { buildTool } from './tool-builder';
+import type { UpdatePullRequestParams, UpdatePullRequestDetails } from '../../github/index';
 
 /**
  * Schema for the update_pull_request tool.
@@ -48,25 +48,34 @@ const updatePullRequestSchema = Type.Object({
   ),
 });
 
+type UpdatePullRequestToolParams = Static<typeof updatePullRequestSchema>;
+
 /**
  * Tool definition for updating a pull request.
  */
-export const updatePullRequestTool = buildTool({
+export const updatePullRequestTool = defineTool({
   name: 'update_pull_request',
   label: 'Update Pull Request',
   description: UPDATE_PULL_REQUEST_DESCRIPTION,
   promptSnippet: UPDATE_PULL_REQUEST_PROMPT_SNIPPET,
   promptGuidelines: UPDATE_PULL_REQUEST_PROMPT_GUIDELINES,
+  // @ts-expect-error - TypeBox Symbol property not recognized by TypeScript
   parameters: updatePullRequestSchema,
-  cancellationMessage: CANCELLATION_MESSAGE_UPDATE_PR,
-  cancellationDetails: {
-    pullRequestNumber: 0,
-    pullRequestUrl: '',
-    headBranch: '',
-    baseBranch: '',
-    dryRun: false,
-  },
-  execute: async (params) => {
+  execute: async (_toolCallId, params: UpdatePullRequestToolParams, signal) => {
+    if (signal?.aborted) {
+      return {
+        content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_UPDATE_PR }],
+        details: {
+          pullRequestNumber: 0,
+          pullRequestUrl: '',
+          headBranch: '',
+          baseBranch: '',
+          dryRun: false,
+          cancelled: true,
+        } as UpdatePullRequestDetails,
+      };
+    }
+
     const { pull_number, title, body, message, dryRun } = params;
 
     // Delegate to the GitHub-specific implementation

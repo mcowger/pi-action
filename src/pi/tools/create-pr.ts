@@ -2,7 +2,8 @@
  * @file create_pull_request tool definition.
  */
 
-import { Type } from '@sinclair/typebox';
+import { Type, Static } from '@sinclair/typebox';
+import { defineTool } from '@mariozechner/pi-coding-agent';
 import {
   CREATE_PULL_REQUEST_PROMPT_SNIPPET,
   CREATE_PULL_REQUEST_PROMPT_GUIDELINES,
@@ -13,8 +14,7 @@ import {
   CREATE_PULL_REQUEST_PARAM_DRY_RUN_DESCRIPTION,
 } from '../prompt';
 import { createPullRequest, CANCELLATION_MESSAGE_CREATE_PR } from '../../github/index';
-import { buildTool } from './tool-builder';
-import type { CreatePullRequestParams } from '../../github/index';
+import type { CreatePullRequestParams, CreatePullRequestDetails } from '../../github/index';
 
 /**
  * Schema for the create_pull_request tool.
@@ -40,25 +40,34 @@ const createPullRequestSchema = Type.Object({
   ),
 });
 
+type CreatePullRequestToolParams = Static<typeof createPullRequestSchema>;
+
 /**
  * Tool definition for creating a pull request.
  */
-export const createPRTool = buildTool({
+export const createPRTool = defineTool({
   name: 'create_pull_request',
   label: 'Create Pull Request',
   description: CREATE_PULL_REQUEST_DESCRIPTION,
   promptSnippet: CREATE_PULL_REQUEST_PROMPT_SNIPPET,
   promptGuidelines: CREATE_PULL_REQUEST_PROMPT_GUIDELINES,
+  // @ts-expect-error - TypeBox Symbol property not recognized by TypeScript
   parameters: createPullRequestSchema,
-  cancellationMessage: CANCELLATION_MESSAGE_CREATE_PR,
-  cancellationDetails: {
-    pullRequestNumber: 0,
-    pullRequestUrl: '',
-    headBranch: '',
-    baseBranch: '',
-    dryRun: false,
-  },
-  execute: async params => {
+  execute: async (_toolCallId, params: CreatePullRequestToolParams, signal) => {
+    if (signal?.aborted) {
+      return {
+        content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_CREATE_PR }],
+        details: {
+          pullRequestNumber: 0,
+          pullRequestUrl: '',
+          headBranch: '',
+          baseBranch: '',
+          dryRun: false,
+          cancelled: true,
+        } as CreatePullRequestDetails,
+      };
+    }
+
     const { title, body, base, dryRun } = params;
 
     // Delegate to the GitHub-specific implementation

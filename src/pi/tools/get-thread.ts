@@ -2,7 +2,8 @@
  * @file get_issue_or_pr_thread tool definition.
  */
 
-import { Type } from '@sinclair/typebox';
+import { Type, Static } from '@sinclair/typebox';
+import { defineTool } from '@mariozechner/pi-coding-agent';
 import {
   GET_ISSUE_PR_THREAD_PROMPT_SNIPPET,
   GET_ISSUE_PR_THREAD_PROMPT_GUIDELINES,
@@ -16,7 +17,6 @@ import { formatThreadAsText } from './common';
 import { getIssueOrPRThread, CANCELLATION_MESSAGE_GET_THREAD } from '../../github/index';
 import type { AgentToolResult } from '@mariozechner/pi-coding-agent';
 import type { IssueOrPRThread } from '../../github/index';
-import { buildTool } from './tool-builder';
 
 /**
  * Schema for the get_issue_or_pr_thread tool.
@@ -44,36 +44,49 @@ const getIssueOrPRThreadSchema = Type.Object({
   ),
 });
 
+type GetIssueOrPRThreadToolParams = Static<typeof getIssueOrPRThreadSchema>;
+
+/**
+ * Cancellation details for get_issue_or_pr_thread tool.
+ */
+const cancellationDetails: IssueOrPRThread = {
+  number: 0,
+  title: 'Cancelled',
+  body: CANCELLATION_MESSAGE_GET_THREAD,
+  state: 'closed',
+  author: 'unknown',
+  author_type: 'user',
+  created_at: undefined,
+  updated_at: undefined,
+  closed_at: undefined,
+  merged_at: undefined,
+  labels: [],
+  is_pull_request: false,
+  head_branch: undefined,
+  base_branch: undefined,
+  head_sha: undefined,
+  comments: [],
+};
+
 /**
  * Tool definition for fetching issue or PR thread.
  */
-export const getIssueOrPRThreadTool = buildTool({
+export const getIssueOrPRThreadTool = defineTool({
   name: 'get_issue_or_pr_thread',
   label: 'Get Issue/PR Thread',
   description: GET_ISSUE_PR_THREAD_DESCRIPTION,
   promptSnippet: GET_ISSUE_PR_THREAD_PROMPT_SNIPPET,
   promptGuidelines: GET_ISSUE_PR_THREAD_PROMPT_GUIDELINES,
+  // @ts-expect-error - TypeBox Symbol property not recognized by TypeScript
   parameters: getIssueOrPRThreadSchema,
-  cancellationMessage: CANCELLATION_MESSAGE_GET_THREAD,
-  cancellationDetails: {
-    number: 0,
-    title: 'Cancelled',
-    body: CANCELLATION_MESSAGE_GET_THREAD,
-    state: 'closed',
-    author: 'unknown',
-    author_type: 'user',
-    created_at: undefined,
-    updated_at: undefined,
-    closed_at: undefined,
-    merged_at: undefined,
-    labels: [],
-    is_pull_request: false,
-    head_branch: undefined,
-    base_branch: undefined,
-    head_sha: undefined,
-    comments: [],
-  },
-  execute: async (params) => {
+  execute: async (_toolCallId, params: GetIssueOrPRThreadToolParams, signal) => {
+    if (signal?.aborted) {
+      return {
+        content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_GET_THREAD }],
+        details: { ...cancellationDetails, cancelled: true },
+      } as AgentToolResult<IssueOrPRThread>;
+    }
+
     const result = await getIssueOrPRThread(params);
 
     if (!result) {
