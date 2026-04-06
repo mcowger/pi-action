@@ -9,11 +9,28 @@ import type { CoreAdapter } from '../types';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
 /**
+ * Captured information about extension loading, passed from resource-loader
+ * to be displayed in the `before_agent_start` section.
+ */
+export interface ExtensionLoadingInfo {
+  /** The original extension sources requested by the user. */
+  requested: string[];
+  /** Paths of extensions that were successfully loaded. */
+  loaded: string[];
+  /** Warnings encountered during extension loading. */
+  warnings: string[];
+}
+
+/**
  * Injected at build time because Pi SDK 'VERSION' doesn't play well with bundles
  */
 declare const __PI_CODING_AGENT_VERSION__: string;
 
-export const loggingFactory = (pi: ExtensionAPI, core: CoreAdapter) => {
+export const loggingFactory = (
+  pi: ExtensionAPI,
+  core: CoreAdapter,
+  extensionInfo?: ExtensionLoadingInfo
+) => {
   pi.on('tool_execution_start', async event => {
     core.info('');
     core.debug(`🔧 Tool Execution started: ${event.toolName} (${event.toolCallId})`);
@@ -52,6 +69,23 @@ export const loggingFactory = (pi: ExtensionAPI, core: CoreAdapter) => {
     }
     core.info(`  Thinking Level:   ${thinkingLevel}`);
     core.info('─────────────────────────────────────────────────────────────────────');
+
+    if (extensionInfo && extensionInfo.requested.length > 0) {
+      core.info('📦 Extensions');
+      core.info(`  Requested:        ${extensionInfo.requested.join(', ')}`);
+      if (extensionInfo.loaded.length > 0) {
+        core.info(`  Loaded:           ${extensionInfo.loaded.length} extension(s)`);
+        extensionInfo.loaded.forEach(ext => {
+          core.info(`    • ${ext}`);
+        });
+      } else {
+        core.info('  Loaded:           None');
+      }
+      extensionInfo.warnings.forEach(warning => {
+        core.warning(`  ⚠️  ${warning}`);
+      });
+      core.info('─────────────────────────────────────────────────────────────────────');
+    }
 
     const allTools = pi.getAllTools();
     if (allTools.length > 0) {
@@ -123,8 +157,9 @@ export function getVersion(): string {
  * the Pi SDK's extension system.
  *
  * @param core - The CoreAdapter to use for logging.
+ * @param extensionInfo - Optional extension loading info to display in the session header.
  * @returns A factory function compatible with the Pi SDK's extension system.
  */
-export function createLoggingFactory(core: CoreAdapter) {
-  return (pi: ExtensionAPI) => loggingFactory(pi, core);
+export function createLoggingFactory(core: CoreAdapter, extensionInfo?: ExtensionLoadingInfo) {
+  return (pi: ExtensionAPI) => loggingFactory(pi, core, extensionInfo);
 }

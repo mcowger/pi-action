@@ -9,21 +9,89 @@
  * Also appends AGENTS.md content to the system prompt to provide project context.
  */
 
-import { DefaultResourceLoader } from '@mariozechner/pi-coding-agent';
+import {
+  DefaultPackageManager,
+  DefaultResourceLoader,
+  getAgentDir,
+  SettingsManager,
+} from '@mariozechner/pi-coding-agent';
 import { SYSTEM_PROMPT } from './prompt';
 import { createLoggingFactory } from './logging';
+import type { ExtensionLoadingInfo } from './logging';
 import { extensionsFactory } from './tools/index';
 import type { CoreAdapter } from '../types';
+
+/**
+ * Result of resolving extension sources.
+ */
+interface ExtensionResolutionResult {
+  /** Paths of successfully resolved and enabled extensions. */
+  paths: string[];
+  /** Information about the extension loading process. */
+  info: ExtensionLoadingInfo;
+}
+
+/**
+ * Resolve extension sources to their filesystem paths.
+ *
+ * @param extensions - Optional array of extension sources (npm packages, git repos, or local paths).
+ * @returns A promise resolving to the extension paths and loading info.
+ */
+export async function resolveExtensions(extensions?: string[]): Promise<ExtensionResolutionResult> {
+  const paths: string[] = [];
+  const info: ExtensionLoadingInfo = {
+    requested: extensions ?? [],
+    loaded: [],
+    warnings: [],
+  };
+
+  if (!extensions?.length) {
+    return { paths, info };
+  }
+
+  const settingsManager = SettingsManager.inMemory();
+  const pkgManager = new DefaultPackageManager({
+    cwd: process.cwd(),
+    agentDir: getAgentDir(),
+    settingsManager,
+  });
+
+  const resolved = await pkgManager.resolveExtensionSources(extensions, {
+    local: true,
+    temporary: true,
+  });
+
+  for (const ext of resolved.extensions) {
+    if (ext.enabled) {
+      info.loaded.push(ext.path);
+      paths.push(ext.path);
+    }
+  }
+
+  if (resolved.extensions.length === 0 && extensions.length > 0) {
+    info.warnings.push(`No extensions resolved from: ${extensions.join(', ')}`);
+  }
+
+  return { paths, info };
+}
 
 /**
  * Create and configure the resource loader used by the agent session.
  *
  * @param core - The CoreAdapter to use for logging within the Pi agent.
+ * @param extensions - Optional array of extension sources (npm packages, git repos, or local paths).
  * @returns A fully loaded {@link DefaultResourceLoader} instance.
  */
-export async function getResourceLoader(core: CoreAdapter): Promise<DefaultResourceLoader> {
+export async function getResourceLoader(
+  core: CoreAdapter,
+  extensions?: string[]
+): Promise<DefaultResourceLoader> {
+  const { paths: additionalExtensionPaths, info: extensionInfo } =
+    await resolveExtensions(extensions);
+
   const loader = new DefaultResourceLoader({
-    extensionFactories: [extensionsFactory, createLoggingFactory(core)],
+    extensionFactories: [extensionsFactory, createLoggingFactory(core, extensionInfo)],
+    additionalExtensionPaths,
     systemPromptOverride: () => SYSTEM_PROMPT,
     appendSystemPromptOverride: agentsFiles => {
       if (agentsFiles.length === 0) {

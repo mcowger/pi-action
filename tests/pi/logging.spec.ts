@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { truncateText, getVersion } from '../../src/pi/logging';
+import { truncateText, getVersion, ExtensionLoadingInfo } from '../../src/pi/logging';
+import { createLoggingFactory } from '../../src/pi/logging';
+import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { CoreAdapter } from '../../src/types';
 
 describe('truncateText', () => {
   test('returns text unchanged when shorter than maxLength', () => {
@@ -71,5 +74,89 @@ describe('getVersion', () => {
     // In tests, it will be undefined, so we expect 'unknown'
     const result = getVersion();
     expect(result).toBe('unknown');
+  });
+});
+
+describe('ExtensionLoadingInfo', () => {
+  test('type is exported and can be instantiated', () => {
+    const info: ExtensionLoadingInfo = {
+      requested: ['npm:some-package'],
+      loaded: ['/path/to/extension'],
+      warnings: [],
+    };
+    expect(info.requested).toEqual(['npm:some-package']);
+    expect(info.loaded).toEqual(['/path/to/extension']);
+    expect(info.warnings).toEqual([]);
+  });
+
+  test('supports empty arrays', () => {
+    const info: ExtensionLoadingInfo = {
+      requested: [],
+      loaded: [],
+      warnings: [],
+    };
+    expect(info.requested).toEqual([]);
+    expect(info.loaded).toEqual([]);
+    expect(info.warnings).toEqual([]);
+  });
+
+  test('supports warnings array', () => {
+    const info: ExtensionLoadingInfo = {
+      requested: ['invalid-package'],
+      loaded: [],
+      warnings: ['No extensions resolved from: invalid-package'],
+    };
+    expect(info.warnings).toContain('No extensions resolved from: invalid-package');
+  });
+});
+
+describe('createLoggingFactory', () => {
+  test('returns a factory function that accepts ExtensionAPI', () => {
+    const mockCore: CoreAdapter = {
+      getInput: () => '',
+      setFailed: () => {},
+      notice: () => {},
+      debug: () => {},
+      info: () => {},
+      warning: () => {},
+    };
+
+    const factory = createLoggingFactory(mockCore);
+    expect(typeof factory).toBe('function');
+
+    // The factory should accept an ExtensionAPI
+    const mockPi = {
+      on: () => {},
+      getAllTools: () => [],
+      getThinkingLevel: () => 'off',
+    } as unknown as ExtensionAPI;
+
+    expect(() => factory(mockPi)).not.toThrow();
+  });
+
+  test('accepts optional extensionInfo parameter', () => {
+    const mockCore: CoreAdapter = {
+      getInput: () => '',
+      setFailed: () => {},
+      notice: () => {},
+      debug: () => {},
+      info: () => {},
+      warning: () => {},
+    };
+
+    const extensionInfo: ExtensionLoadingInfo = {
+      requested: ['npm:example'],
+      loaded: ['/tmp/example'],
+      warnings: [],
+    };
+
+    const factory = createLoggingFactory(mockCore, extensionInfo);
+    const mockPi = {
+      on: () => {},
+      getAllTools: () => [],
+      getThinkingLevel: () => 'off',
+    } as unknown as ExtensionAPI;
+
+    expect(() => factory(mockPi)).not.toThrow();
   });
 });

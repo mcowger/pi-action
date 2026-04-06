@@ -426,6 +426,89 @@ describe('ActionOrchestrator', () => {
     });
   });
 
+  describe('extensions configuration', () => {
+    test('parses extensions input into config array', async () => {
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          extensions: 'npm:package-one\ngit:github.com/user/repo\n./local-path.ts',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
+      await orchestrator.execute();
+
+      expect(mockPiFactory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          extensions: ['npm:package-one', 'git:github.com/user/repo', './local-path.ts'],
+        }),
+        mockCore
+      );
+    });
+
+    test('omits extensions when input is empty', async () => {
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          extensions: '',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
+      await orchestrator.execute();
+
+      expect(mockPiFactory).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          extensions: expect.any(Array),
+        }),
+        mockCore
+      );
+    });
+
+    test('omits extensions when input is not provided', async () => {
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
+      await orchestrator.execute();
+
+      expect(mockPiFactory).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          extensions: expect.any(Array),
+        }),
+        mockCore
+      );
+    });
+
+    test('calls getInput for extensions', async () => {
+      const orchestrator = new ActionOrchestrator(mockCore, mockGithub, mockPiFactory);
+      await orchestrator.execute();
+
+      expect(mockCore.getInput).toHaveBeenCalledWith('extensions');
+    });
+  });
+
   describe('edge cases', () => {
     test('handles empty prompt string as missing prompt error', async () => {
       const getPromptMock = mock(async () => '');

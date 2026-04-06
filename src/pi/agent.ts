@@ -32,6 +32,7 @@ export class Agent {
   private thinkingLevel: ThinkingLevel;
   private outputChunks: string[] = [];
   private core: CoreAdapter;
+  private extensions?: string[];
 
   /**
    * Create a new Pi agent.
@@ -44,14 +45,25 @@ export class Agent {
    * @param level      - Thinking/reasoning level for the model
    *                      (default `'off'`).
    * @param core       - The CoreAdapter for logging and debug output.
+   * @param extensions - Optional array of extension sources (npm, git, or local paths).
    * @throws {Error}   If the requested model cannot be found in the registry.
    */
-  constructor(modelStr: string, provider: string, token: string, level = 'off', core: CoreAdapter) {
+  constructor(
+    modelStr: string,
+    provider: string,
+    token: string,
+    level = 'off',
+    core: CoreAdapter,
+    extensions?: string[]
+  ) {
     this.modelStr = modelStr;
     this.provider = provider;
     this.token = token;
     this.thinkingLevel = level as ThinkingLevel;
     this.core = core;
+    if (extensions !== undefined) {
+      this.extensions = extensions;
+    }
     this.modelRegistry = ModelRegistry.inMemory(this.authStorage);
 
     if (this.token) {
@@ -85,7 +97,7 @@ export class Agent {
       thinkingLevel: this.thinkingLevel,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      resourceLoader: await getResourceLoader(this.core),
+      resourceLoader: await getResourceLoader(this.core, this.extensions),
     });
     this.session = session;
 

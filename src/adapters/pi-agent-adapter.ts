@@ -11,7 +11,14 @@ import { Agent } from '../pi';
  * Factory function that creates a PiAgent wrapping a real Pi Agent instance.
  */
 export const createRealPiAgent: PiAgentFactory = (config: PiConfig, core): PiAgent => {
-  const agent = new Agent(config.model, config.provider, config.token, config.thinkingLevel, core);
+  const agent = new Agent(
+    config.model,
+    config.provider,
+    config.token,
+    config.thinkingLevel,
+    core,
+    config.extensions
+  );
 
   return {
     async run(text: string) {

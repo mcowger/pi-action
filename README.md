@@ -81,6 +81,29 @@ You can use the `prompt` input to run the agent without requiring a comment trig
 
 When using the `prompt` input, the action still enriches the prompt with issue/PR context (title and description) if available in the workflow context.
 
+### Custom Extensions
+
+You can load custom Pi extensions to add additional tools, custom tools, or modify agent behavior:
+
+```yaml
+      - name: Run Pi agent with extensions
+        uses: shaftoe/pi-coding-agent-action@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          provider: anthropic
+          model: claude-sonnet-4-5
+          token: ${{ secrets.ANTHROPIC_API_KEY }}
+          extensions: |
+            npm:pi-subagents
+            git:github.com/user/pi-custom-tools
+            ./my-local-extension.ts
+```
+
+Supported extension sources:
+- **npm packages**: `npm:package-name` or `npm:package@version`
+- **git repositories**: `git:github.com/user/repo` (supports branches with `#branch`)
+- **local files**: Relative paths to `.ts` extension files
+
 ### Quick Start
 
 Create a workflow file, e.g., `.github/workflows/pi-agent.yml`. See the [interactive](./.github/workflows/pi.yml) and [non-interactive](./.github/workflows/pr.yml) workflows in this repository to get started.
@@ -96,6 +119,7 @@ Create a workflow file, e.g., `.github/workflows/pi-agent.yml`. See the [interac
 | `thinking_level` | Model thinking level (off|low|medium|high) | No | off |
 | `trigger` | Trigger phrase used to invoke the action | No | /pi |
 | `prompt` | Optional prompt to send to the agent (skips comment extraction) | No | - |
+| `extensions` | Custom Pi extensions to load (one per line). Supports npm packages (npm:package-name), git repos (git:github.com/user/repo), or local file paths | No | - |
 
 Refer to [Pi documentation](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) for the current list of supported providers / models / etc.
 

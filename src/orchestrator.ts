@@ -81,12 +81,21 @@ export class ActionOrchestrator {
    * Gather configuration from core inputs.
    */
   private gatherConfig(): PiConfig {
+    const extensionsInput = this.core.getInput('extensions');
+    const extensions = extensionsInput
+      ? extensionsInput
+          .split('\n')
+          .map(s => s.trim())
+          .filter(Boolean)
+      : undefined;
+
     return {
       provider: this.core.getInput('provider'),
       model: this.core.getInput('model'),
       token: this.core.getInput('token'),
       thinkingLevel: this.core.getInput('thinking_level') ?? 'off',
       promptInput: this.core.getInput('prompt'),
+      ...(extensions?.length ? { extensions } : {}),
     };
   }
 
