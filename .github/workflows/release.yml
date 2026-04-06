@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  test:
+  test-and-coverage:
     uses: ./.github/workflows/build_test_coverage.yml
     with:
       e2e: true
@@ -20,6 +20,7 @@ jobs:
   release:
     name: semantic-release
     runs-on: ubuntu-latest
+    needs: test-and-coverage
 
     steps:
       - name: Checkout

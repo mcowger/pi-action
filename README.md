@@ -334,13 +334,7 @@ bun test tests/e2e/pi-agent.spec.ts
 
 ### Releasing
 
-Update [`VERSION`](./VERSION) with the new value, then
-
-```bash
-bun run tag
-```
-
-to create release commit and tag to be pushed.
+Automated release flow handled by `semantic-release` in [release.yml](./.github/workflows/release.yml)
 
 ## License
 

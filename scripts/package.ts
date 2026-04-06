@@ -3,7 +3,7 @@ import { build } from 'esbuild';
 import { join } from 'node:path';
 
 export async function buildDist(cwd: string = process.cwd()): Promise<void> {
-  const version = readFileSync(join(cwd, 'VERSION'), 'utf-8').trim();
+  const version = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf-8')).version;
   const piVersion = JSON.parse(
     readFileSync(join(cwd, 'node_modules/@mariozechner/pi-coding-agent/package.json'), 'utf-8')
   ).version;
@@ -29,7 +29,7 @@ export async function buildDist(cwd: string = process.cwd()): Promise<void> {
 // Bun sets isMain property on the module
 // @ts-ignore - Bun runtime property
 if (import.meta.main || process.argv[1].endsWith('/package.ts')) {
-  buildDist().catch((error) => {
+  buildDist().catch(error => {
     console.error('Build failed:', error);
     process.exit(1);
   });
