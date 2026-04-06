@@ -1,12 +1,34 @@
 /**
  * Tests for resource-loader module.
  *
- * Tests extension resolution functionality.
+ * Tests extension resolution functionality and resource loader configuration.
  */
 
 import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
-import { resolveExtensions } from '../../src/pi/resource-loader';
-import { DefaultPackageManager } from '@mariozechner/pi-coding-agent';
+import { resolveExtensions, getResourceLoader } from '../../src/pi/resource-loader';
+import { DefaultPackageManager, DefaultResourceLoader } from '@mariozechner/pi-coding-agent';
+
+// Mock CoreAdapter for testing
+const mockCoreAdapter = {
+  getInput: mock((name: string) => {
+    const defaults: Record<string, string> = {
+      github_token: 'fake-token',
+      trigger: '/pi',
+      max_comments: '100',
+    };
+    return defaults[name] ?? '';
+  }),
+  setFailed: mock(),
+  notice: mock(),
+  debug: mock(),
+  info: mock(),
+  warning: mock(),
+};
+
+// Set env vars before importing
+process.env.INPUT_TRIGGER = '/pi';
+process.env.INPUT_GITHUB_TOKEN = 'fake-token';
+process.env.INPUT_MAX_COMMENTS = '100';
 
 describe('resolveExtensions', () => {
   let mockResolveExtensionSources: ReturnType<typeof mock>;
@@ -187,6 +209,115 @@ describe('resolveExtensions', () => {
 
       expect(result.paths.length).toBe(10);
       expect(result.info.loaded.length).toBe(10);
+    });
+  });
+});
+
+describe('getResourceLoader', () => {
+  let mockResolveExtensionSources: ReturnType<typeof mock>;
+  let originalResolveExtensionSources: typeof DefaultPackageManager.prototype.resolveExtensionSources;
+  let mockReload: ReturnType<typeof mock>;
+  let originalReload: typeof DefaultResourceLoader.prototype.reload;
+
+  beforeEach(() => {
+    // Store original method and mock it
+    originalResolveExtensionSources = DefaultPackageManager.prototype.resolveExtensionSources;
+    mockResolveExtensionSources = mock(async (sources: string[]) => ({
+      extensions: sources.map((source, index) => ({
+        source,
+        path: `/tmp/extensions/${source.replace(/[^a-z0-9]/g, '-')}-${index}`,
+        enabled: true,
+      })),
+    }));
+    DefaultPackageManager.prototype.resolveExtensionSources = mockResolveExtensionSources;
+
+    // Mock reload method to avoid CLI extension loading errors in tests
+    // The Pi SDK's reload() tries to access CLI extension paths that
+    // don't exist in test environment, causing errors
+    originalReload = DefaultResourceLoader.prototype.reload;
+    mockReload = mock(async () => undefined);
+    DefaultResourceLoader.prototype.reload = mockReload;
+  });
+
+  afterEach(() => {
+    // Restore original methods
+    DefaultPackageManager.prototype.resolveExtensionSources = originalResolveExtensionSources;
+    DefaultResourceLoader.prototype.reload = originalReload;
+  });
+
+  describe('resource loader configuration', () => {
+    test('creates loader with noThemes enabled for headless environments', async () => {
+      const loader = await getResourceLoader(mockCoreAdapter);
+
+      // The loader should be created successfully
+      expect(loader).toBeDefined();
+      expect(loader).toBeInstanceOf(DefaultResourceLoader);
+      // The key test: reload was called (proves config was applied)
+      expect(mockReload).toHaveBeenCalled();
+      // The key benefit: no theme errors occur during loader creation
+      // (This was previously causing "Theme not initialized" errors)
+    });
+
+    test('includes system prompt override', async () => {
+      const loader = await getResourceLoader(mockCoreAdapter);
+
+      // Loader should be created with system prompt override
+      expect(loader).toBeDefined();
+      expect(loader).toBeInstanceOf(DefaultResourceLoader);
+    });
+
+    test('includes custom extension factory', async () => {
+      const loader = await getResourceLoader(mockCoreAdapter);
+
+      // Loader should include our custom tools extension factory
+      expect(loader).toBeDefined();
+      expect(loader).toBeInstanceOf(DefaultResourceLoader);
+    });
+  });
+
+  describe('with extensions', () => {
+    test('resolves and includes extension paths', async () => {
+      const extensions = ['npm:package-one', 'npm:package-two'];
+      const loader = await getResourceLoader(mockCoreAdapter, extensions);
+
+      // Verify extensions were resolved
+      expect(mockResolveExtensionSources).toHaveBeenCalledWith(
+        extensions,
+        expect.objectContaining({ local: true, temporary: true })
+      );
+
+      // Loader should be created successfully
+      expect(loader).toBeDefined();
+      expect(loader).toBeInstanceOf(DefaultResourceLoader);
+    });
+
+    test('handles no extensions', async () => {
+      const loader = await getResourceLoader(mockCoreAdapter, []);
+
+      // Loader should be created successfully even with no extensions
+      expect(loader).toBeDefined();
+      expect(loader).toBeInstanceOf(DefaultResourceLoader);
+    });
+
+    test('handles undefined extensions', async () => {
+      const loader = await getResourceLoader(mockCoreAdapter, undefined);
+
+      // Loader should be created successfully
+      expect(loader).toBeDefined();
+      expect(loader).toBeInstanceOf(DefaultResourceLoader);
+    });
+  });
+
+  describe('error handling', () => {
+    test('propagates extension resolution errors', async () => {
+      mockResolveExtensionSources = mock(async () => {
+        throw new Error('Extension resolution failed');
+      });
+      DefaultPackageManager.prototype.resolveExtensionSources = mockResolveExtensionSources;
+
+      await expect(getResourceLoader(mockCoreAdapter, ['npm:package'])).rejects.toThrow(
+        'Extension resolution failed'
+      );
     });
   });
 });

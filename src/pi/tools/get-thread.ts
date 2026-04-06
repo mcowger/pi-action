@@ -17,6 +17,7 @@ import { formatThreadAsText } from './common';
 import { getIssueOrPRThread, CANCELLATION_MESSAGE_GET_THREAD } from '../../github/index';
 import type { AgentToolResult } from '@mariozechner/pi-coding-agent';
 import type { IssueOrPRThread } from '../../github/index';
+import { withCancellation } from './tool-execution';
 
 /**
  * Schema for the get_issue_or_pr_thread tool.
@@ -47,26 +48,31 @@ const getIssueOrPRThreadSchema = Type.Object({
 type GetIssueOrPRThreadToolParams = Static<typeof getIssueOrPRThreadSchema>;
 
 /**
- * Cancellation details for get_issue_or_pr_thread tool.
+ * Create a not-found result for when an issue or PR is not found.
  */
-const cancellationDetails: IssueOrPRThread = {
-  number: 0,
-  title: 'Cancelled',
-  body: CANCELLATION_MESSAGE_GET_THREAD,
-  state: 'closed',
-  author: 'unknown',
-  author_type: 'user',
-  created_at: undefined,
-  updated_at: undefined,
-  closed_at: undefined,
-  merged_at: undefined,
-  labels: [],
-  is_pull_request: false,
-  head_branch: undefined,
-  base_branch: undefined,
-  head_sha: undefined,
-  comments: [],
-};
+function createNotFoundResult(): AgentToolResult<IssueOrPRThread> {
+  return {
+    content: [{ type: 'text' as const, text: 'Issue or pull request not found' }],
+    details: {
+      number: 0,
+      title: 'Not Found',
+      body: 'Issue or pull request not found',
+      state: 'closed',
+      author: 'unknown',
+      author_type: 'user',
+      created_at: undefined,
+      updated_at: undefined,
+      closed_at: undefined,
+      merged_at: undefined,
+      labels: [],
+      is_pull_request: false,
+      head_branch: undefined,
+      base_branch: undefined,
+      head_sha: undefined,
+      comments: [],
+    },
+  };
+}
 
 /**
  * Tool definition for fetching issue or PR thread.
@@ -79,45 +85,40 @@ export const getIssueOrPRThreadTool = defineTool({
   promptGuidelines: GET_ISSUE_PR_THREAD_PROMPT_GUIDELINES,
   // @ts-expect-error - TypeBox Symbol property not recognized by TypeScript
   parameters: getIssueOrPRThreadSchema,
-  execute: async (_toolCallId, params: GetIssueOrPRThreadToolParams, signal) => {
-    if (signal?.aborted) {
+  execute: withCancellation({
+    cancellationMessage: CANCELLATION_MESSAGE_GET_THREAD,
+    cancellationDetails: {
+      number: 0,
+      title: 'Cancelled',
+      body: CANCELLATION_MESSAGE_GET_THREAD,
+      state: 'closed',
+      author: 'unknown',
+      author_type: 'user',
+      created_at: undefined,
+      updated_at: undefined,
+      closed_at: undefined,
+      merged_at: undefined,
+      labels: [],
+      is_pull_request: false,
+      head_branch: undefined,
+      base_branch: undefined,
+      head_sha: undefined,
+      comments: [],
+    },
+    prepareParams: (params: GetIssueOrPRThreadToolParams) => params,
+    execute: async (params) => {
+      const result = await getIssueOrPRThread(params);
+
+      if (!result) {
+        return createNotFoundResult();
+      }
+
+      const threadSummary = formatThreadAsText(result);
+
       return {
-        content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_GET_THREAD }],
-        details: { ...cancellationDetails, cancelled: true },
-      } as AgentToolResult<IssueOrPRThread>;
-    }
-
-    const result = await getIssueOrPRThread(params);
-
-    if (!result) {
-      return {
-        content: [{ type: 'text' as const, text: 'Issue or pull request not found' }],
-        details: {
-          number: 0,
-          title: 'Not Found',
-          body: 'Issue or pull request not found',
-          state: 'closed',
-          author: 'unknown',
-          author_type: 'user',
-          created_at: undefined,
-          updated_at: undefined,
-          closed_at: undefined,
-          merged_at: undefined,
-          labels: [],
-          is_pull_request: false,
-          head_branch: undefined,
-          base_branch: undefined,
-          head_sha: undefined,
-          comments: [],
-        },
-      } as AgentToolResult<IssueOrPRThread>;
-    }
-
-    const threadSummary = formatThreadAsText(result);
-
-    return {
-      content: [{ type: 'text' as const, text: threadSummary }],
-      details: result,
-    };
-  },
+        content: [{ type: 'text' as const, text: threadSummary }],
+        details: result,
+      };
+    },
+  }),
 });

@@ -19,6 +19,15 @@ import { getIssueOrPRThreadTool } from './get-thread';
 import { updatePullRequestTool } from './update-pr';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
+// Re-export tool execution utilities for use in custom tools
+export {
+  withCancellation,
+  createCancellationResult,
+  buildParams,
+  type ToolExecutionConfig,
+  type CancellationResult,
+} from './tool-execution';
+
 /**
  * Extension factory that registers all custom tools with the Pi agent.
  *

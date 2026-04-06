@@ -99,6 +99,9 @@ export async function getResourceLoader(
       }
       return agentsFiles;
     },
+    // Disable theme loading in headless/non-interactive environments
+    // (GitHub Actions CI and test environments don't need UI themes)
+    noThemes: true,
   });
   await loader.reload();
   return loader;

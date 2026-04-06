@@ -15,7 +15,8 @@ import {
   UPDATE_PULL_REQUEST_PARAM_DRY_RUN_DESCRIPTION,
 } from '../prompt';
 import { updatePullRequest, CANCELLATION_MESSAGE_UPDATE_PR } from '../../github/index';
-import type { UpdatePullRequestParams, UpdatePullRequestDetails } from '../../github/index';
+import type { UpdatePullRequestParams } from '../../github/index';
+import { withCancellation } from './tool-execution';
 
 /**
  * Schema for the update_pull_request tool.
@@ -61,41 +62,35 @@ export const updatePullRequestTool = defineTool({
   promptGuidelines: UPDATE_PULL_REQUEST_PROMPT_GUIDELINES,
   // @ts-expect-error - TypeBox Symbol property not recognized by TypeScript
   parameters: updatePullRequestSchema,
-  execute: async (_toolCallId, params: UpdatePullRequestToolParams, signal) => {
-    if (signal?.aborted) {
-      return {
-        content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_UPDATE_PR }],
-        details: {
-          pullRequestNumber: 0,
-          pullRequestUrl: '',
-          headBranch: '',
-          baseBranch: '',
-          dryRun: false,
-          cancelled: true,
-        } as UpdatePullRequestDetails,
-      };
-    }
-
-    const { pull_number, title, body, message, dryRun } = params;
-
-    // Delegate to the GitHub-specific implementation
-    const updateParams: UpdatePullRequestParams = {};
-    if (pull_number !== undefined) {
-      updateParams.pull_number = pull_number;
-    }
-    if (title !== undefined) {
-      updateParams.title = title;
-    }
-    if (body !== undefined) {
-      updateParams.body = body;
-    }
-    if (message !== undefined) {
-      updateParams.message = message;
-    }
-    if (dryRun !== undefined) {
-      updateParams.dryRun = dryRun;
-    }
-
-    return await updatePullRequest(updateParams);
-  },
+  execute: withCancellation({
+    cancellationMessage: CANCELLATION_MESSAGE_UPDATE_PR,
+    cancellationDetails: {
+      pullRequestNumber: 0,
+      pullRequestUrl: '',
+      headBranch: '',
+      baseBranch: '',
+      dryRun: false,
+    },
+    prepareParams: (params: UpdatePullRequestToolParams) => {
+      const { pull_number, title, body, message, dryRun } = params;
+      const updateParams: UpdatePullRequestParams = {};
+      if (pull_number !== undefined) {
+        updateParams.pull_number = pull_number;
+      }
+      if (title !== undefined) {
+        updateParams.title = title;
+      }
+      if (body !== undefined) {
+        updateParams.body = body;
+      }
+      if (message !== undefined) {
+        updateParams.message = message;
+      }
+      if (dryRun !== undefined) {
+        updateParams.dryRun = dryRun;
+      }
+      return updateParams;
+    },
+    execute: updatePullRequest,
+  }),
 });

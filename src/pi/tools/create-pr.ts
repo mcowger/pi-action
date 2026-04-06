@@ -14,7 +14,8 @@ import {
   CREATE_PULL_REQUEST_PARAM_DRY_RUN_DESCRIPTION,
 } from '../prompt';
 import { createPullRequest, CANCELLATION_MESSAGE_CREATE_PR } from '../../github/index';
-import type { CreatePullRequestParams, CreatePullRequestDetails } from '../../github/index';
+import type { CreatePullRequestParams } from '../../github/index';
+import { withCancellation } from './tool-execution';
 
 /**
  * Schema for the create_pull_request tool.
@@ -53,35 +54,29 @@ export const createPRTool = defineTool({
   promptGuidelines: CREATE_PULL_REQUEST_PROMPT_GUIDELINES,
   // @ts-expect-error - TypeBox Symbol property not recognized by TypeScript
   parameters: createPullRequestSchema,
-  execute: async (_toolCallId, params: CreatePullRequestToolParams, signal) => {
-    if (signal?.aborted) {
-      return {
-        content: [{ type: 'text' as const, text: CANCELLATION_MESSAGE_CREATE_PR }],
-        details: {
-          pullRequestNumber: 0,
-          pullRequestUrl: '',
-          headBranch: '',
-          baseBranch: '',
-          dryRun: false,
-          cancelled: true,
-        } as CreatePullRequestDetails,
-      };
-    }
-
-    const { title, body, base, dryRun } = params;
-
-    // Delegate to the GitHub-specific implementation
-    const prParams: CreatePullRequestParams = { title };
-    if (body !== undefined) {
-      prParams.body = body;
-    }
-    if (base !== undefined) {
-      prParams.base = base;
-    }
-    if (dryRun !== undefined) {
-      prParams.dryRun = dryRun;
-    }
-
-    return await createPullRequest(prParams);
-  },
+  execute: withCancellation({
+    cancellationMessage: CANCELLATION_MESSAGE_CREATE_PR,
+    cancellationDetails: {
+      pullRequestNumber: 0,
+      pullRequestUrl: '',
+      headBranch: '',
+      baseBranch: '',
+      dryRun: false,
+    },
+    prepareParams: (params: CreatePullRequestToolParams) => {
+      const { title, body, base, dryRun } = params;
+      const prParams: CreatePullRequestParams = { title };
+      if (body !== undefined) {
+        prParams.body = body;
+      }
+      if (base !== undefined) {
+        prParams.base = base;
+      }
+      if (dryRun !== undefined) {
+        prParams.dryRun = dryRun;
+      }
+      return prParams;
+    },
+    execute: createPullRequest,
+  }),
 });
