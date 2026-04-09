@@ -6,6 +6,9 @@ on:
       prompt:
         type: string
         required: false
+      allowed_actor:
+        type: string
+        required: false
     secrets:
       token:
         required: true
@@ -20,7 +23,8 @@ permissions:
 jobs:
   pi-agent:
     if: |
-      (github.actor == 'shaftoe') && startsWith(github.event.comment.body, '/pi')
+      startsWith(github.event.comment.body, '/pi') &&
+      (inputs.allowed_actor == '' || github.actor == inputs.allowed_actor)
 
     runs-on: ubuntu-latest
 
