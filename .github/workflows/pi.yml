@@ -20,7 +20,7 @@ permissions:
 jobs:
   pi-agent:
     if: |
-      (github.actor == 'shaftoe') && contains(github.event.comment.body, '/pi')
+      (github.actor == 'shaftoe') && startsWith(github.event.comment.body, '/pi')
 
     runs-on: ubuntu-latest
 
