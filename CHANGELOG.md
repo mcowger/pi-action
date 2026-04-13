@@ -31,8 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Tool execution refactored to reduce duplication
 - Dependencies updated
-
-### Documentation
 - Updated README architecture section
 
 ## [2.4.0] - 2026-04-03
@@ -44,16 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated tools to use new `defineTool()` from Pi SDK
 - Dependencies bumped
-
-### Fixed
 - Development dependency (eslint) bumped
 
 ## [2.3.3] - 2026-04-03
 
 ### Changed
 - Upgraded Pi to version 0.65.0 and related dependencies
-
-### Documentation
 - Added caution note about securing workflows in README
 
 ## [2.3.2] - 2026-04-03
@@ -71,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved module-level state management in `src/github/index.ts`
 - Merged Pi flows into single pi.yml workflow
 - Unified type configuration across tests
+- Removed core import to simplify testing
+- Extracted duplicate `getContextType()` to shared utility
 
 ### Fixed
 - Missing action version in footer and logs
@@ -78,10 +74,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Silent errors being swallowed
 - Unsafe type assertion for tree entry sha field
 - Logging issues
-
-### Refactored
-- Removed core import to simplify testing
-- Extracted duplicate `getContextType()` to shared utility
 
 ## [2.3.0] - 2026-03-31
 
