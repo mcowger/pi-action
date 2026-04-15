@@ -10,7 +10,7 @@
  * - **`get_issue_or_pr_thread`** – fetches the full comment thread of an issue
  *   or pull request for context.
  *
- * The exported {@link extensionsFactory} function is passed to the Pi SDK resource
+ * The exported {@link toolsFactory} function is passed to the Pi SDK resource
  * loader so that the tools are available during agent sessions.
  */
 
@@ -36,7 +36,7 @@ export {
  *
  * @param pi - The Pi extension API used to register tools.
  */
-export const extensionsFactory = (pi: ExtensionAPI): void => {
+export const toolsFactory = (pi: ExtensionAPI): void => {
   const tools = [createPRTool, updatePullRequestTool, getIssueOrPRThreadTool];
   tools.forEach(tool => {
     pi.registerTool(tool);

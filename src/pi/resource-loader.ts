@@ -18,7 +18,7 @@ import {
 import { SYSTEM_PROMPT } from './prompt';
 import { createLoggingFactory } from './logging';
 import type { ExtensionLoadingInfo } from './logging';
-import { extensionsFactory } from './tools/index';
+import { toolsFactory } from './tools/index';
 import type { CoreAdapter } from '../types';
 
 /**
@@ -93,7 +93,7 @@ export async function getResourceLoader(
 
   const extensionFactories = [createLoggingFactory(core, extensionInfo)];
   if (loadBuiltinExtensions) {
-    extensionFactories.unshift(extensionsFactory);
+    extensionFactories.unshift(toolsFactory);
   }
 
   const loader = new DefaultResourceLoader({
