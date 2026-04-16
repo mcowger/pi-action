@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-04-16
+
+### Changed
+
+- **deps**: bump Pi and prettier
+- rename toolsFactory for clarity
+
+### Fixed
+
+- bump Pi SDK v0.67.5
+
 ## [2.7.0] - 2026-04-15
 
 ### Added
@@ -99,7 +110,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.0...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.1...HEAD
+[2.7.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.5.0...v2.6.0
