@@ -3,8 +3,10 @@ name: Pi AI Agent
 on:
   issue_comment:
     types: [created]
-  issues:
-    types: [opened, edited]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
 
 permissions:
   contents: write
