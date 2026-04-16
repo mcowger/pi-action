@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.2] - 2026-04-16
+
+### Fixed
+
+- support PR inline (review) comments (#91)
+
 ## [2.7.1] - 2026-04-16
 
 ### Changed
@@ -110,7 +116,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.1...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.2...HEAD
+[2.7.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.1...v2.7.2
 [2.7.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.6.0...v2.6.1
