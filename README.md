@@ -161,75 +161,6 @@ Refer to [Pi documentation](https://github.com/badlogic/pi-mono/tree/main/packag
    - Creates a new PR
 6. Posts result as a comment with metadata footer
 
-## Architecture
-
-The action is built on top of the [Pi coding agent](https://pi.dev) framework and consists of several key modules.
-
-### Directory Structure
-
-```
-src/
-├── run.ts                     # Main entry point (creates adapters and orchestrator)
-├── orchestrator.ts            # Business logic orchestration with adapter pattern
-├── types.ts                   # Shared type definitions and adapter interfaces
-├── import-meta-url.js         # Polyfill for import.meta.url (ES modules)
-├── adapters/                  # Production implementations of adapter interfaces
-│   ├── core-adapter.ts        # GitHub Actions Core operations
-│   ├── github-adapter.ts      # GitHub API operations
-│   └── pi-agent-adapter.ts    # Pi agent factory
-├── pi/                        # Pi integration layer
-│   ├── index.ts               # Barrel export for pi module
-│   ├── agent.ts               # Pi SDK wrapper for session management (Agent class)
-│   ├── prompt.ts              # System prompt and tool prompt definitions
-│   ├── logging.ts             # Centralized logging via SDK events
-│   ├── resource-loader.ts     # Resource loader configuration
-│   └── tools/                 # Custom Pi tool extensions
-│       ├── index.ts           # Extension factory registration
-│       ├── create-pr.ts       # create_pull_request tool
-│       ├── update-pr.ts       # update_pull_request tool
-│       ├── get-thread.ts      # get_issue_or_pr_thread tool
-│       └── common.ts          # Shared tool utilities
-└── github/                    # GitHub API integration
-    ├── index.ts               # Barrel export for github module
-    ├── context.ts             # Context extraction and thread retrieval
-    ├── context-utils.ts       # Context utility functions
-    ├── octokit.ts             # Shared Octokit client singleton
-    ├── reactions.ts           # Reaction management (add/remove eyes)
-    ├── comments.ts            # Comment creation with metadata footer
-    ├── pull-request.ts        # PR creation logic
-    ├── pull-request-update.ts # PR update logic
-    ├── constants.ts           # GitHub-related constants
-    └── git/                   # Git operations via GitHub API
-        ├── index.ts           # Barrel export for git module
-        ├── commit-creator.ts  # Commit creation via Git Data API
-        ├── file-scanner.ts    # File scanning and change detection
-        ├── tree-builder.ts    # Git tree construction
-        └── types.ts           # Git-related type definitions
-
-tests/
-├── orchestrator.spec.ts       # Orchestrator business logic tests
-├── github.spec.ts             # GitHub module integration tests
-├── tsconfig.json              # Test TypeScript configuration
-├── helpers/                   # Test helpers and utilities
-│   └── fakes.ts               # Mock implementations for testing
-├── e2e/                       # End-to-end tests
-│   └── pi-agent.spec.ts       # Real Pi SDK integration tests
-├── github/                    # GitHub module tests
-│   ├── comments.spec.ts       # Comment creation tests
-│   ├── git.spec.ts            # Git operations tests
-│   ├── pull-request-logic.spec.ts    # PR creation logic tests
-│   └── pull-request-update-logic.spec.ts  # PR update logic tests
-└── pi/                        # Pi module tests
-    ├── agent-logic.spec.ts    # Pi agent behavior tests
-    ├── logging.spec.ts        # Logging tests
-    ├── tools.spec.ts          # Tool interface tests
-    └── tools/                 # Tool execution tests
-        ├── common.spec.ts     # Common tool utilities tests
-        ├── create-pr-execution.spec.ts  # create_pr tool execution tests
-        ├── update-pr-execution.spec.ts  # update_pr tool execution tests
-        └── get-thread-execution.spec.ts # get_thread tool execution tests
-```
-
 ### Custom Tools
 
 The action extends Pi with three custom tools:
@@ -257,7 +188,7 @@ The action extends Pi with three custom tools:
 
 ### Prerequisites
 
-- Bun package manager (preferred) or npm
+- Bun package manager
 - Node.js 24+
 
 ### Validation
