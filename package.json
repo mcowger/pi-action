@@ -31,7 +31,7 @@
     "@actions/core": "^3.0.0",
     "@actions/github": "^9.1.0",
     "@js-temporal/polyfill": "^0.5.1",
-    "@mariozechner/pi-coding-agent": "^0.67.5",
+    "@mariozechner/pi-coding-agent": "^0.67.6",
     "@sinclair/typebox": "^0.34.49",
     "ignore": "^7.0.5"
   },
@@ -49,6 +49,6 @@
     "isomorphic-git": "^1.37.5",
     "prettier": "^3.8.3",
     "semantic-release": "^25.0.3",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   }
 }
