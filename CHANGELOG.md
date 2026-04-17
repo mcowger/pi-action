@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-04-17
+
+### Added
+
+- add support for review comments (#96)
+
+### Changed
+
+- **deps**: bump Pi and typescript
+- remove useless and stale info from readme
+- update readme
+
 ## [2.7.2] - 2026-04-16
 
 ### Fixed
@@ -116,7 +128,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.2...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.2...v2.8.0
 [2.7.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.1...v2.7.2
 [2.7.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.6.1...v2.7.0
