@@ -21,7 +21,7 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 > [!IMPORTANT]
 > The default `v2` branch is in active development so if you don't want the bleeding edge you should pin to the latest release, e.g.
 > ```yaml
->    uses: shaftoe/pi-coding-agent-action@v2.8.0
+>    uses: shaftoe/pi-coding-agent-action@v2.8.1
 > ```
 
 ## Usage
