@@ -7,6 +7,9 @@
  * semantic-release (via the `--package-manager bun` / `execCwd` option)
  * or can be passed as the first CLI argument.
  *
+ * Note: package.json version bumping is handled by @semantic-release/npm
+ * with npmPublish:false, so this script only needs to handle README.md.
+ *
  * Usage:
  *   bun run scripts/bump-readme-version.ts [version]
  */
