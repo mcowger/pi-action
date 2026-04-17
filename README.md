@@ -16,7 +16,14 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 
 ## Securing your workflows
 
-**CAUTION**: depending on the permissions assigned to your workflow you should consider restricting who's allowed to trigger it e.g. filtering for GitHub user name or role (`if github.actor == '<my-user>'`).
+> [!WARNING]
+> Depending on the permissions assigned to your workflow you should consider restricting who's allowed to trigger it e.g. filtering for GitHub user name or role (`if github.actor == '<my-user>'`).
+
+> [!IMPORTANT]
+> The default `v2` branch is in active development so if you don't want the bleeding edge you should pin to the latest release, e.g.
+> ```yaml
+>    uses: shaftoe/pi-coding-agent-action@v2.7.2
+> ```
 
 ## Usage
 
