@@ -8,11 +8,10 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 
 ## Features
 
-- **Issue assistance**: Type `/pi` in an issue comment to have the agent analyze the issue and create a fix
-- **PR assistance**: Type `/pi` in a PR comment to have the agent review and improve the pull request
-- **Code reviews**: Have Pi review every new pull request automatically
-- **Automated commits**: The agent can make changes, commit them, and create PRs automatically
-- **Flexible LLM support**: Support for various providers (Anthropic, OpenAI, Google, etc.)
+- **Issue assistance**: Prefix any new issue description and/or any issue comment with `/pi` to have the agent analyze the issue and e.g. create a new PR with the fix
+- **PR assistance**: Prefix any PR comment/review comment/review message with `/pi` to have the agent review and improve the pull request
+- **Automated code reviews**: Have Pi review every new pull request automatically
+- **Add Pi to your own pipelines**: (Optionally) generate prompt from upstream actions/workflows and have Pi do the work in background for you anywhere you like in your workflows
 
 ## Securing your workflows
 
@@ -22,7 +21,7 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 > [!IMPORTANT]
 > The default `v2` branch is in active development so if you don't want the bleeding edge you should pin to the latest release, e.g.
 > ```yaml
->    uses: shaftoe/pi-coding-agent-action@v2.7.2
+>    uses: shaftoe/pi-coding-agent-action@v2.8.0
 > ```
 
 ## Usage
