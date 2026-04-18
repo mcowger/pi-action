@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.2] - 2026-04-18
+
+### Changed
+
+- **deps**: update Pi to v0.67.68
+- update README.md
+
+### Fixed
+
+- handle nested .gitignore files and prevent incorrect deletion of gitignored tracked files (#105)
+
 ## [2.8.1] - 2026-04-17
 
 ### Changed
@@ -138,7 +149,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.1...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.2...HEAD
+[2.8.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.1...v2.8.2
 [2.8.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.2...v2.8.0
 [2.7.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.1...v2.7.2
