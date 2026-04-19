@@ -88,6 +88,13 @@ export interface GitHubClient {
 		head: string;
 		base: string;
 	}): Promise<{ number: number; html_url: string }>;
+	triggerWorkflowDispatch(params: {
+		owner: string;
+		repo: string;
+		workflowId: string;
+		ref: string;
+		inputs?: Record<string, string>;
+	}): Promise<void>;
 	getDefaultBranch(owner: string, repo: string): Promise<string>;
 	getCurrentBranch(): Promise<string>;
 }
@@ -323,6 +330,22 @@ export function createGitHubClient(
 				base: params.base,
 			});
 			return { number: pr.number, html_url: pr.html_url };
+		},
+
+		async triggerWorkflowDispatch(params: {
+			owner: string;
+			repo: string;
+			workflowId: string;
+			ref: string;
+			inputs?: Record<string, string>;
+		}): Promise<void> {
+			await octokit.rest.actions.createWorkflowDispatch({
+				owner: params.owner,
+				repo: params.repo,
+				workflow_id: params.workflowId,
+				ref: params.ref,
+				inputs: params.inputs,
+			});
 		},
 
 		async getDefaultBranch(repoOwner: string, repoName: string): Promise<string> {

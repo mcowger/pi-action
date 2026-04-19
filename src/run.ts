@@ -10,6 +10,7 @@ import {
 	type CommentState,
 } from "./comment-tools.js";
 import { createPullRequestTool } from "./create-pr-tool.js";
+import { triggerWorkflowDispatchTool } from "./trigger-workflow-tool.js";
 import { formatErrorComment, formatSuccessComment, formatReviewComments } from "./formatting.js";
 import {
 	addReaction,
@@ -495,6 +496,18 @@ export async function run(deps: ActionDependencies): Promise<void> {
 				deps.context.repo.owner,
 				deps.context.repo.name,
 			),
+		);
+
+		// Add workflow dispatch tool for triggering downstream workflows
+		customTools.push(
+			triggerWorkflowDispatchTool({
+				client: ghClient,
+				owner: deps.context.repo.owner,
+				repo: deps.context.repo.name,
+				onWorkflowTriggered: (details) => {
+					log.info(`Workflow triggered: ${details.workflowFile} on ${details.ref}`);
+				},
+			}),
 		);
 	}
 

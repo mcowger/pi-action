@@ -42,6 +42,7 @@ export function createMockGitHubClient(): GitHubClient {
 			number: 1,
 			html_url: "https://github.com/test/repo/pull/1",
 		}),
+		triggerWorkflowDispatch: vi.fn().mockResolvedValue(undefined),
 		getDefaultBranch: vi.fn().mockResolvedValue("main"),
 		getCurrentBranch: vi.fn().mockResolvedValue("pi-action/test-branch"),
 	};

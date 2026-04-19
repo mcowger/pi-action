@@ -165,5 +165,14 @@ export interface OctokitClient {
 				description?: string;
 			}) => Promise<{ data: { html_url?: string } }>;
 		};
+		actions: {
+			createWorkflowDispatch: (params: {
+				owner: string;
+				repo: string;
+				workflow_id: string;
+				ref: string;
+				inputs?: Record<string, string>;
+			}) => Promise<{ status: number }>;
+		};
 	};
 }
