@@ -11,7 +11,7 @@ A GitHub Action that invokes the [pi coding agent](https://github.com/mariozechn
 - 🆕 Trigger on issue/PR creation, not just comments
 - 🔀 Automatically includes PR diffs for code review tasks
 - 📦 Uses the pi SDK directly - no separate installation needed
-- 🪝 Auto-installs git hooks to enforce commit conventions for the agent
+
 - 📤 Output mode for non-interactive workflows (release notes, automation)
 - 🎯 Direct prompt mode — invoke the agent without an issue/PR
 
@@ -297,25 +297,13 @@ jobs:
 1. **Issue/PR mode** (`output_mode: comment`): When a comment or issue/PR containing the trigger phrase is posted, the action is triggered
 2. The action validates that the author has write access to the repository (see [`src/security.ts`](src/security.ts))
 3. An 👀 reaction is added to acknowledge the request
-4. **Git hooks are installed** in the target repository to enforce commit conventions (see [action.yml](action.yml#L44-L107))
-5. The pi SDK is invoked with the issue/PR context and the task from the trigger (see [`src/agent.ts`](src/agent.ts))
-6. **Session is shared** as a secret GitHub gist with a preview URL (if `share_session` is enabled)
-7. The response is posted as a new comment with a 🚀 reaction, including the session link
+4. The pi SDK is invoked with the issue/PR context and the task from the trigger (see [`src/agent.ts`](src/agent.ts))
+5. **Session is shared** as a secret GitHub gist with a preview URL (if `share_session` is enabled)
+6. The response is posted as a new comment with a 🚀 reaction, including the session link
 
 **Direct prompt mode** (`output_mode: output` + `prompt`): The agent runs with the provided prompt directly — no issue/PR trigger is needed. The result is available via action outputs (`response`, `success`, `share_url`).
 
 The main orchestration logic is in [`src/run.ts`](src/run.ts), with prompt building in [`src/context.ts`](src/context.ts).
-
-### Git Hooks for the Agent
-
-The action automatically installs **lightweight, standalone git hooks** ([defined in action.yml](action.yml#L44-L107)) in your repository before running the agent. These hooks have no dependencies and work with any language/stack:
-
-- **commit-msg**: Enforces [Conventional Commits](https://www.conventionalcommits.org/) format
-- **prepare-commit-msg**: Auto-appends issue numbers from branch names
-
-**Important**: These hooks are only installed if no existing hook is present - your existing hooks are never overwritten.
-
-This ensures the agent follows conventional commit format without imposing any tooling requirements on your repository.
 
 ## Security
 
