@@ -70,6 +70,15 @@ ${context.body}
 ## Task
 ${context.task}
 
+## Important: Environment Setup (DO NOT reconfigure)
+
+The git repository is already initialized and configured for you:
+- \`git init\` has already been run
+- \`git config user.name\` and \`git config user.email\` are already set
+- You are already on a feature branch (NOT the default branch)
+
+**Do NOT run \`git init\`, \`git config\`, or \`git checkout\` to the default branch.** Start working on the task immediately.
+
 ## Important: Artifact and Script Requirements
 
 **CRITICAL:** After the GitHub Action finishes running, all files modified or created are lost, and the GitHub Action runner is destroyed. Therefore:
