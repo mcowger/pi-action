@@ -47,6 +47,7 @@ To disable session sharing:
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
+    pi_models_json: ${{ secrets.PI_MODELS_JSON }}
     share_session: false
 ```
 
@@ -66,6 +67,7 @@ To disable session sharing:
     github_token: ${{ secrets.GITHUB_TOKEN }}  # For issues, PRs, reactions
     gist_token: ${{ secrets.PAT_WITH_GIST_SCOPE }}  # PAT with gist scope only
     pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
+    pi_models_json: ${{ secrets.PI_MODELS_JSON }}  # Optional: custom model definitions
     share_session: true
 ```
 

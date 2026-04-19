@@ -54,6 +54,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
+          pi_models_json: ${{ secrets.PI_MODELS_JSON }}  # Optional: custom model definitions
 ```
 
 ### Authentication

@@ -99,15 +99,16 @@ Entry point that reads GitHub Actions inputs, creates dependencies, and invokes 
 #### [`run.ts`](src/run.ts)
 Main orchestration that:
 1. Sets up authentication from `PI_AUTH_JSON`
-2. Extracts trigger information from the GitHub payload
-3. Validates permissions
-4. Builds the pi context/prompt
-5. Runs the agent
-6. Posts results as comments
+2. Sets up custom models from `PI_MODELS_JSON`
+3. Extracts trigger information from the GitHub payload
+4. Validates permissions
+5. Builds the pi context/prompt
+6. Runs the agent
+7. Posts results as comments
 
 #### [`agent.ts`](src/agent.ts)
 Wraps the pi SDK to:
-- Discover or use provided auth/model registry
+- Discover or use provided auth/model registry (custom models from `pi_models_json` are picked up automatically via `discoverModels()`)
 - Create an agent session with appropriate settings
 - Subscribe to streaming responses
 - Handle timeouts (using [`withTimeout`](src/utils.ts) utility)
