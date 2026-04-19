@@ -331,6 +331,11 @@ export async function run(deps: ActionDependencies): Promise<void> {
 
 	log.info(`Running pi agent for: ${piContext.task}`);
 
+	// Track PR creation status
+	let prCreated = false;
+	let prNumber = "";
+	let prUrl = "";
+
 	// Run the agent
 	const result = await runAgent(piContext, {
 		...inputs.modelConfig,
@@ -340,7 +345,17 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		branchMode: inputs.branchMode,
 		customTools:
 			inputs.branchMode === "branch" && inputs.githubToken
-				? [createPullRequestTool(ghClient, deps.context.repo.owner, deps.context.repo.name)]
+				? [createPullRequestTool({
+					client: ghClient,
+					owner: deps.context.repo.owner,
+					repo: deps.context.repo.name,
+					onPRCreated: (pr) => {
+						prCreated = true;
+						prNumber = pr.number.toString();
+						prUrl = pr.url;
+						log.info(`PR created: #${pr.number} - ${pr.url}`);
+					},
+				})]
 				: undefined,
 	});
 
@@ -365,4 +380,9 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		inputs.outputMode,
 		log,
 	);
+
+	// Set PR creation outputs for downstream workflow steps
+	log.setOutput("pr_created", prCreated ? "true" : "false");
+	log.setOutput("pr_number", prNumber);
+	log.setOutput("pr_url", prUrl);
 }

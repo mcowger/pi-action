@@ -15,7 +15,7 @@ function createMockPRClient() {
 describe("createPullRequestTool", () => {
 	it("creates a tool with the correct name and label", () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool(client, "testowner", "testrepo");
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
 
 		expect(tool.name).toBe("create_pull_request");
 		expect(tool.label).toBe("Create Pull Request");
@@ -23,7 +23,7 @@ describe("createPullRequestTool", () => {
 
 	it("has description and prompt guidance", () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool(client, "testowner", "testrepo");
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
 
 		expect(tool.description).toContain("Create a pull request");
 		expect(tool.description).toContain("do NOT use `gh pr create`");
@@ -34,7 +34,7 @@ describe("createPullRequestTool", () => {
 
 	it("creates a PR successfully", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool(client, "testowner", "testrepo");
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
 
 		const result = await tool.execute(
 			"call-1",
@@ -64,7 +64,7 @@ describe("createPullRequestTool", () => {
 
 	it("uses default branch when base not specified", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool(client, "testowner", "testrepo");
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
 
 		await tool.execute("call-1", { title: "Fix bug" }, undefined);
 
@@ -76,7 +76,7 @@ describe("createPullRequestTool", () => {
 
 	it("uses provided base branch", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool(client, "testowner", "testrepo");
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
 
 		await tool.execute("call-1", { title: "Fix bug", base: "develop" }, undefined);
 
@@ -88,7 +88,7 @@ describe("createPullRequestTool", () => {
 
 	it("auto-appends attribution to PR body", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool(client, "testowner", "testrepo");
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
 
 		await tool.execute("call-1", { title: "Fix", body: "My changes" }, undefined);
 
@@ -101,7 +101,7 @@ describe("createPullRequestTool", () => {
 
 	it("does not append attribution if already present", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool(client, "testowner", "testrepo");
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
 
 		await tool.execute(
 			"call-1",
@@ -119,7 +119,7 @@ describe("createPullRequestTool", () => {
 	it("errors when head branch equals base branch", async () => {
 		const client = createMockPRClient();
 		client.getCurrentBranch = vi.fn().mockResolvedValue("main");
-		const tool = createPullRequestTool(client, "testowner", "testrepo");
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
 
 		const result = await tool.execute(
 			"call-1",
@@ -136,7 +136,7 @@ describe("createPullRequestTool", () => {
 
 	it("uses empty body when not provided", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool(client, "testowner", "testrepo");
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
 
 		await tool.execute("call-1", { title: "Fix" }, undefined);
 
@@ -145,5 +145,20 @@ describe("createPullRequestTool", () => {
 				body: "\n\n---\n*Created by pi-action 🤖*",
 			}),
 		);
+	});
+
+	it("invokes onPRCreated callback when PR is created", async () => {
+		const client = createMockPRClient();
+		const onPRCreated = vi.fn();
+		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo", onPRCreated });
+
+		await tool.execute("call-1", { title: "Fix bug" }, undefined);
+
+		expect(onPRCreated).toHaveBeenCalledWith({
+			number: 42,
+			url: "https://github.com/testowner/testrepo/pull/42",
+			headBranch: "pi-action/20260419-120000",
+			baseBranch: "main",
+		});
 	});
 });
