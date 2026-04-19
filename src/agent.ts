@@ -5,6 +5,7 @@ import {
 	createCodingTools,
 	type ModelRegistry,
 	ModelRegistry as ModelRegistryClass,
+	type ToolDefinition,
 	SessionManager,
 	SettingsManager,
 } from "@mariozechner/pi-coding-agent";
@@ -22,6 +23,8 @@ export interface AgentConfig extends ModelConfig {
 	cwd: string;
 	logger?: AgentLogger;
 	promptTemplate?: string;
+	customTools?: ToolDefinition[];
+	branchMode?: "branch" | "direct";
 }
 
 /**
@@ -143,7 +146,7 @@ export async function runAgent(
 	authStorage?: AuthStorage,
 	modelRegistry?: ModelRegistry,
 ): Promise<AgentResult> {
-	const prompt = buildPrompt(piContext, config.promptTemplate);
+	const prompt = buildPrompt(piContext, config.promptTemplate, config.branchMode);
 
 	// Use provided or create auth/models
 	const auth = authStorage ?? AuthStorageClass.create();
@@ -182,6 +185,7 @@ export async function runAgent(
 			authStorage: auth,
 			modelRegistry: models,
 			tools: createCodingTools(config.cwd),
+			customTools: config.customTools,
 			sessionManager: SessionManager.create(config.cwd),
 			settingsManager: SettingsManager.inMemory({
 				compaction: { enabled: false },

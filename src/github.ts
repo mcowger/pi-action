@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import type {
 	GitHubReaction,
 	GitHubUser,
@@ -9,6 +10,7 @@ import type {
 
 export interface GitHubContext {
 	repo: RepoRef;
+	cwd: string;
 }
 
 export function extractTriggerInfo(
@@ -74,6 +76,16 @@ export interface GitHubClient {
 		body?: string,
 		event?: "COMMENT" | "APPROVE" | "REQUEST_CHANGES",
 	): Promise<{ reviewId: number; reviewUrl: string; commentsAdded: number }>;
+	createPullRequest(params: {
+		owner: string;
+		repo: string;
+		title: string;
+		body?: string;
+		head: string;
+		base: string;
+	}): Promise<{ number: number; html_url: string }>;
+	getDefaultBranch(owner: string, repo: string): Promise<string>;
+	getCurrentBranch(): Promise<string>;
 }
 
 export function createGitHubClient(
@@ -81,6 +93,7 @@ export function createGitHubClient(
 	context: GitHubContext,
 ): GitHubClient {
 	const { owner, name: repo } = context.repo;
+	const cwd = context.cwd;
 
 	return {
 		async addReactionToComment(commentId: number, reaction: GitHubReaction) {
@@ -207,6 +220,45 @@ export function createGitHubClient(
 				reviewUrl: review.data.html_url,
 				commentsAdded: comments.length,
 			};
+		},
+
+		async createPullRequest(params: {
+			owner: string;
+			repo: string;
+			title: string;
+			body?: string;
+			head: string;
+			base: string;
+		}): Promise<{ number: number; html_url: string }> {
+			const { data: pr } = await octokit.rest.pulls.create({
+				owner: params.owner,
+				repo: params.repo,
+				title: params.title,
+				body: params.body,
+				head: params.head,
+				base: params.base,
+			});
+			return { number: pr.number, html_url: pr.html_url };
+		},
+
+		async getDefaultBranch(repoOwner: string, repoName: string): Promise<string> {
+			const { data: repoData } = await octokit.rest.repos.get({
+				owner: repoOwner,
+				repo: repoName,
+			});
+			return repoData.default_branch;
+		},
+
+		async getCurrentBranch(): Promise<string> {
+			try {
+				const result = execSync("git rev-parse --abbrev-ref HEAD", {
+					encoding: "utf-8",
+					cwd: cwd,
+				});
+				return result.trim();
+			} catch {
+				return "main";
+			}
 		},
 	};
 }

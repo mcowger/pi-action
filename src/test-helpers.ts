@@ -23,6 +23,12 @@ export function createMockGitHubClient(): GitHubClient {
 			reviewUrl: "https://github.com/test/repo/pull/1#pullrequestreview-1",
 			commentsAdded: 1,
 		}),
+		createPullRequest: vi.fn().mockResolvedValue({
+			number: 1,
+			html_url: "https://github.com/test/repo/pull/1",
+		}),
+		getDefaultBranch: vi.fn().mockResolvedValue("main"),
+		getCurrentBranch: vi.fn().mockResolvedValue("pi-action/test-branch"),
 	};
 }
 

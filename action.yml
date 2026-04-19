@@ -48,6 +48,10 @@ inputs:
     description: 'Direct prompt for the agent (no issue/PR context needed, requires output_mode: output)'
     required: false
     default: ''
+  branch_mode:
+    description: 'How to handle git changes: branch (create a branch and PR) or direct (push to current branch)'
+    required: false
+    default: 'branch'
   debug:
     description: 'Enable verbose debug logging for troubleshooting'
     required: false
@@ -75,7 +79,17 @@ runs:
     - name: Install action dependencies
       shell: bash
       run: npm ci --prefix ${{ github.action_path }}
-    
+
+    - name: Configure git and checkout branch
+      if: inputs.branch_mode == 'branch'
+      shell: bash
+      run: |
+        git config --global user.email "pi-action[bot]@users.noreply.github.com"
+        git config --global user.name "pi-action[bot]"
+        BRANCH_NAME="pi-action/$(date +%Y%m%d-%H%M%S)"
+        git checkout -b "$BRANCH_NAME"
+        echo "PI_ACTION_BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
+
     - name: Run pi-action
       id: run-pi
       shell: bash
@@ -95,4 +109,5 @@ runs:
         INPUT_SHARE_SESSION: ${{ inputs.share_session }}
         INPUT_OUTPUT_MODE: ${{ inputs.output_mode }}
         INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_BRANCH_MODE: ${{ inputs.branch_mode }}
         INPUT_DEBUG: ${{ inputs.debug }}

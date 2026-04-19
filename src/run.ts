@@ -2,8 +2,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { runAgent } from "./agent.js";
+import { buildPrompt, extractTask, hasTrigger } from "./context.js";
 import type { PIContext } from "./context.js";
-import { extractTask, hasTrigger } from "./context.js";
+import { createPullRequestTool } from "./create-pr-tool.js";
 import { formatErrorComment, formatSuccessComment } from "./formatting.js";
 import {
 	addReaction,
@@ -28,6 +29,7 @@ export interface ActionInputs {
 	shareSession: boolean;
 	outputMode: "comment" | "output";
 	prompt: string | undefined;
+	branchMode: "branch" | "direct";
 }
 
 export interface ActionContext {
@@ -262,7 +264,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 			task: inputs.prompt,
 		};
 
-		const result = await runAgent(piContext, {
+	const result = await runAgent(piContext, {
 			...inputs.modelConfig,
 			cwd,
 			logger: log,
@@ -335,6 +337,11 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		cwd,
 		logger: log,
 		promptTemplate: inputs.promptTemplate,
+		branchMode: inputs.branchMode,
+		customTools:
+			inputs.branchMode === "branch" && inputs.githubToken
+				? [createPullRequestTool(ghClient, deps.context.repo.owner, deps.context.repo.name)]
+				: undefined,
 	});
 
 	// Post result (use gistClient for session sharing if available)

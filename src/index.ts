@@ -39,6 +39,9 @@ run({
 			? "output"
 			: "comment") as "comment" | "output",
 		prompt: core.getInput("prompt") || undefined,
+		branchMode: (getInputOrDefault("branch_mode", "branch") === "direct"
+			? "direct"
+			: "branch") as "branch" | "direct",
 	},
 	context: {
 		payload: github.context.payload,
@@ -53,6 +56,7 @@ run({
 				owner: github.context.repo.owner,
 				name: github.context.repo.repo,
 			},
+			cwd: process.cwd(),
 		}),
 	log: {
 		info: core.info,

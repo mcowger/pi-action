@@ -123,6 +123,20 @@ export interface OctokitClient {
 				}>;
 				body?: string;
 			}) => Promise<{ data: { id: number; html_url: string } }>;
+			create: (params: {
+				owner: string;
+				repo: string;
+				title: string;
+				body?: string;
+				head: string;
+				base: string;
+			}) => Promise<{ data: { number: number; html_url: string } }>;
+		};
+		repos: {
+			get: (params: {
+				owner: string;
+				repo: string;
+			}) => Promise<{ data: { default_branch: string } }>;
 		};
 		gists: {
 			create: (params: {

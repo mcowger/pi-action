@@ -186,6 +186,7 @@ describe("createGitHubClient", () => {
 			owner: "testowner",
 			name: "testrepo",
 		},
+		cwd: "/test/repo",
 	};
 
 	function createMockOctokit() {
