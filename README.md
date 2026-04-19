@@ -12,6 +12,8 @@ A GitHub Action that invokes the [pi coding agent](https://github.com/mariozechn
 - 🔀 Automatically includes PR diffs for code review tasks
 - 📦 Uses the pi SDK directly - no separate installation needed
 - 🪝 Auto-installs git hooks to enforce commit conventions for the agent
+- 📤 Output mode for non-interactive workflows (release notes, automation)
+- 🎯 Direct prompt mode — invoke the agent without an issue/PR
 
 ## Usage
 
@@ -105,6 +107,18 @@ All inputs are defined in [`action.yml`](action.yml). Default values are central
 | `model` | Model ID | No | `claude-sonnet-4-20250514` |
 | `prompt_template` | Custom prompt template with placeholder variables | No | (built-in default) |
 | `share_session` | Include a link to the full session HTML in the response comment | No | `true` |
+| `output_mode` | How to deliver results: `comment` (post to issue/PR) or `output` (set action outputs only) | No | `comment` |
+| `prompt` | Direct prompt for the agent (no issue/PR context needed; requires `output_mode: output`) | No | - |
+
+### Outputs
+
+The following outputs are available when `output_mode` is set to `output`:
+
+| Output | Description |
+|--------|-------------|
+| `response` | The agent's response text (or error message on failure) |
+| `success` | Whether the agent succeeded (`"true"` or `"false"`) |
+| `share_url` | URL to the shared session HTML (if `share_session` is enabled) |
 
 ### Examples
 
@@ -221,6 +235,47 @@ This separation follows the principle of least privilege - the PAT only needs `g
 
 If gist creation fails (e.g., due to missing permissions), the action will gracefully continue and post the response without a session link.
 
+#### Output Mode & Direct Prompts
+
+Use `output_mode: output` to have the agent set GitHub Actions outputs instead of posting comments. This is useful for programmatic consumption of the agent's response.
+
+Combine with the `prompt` input to run the agent without an issue/PR context — enabling use with **any GitHub event**:
+
+```yaml
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'What should pi do?'
+        required: true
+
+jobs:
+  pi:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cv/pi-action@v1
+        id: pi
+        with:
+          output_mode: output
+          prompt: ${{ github.event.inputs.task || 'Generate release notes based on git log since the last tag' }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
+      - run: echo "${{ steps.pi.outputs.response }}"
+```
+
+**Use cases:**
+- Generate release notes on publish
+- Auto-triage issues on push
+- Run custom analyses on schedule or workflow_dispatch
+- Integrate agent output into multi-step workflows
+
 #### Comments only (no issue/PR creation triggers)
 
 If you only want to trigger on comments, not when issues/PRs are created:
@@ -239,13 +294,15 @@ jobs:
 
 ## How It Works
 
-1. When a comment or issue/PR containing the trigger phrase is posted, the action is triggered
+1. **Issue/PR mode** (`output_mode: comment`): When a comment or issue/PR containing the trigger phrase is posted, the action is triggered
 2. The action validates that the author has write access to the repository (see [`src/security.ts`](src/security.ts))
 3. An 👀 reaction is added to acknowledge the request
 4. **Git hooks are installed** in the target repository to enforce commit conventions (see [action.yml](action.yml#L44-L107))
 5. The pi SDK is invoked with the issue/PR context and the task from the trigger (see [`src/agent.ts`](src/agent.ts))
 6. **Session is shared** as a secret GitHub gist with a preview URL (if `share_session` is enabled)
 7. The response is posted as a new comment with a 🚀 reaction, including the session link
+
+**Direct prompt mode** (`output_mode: output` + `prompt`): The agent runs with the provided prompt directly — no issue/PR trigger is needed. The result is available via action outputs (`response`, `success`, `share_url`).
 
 The main orchestration logic is in [`src/run.ts`](src/run.ts), with prompt building in [`src/context.ts`](src/context.ts).
 
