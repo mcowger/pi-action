@@ -4,6 +4,11 @@ import { join } from "node:path";
 import { runAgent } from "./agent.js";
 import { buildPrompt, extractTask, hasTrigger } from "./context.js";
 import type { PIContext } from "./context.js";
+import {
+	createProgressCommentTool,
+	createUpdateCommentTool,
+	type CommentState,
+} from "./comment-tools.js";
 import { createPullRequestTool } from "./create-pr-tool.js";
 import { formatErrorComment, formatSuccessComment } from "./formatting.js";
 import {
@@ -422,6 +427,48 @@ export async function run(deps: ActionDependencies): Promise<void> {
 	let prNumber = "";
 	let prUrl = "";
 
+	// Track agent-created resources
+	const agentComments: CommentState[] = [];
+
+	// Build custom tools array
+	const customTools: import("./agent.js").AgentConfig["customTools"] = [];
+
+	// Add PR creation tool in branch mode
+	if (inputs.branchMode === "branch" && inputs.githubToken) {
+		customTools.push(createPullRequestTool({
+			client: ghClient,
+			owner: deps.context.repo.owner,
+			repo: deps.context.repo.name,
+			onPRCreated: (pr) => {
+				prCreated = true;
+				prNumber = pr.number.toString();
+				prUrl = pr.url;
+				log.info(`PR created: #${pr.number} - ${pr.url}`);
+			},
+		}));
+	}
+
+	// Add comment tools for progress reporting
+	if (inputs.githubToken) {
+		customTools.push(
+			createProgressCommentTool(
+				ghClient,
+				deps.context.repo.owner,
+				deps.context.repo.name,
+				triggerInfo.issueNumber,
+				(comment) => {
+					agentComments.push(comment);
+					log.info(`Agent created comment: #${comment.commentId} - ${comment.htmlUrl}`);
+				},
+			),
+			createUpdateCommentTool(
+				ghClient,
+				deps.context.repo.owner,
+				deps.context.repo.name,
+			),
+		);
+	}
+
 	// Run the agent
 	const result = await runAgent(piContext, {
 		...inputs.modelConfig,
@@ -429,20 +476,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		logger: log,
 		promptTemplate: inputs.promptTemplate,
 		branchMode: inputs.branchMode,
-		customTools:
-			inputs.branchMode === "branch" && inputs.githubToken
-				? [createPullRequestTool({
-					client: ghClient,
-					owner: deps.context.repo.owner,
-					repo: deps.context.repo.name,
-					onPRCreated: (pr) => {
-						prCreated = true;
-						prNumber = pr.number.toString();
-						prUrl = pr.url;
-						log.info(`PR created: #${pr.number} - ${pr.url}`);
-					},
-				})]
-				: undefined,
+		customTools: customTools.length > 0 ? customTools : undefined,
 	});
 
 	// Check for empty response with fallback (agent ended with tool call but no summary)

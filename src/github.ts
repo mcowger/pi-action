@@ -63,6 +63,8 @@ export interface GitHubClient {
 		reaction: GitHubReaction,
 	): Promise<void>;
 	createComment(issueNumber: number, body: string): Promise<void>;
+	createIssueComment(issueNumber: number, body: string): Promise<{ id: number; html_url: string }>;
+	updateComment(commentId: number, body: string): Promise<void>;
 	getPullRequest(pullNumber: number): Promise<{ number: number; title: string; body: string; user: GitHubUser; author_association: string; head: { sha: string }; base: { ref: string } }>;
 	getPullRequestDiff(pullNumber: number): Promise<string>;
 	createGist(
@@ -120,6 +122,28 @@ export function createGitHubClient(
 				owner,
 				repo,
 				issue_number: issueNumber,
+				body,
+			});
+		},
+
+		async createIssueComment(issueNumber: number, body: string) {
+			const { data } = await octokit.rest.issues.createComment({
+				owner,
+				repo,
+				issue_number: issueNumber,
+				body,
+			});
+			return {
+				id: data.id,
+				html_url: data.html_url || "",
+			};
+		},
+
+		async updateComment(commentId: number, body: string) {
+			await octokit.rest.issues.updateComment({
+				owner,
+				repo,
+				comment_id: commentId,
 				body,
 			});
 		},

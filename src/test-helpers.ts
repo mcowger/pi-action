@@ -16,6 +16,11 @@ export function createMockGitHubClient(): GitHubClient {
 		addReactionToComment: vi.fn(),
 		addReactionToIssue: vi.fn(),
 		createComment: vi.fn(),
+		createIssueComment: vi.fn().mockResolvedValue({
+			id: 12345,
+			html_url: "https://github.com/test/repo/issues/1#issuecomment-12345",
+		}),
+		updateComment: vi.fn(),
 		getPullRequest: vi.fn().mockResolvedValue({
 			number: 1,
 			title: "Test PR",
