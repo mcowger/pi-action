@@ -99,10 +99,25 @@ export function createPullRequestTool(
 			_signal?: AbortSignal,
 		): Promise<AgentToolResult<CreatePRToolDetails>> {
 			// Resolve head branch from current git state
-			const headBranch = await client.getCurrentBranch();
+			let headBranch: string;
+			try {
+				headBranch = await client.getCurrentBranch();
+			} catch (error) {
+				return {
+					content: [{ type: "text" as const, text: `Error: Failed to determine current git branch: ${error instanceof Error ? error.message : String(error)}` }],
+					details: { pullRequestNumber: 0, pullRequestUrl: "", headBranch: "", baseBranch: "" },
+				};
+			}
 
-			// Resolve base branch
-			const baseBranch = params.base ?? (await client.getDefaultBranch(owner, repo));
+			let baseBranch: string;
+			try {
+				baseBranch = params.base ?? (await client.getDefaultBranch(owner, repo));
+			} catch (error) {
+				return {
+					content: [{ type: "text" as const, text: `Error: Failed to determine default branch: ${error instanceof Error ? error.message : String(error)}. You can specify it explicitly using the 'base' parameter.` }],
+					details: { pullRequestNumber: 0, pullRequestUrl: "", headBranch, baseBranch: params.base ?? "" },
+				};
+			}
 
 			if (headBranch === baseBranch) {
 				return {
@@ -127,14 +142,23 @@ export function createPullRequestTool(
 				body += "\n\n---\n*Created by pi-action 🤖*";
 			}
 
-			const pr = await client.createPullRequest({
-				owner,
-				repo,
-				title: params.title,
-				body,
-				head: headBranch,
-				base: baseBranch,
-			});
+			let pr: { number: number; html_url: string };
+			try {
+				pr = await client.createPullRequest({
+					owner,
+					repo,
+					title: params.title,
+					body,
+					head: headBranch,
+					base: baseBranch,
+				});
+			} catch (error) {
+				const msg = error instanceof Error ? error.message : String(error);
+				return {
+					content: [{ type: "text" as const, text: `Error: Failed to create pull request: ${msg}\n\nBranch ${headBranch} exists with your changes. You can create the PR manually or try again. Make sure the branch was pushed (git push --set-upstream origin ${headBranch}).` }],
+					details: { pullRequestNumber: 0, pullRequestUrl: "", headBranch, baseBranch },
+				};
+			}
 
 			const successMsg = `Pull request #${pr.number} created: ${pr.html_url}`;
 
