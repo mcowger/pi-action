@@ -86,7 +86,7 @@ function createSessionEventHandler(
 				}
 				break;
 			case "message_start":
-				debug(`message_start: role=${(event as Record<string, unknown>).message?.role ?? "unknown"}`);
+				debug(`message_start: role=${((event as unknown) as Record<string, unknown>).message}`);
 				break;
 			case "message_end":
 				debug("message_end");
