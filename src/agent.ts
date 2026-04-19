@@ -146,7 +146,7 @@ export async function runAgent(
 	authStorage?: AuthStorage,
 	modelRegistry?: ModelRegistry,
 ): Promise<AgentResult> {
-	const prompt = buildPrompt(piContext, config.promptTemplate, config.branchMode);
+	const prompt = buildPrompt(piContext, config.promptTemplate, config.branchMode, config.cwd);
 
 	// Use provided or create auth/models
 	const auth = authStorage ?? AuthStorageClass.create();

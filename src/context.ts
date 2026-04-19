@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 
 export function hasTrigger(text: string, trigger: string): boolean {
 	return text.toLowerCase().includes(trigger.toLowerCase());
@@ -124,7 +125,7 @@ export function renderTemplate(template: string, context: PIContext): string {
 	return rendered;
 }
 
-function loadTemplate(customTemplate?: string): string {
+function loadTemplate(customTemplate?: string, cwd?: string): string {
 	// If inline template provided, use it
 	if (customTemplate?.trim()) {
 		return customTemplate;
@@ -134,9 +135,14 @@ function loadTemplate(customTemplate?: string): string {
 	const templateFile = process.env.INPUT_PROMPT_TEMPLATE_FILE;
 	if (templateFile) {
 		try {
-			return readFileSync(templateFile, "utf-8");
+			// Resolve relative paths against cwd (the checked-out repo)
+			// Absolute paths are used as-is
+			const fullPath = isAbsolute(templateFile)
+				? templateFile
+				: join(cwd || process.cwd(), templateFile);
+			return readFileSync(fullPath, "utf-8");
 		} catch (error) {
-			console.warn(`Failed to load prompt template from ${templateFile}: ${error}. Using default.`);
+			console.warn(`Failed to load prompt template from ${templateFile} (resolved: ${isAbsolute(templateFile) ? templateFile : join(cwd || process.cwd(), templateFile)}): ${error}. Using default.`);
 		}
 	}
 
@@ -147,9 +153,10 @@ export function buildPrompt(
 	context: PIContext,
 	customTemplate?: string,
 	branchMode?: "branch" | "direct",
+	cwd?: string,
 ): string {
 	// Load template (from file, inline, or default)
-	const template = loadTemplate(customTemplate);
+	const template = loadTemplate(customTemplate, cwd);
 
 	// For direct mode without a custom template, the task IS the prompt
 	if (context.type === "direct" && !customTemplate?.trim()) {
