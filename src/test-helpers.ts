@@ -33,6 +33,11 @@ export function createMockGitHubClient(): GitHubClient {
 		getPullRequestDiff: vi.fn().mockResolvedValue(""),
 		getPullRequestReviewComments: vi.fn().mockResolvedValue([]),
 		createGist: vi.fn().mockResolvedValue("https://gist.github.com/test123"),
+		getGist: vi.fn().mockResolvedValue({
+			files: { "pi-action-sessions.md": { content: "" } },
+			description: "test log",
+		}),
+		updateGist: vi.fn().mockResolvedValue("https://gist.github.com/test123"),
 		createPRReview: vi.fn().mockResolvedValue({
 			reviewId: 1,
 			reviewUrl: "https://github.com/test/repo/pull/1#pullrequestreview-1",

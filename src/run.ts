@@ -185,6 +185,8 @@ async function postResult(
 	outputMode: "comment" | "output",
 	log: Logger,
 	suppressFinalComment: boolean,
+	repoRef?: RepoRef,
+	prInfo?: { number?: number; url?: string },
 ): Promise<void> {
 	let shareUrl: string | undefined;
 
@@ -196,11 +198,20 @@ async function postResult(
 			const shareResult = await shareSession(
 				result.session,
 				clientForGist,
-				`pi-action session for ${result.success ? "success" : "error"}: ${triggerInfo.issueTitle}`,
+				repoRef ? `${repoRef.owner}/${repoRef.name}` : undefined,
+				{
+					description: `pi-action session for ${result.success ? "success" : "error"}: ${triggerInfo.issueTitle}`,
+					result: result.success ? "success" : "error",
+					prNumber: prInfo?.number,
+					prUrl: prInfo?.url,
+				},
 			);
 			if (shareResult) {
 				shareUrl = shareResult.previewUrl;
 				log.info(`Session shared: ${shareUrl}`);
+				if (shareResult.logGistUrl) {
+					log.info(`Session log updated: ${shareResult.logGistUrl}`);
+				}
 			}
 		} catch (error) {
 			log.warning(`Failed to share session: ${error}`);
@@ -334,11 +345,18 @@ export async function run(deps: ActionDependencies): Promise<void> {
 				const shareResult = await shareSession(
 					result.session,
 					gistClient,
-					"pi-action direct prompt session",
+					undefined,
+					{
+						description: "pi-action direct prompt session",
+						result: result.success ? "success" : "error",
+					},
 				);
 				if (shareResult) {
 					log.setOutput("share_url", shareResult.previewUrl);
 					log.info(`Session shared: ${shareResult.previewUrl}`);
+					if (shareResult.logGistUrl) {
+						log.info(`Session log: ${shareResult.logGistUrl}`);
+					}
 				}
 			} catch (error) {
 				log.warning(`Failed to share session: ${error}`);
@@ -406,6 +424,8 @@ export async function run(deps: ActionDependencies): Promise<void> {
 				inputs.outputMode,
 				log,
 				inputs.suppressFinalComment,
+				deps.context.repo,
+				{ number: prData.number, url: undefined },
 			);
 
 			// Set outputs
@@ -542,6 +562,8 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		inputs.outputMode,
 		log,
 		inputs.suppressFinalComment,
+		deps.context.repo,
+		{ number: triggerInfo.isPullRequest ? triggerInfo.issueNumber : undefined, url: undefined },
 	);
 
 	// Set PR creation outputs for downstream workflow steps

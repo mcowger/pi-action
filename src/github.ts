@@ -74,6 +74,8 @@ export interface GitHubClient {
 		description: string,
 		isPublic?: boolean,
 	): Promise<string>;
+	getGist(gistId: string): Promise<{ files: Record<string, { content: string }>; description: string }>;
+	updateGist(gistId: string, filename: string, content: string, description?: string): Promise<string>;
 	createPRReview(
 		pullNumber: number,
 		comments: InlineComment[],
@@ -235,6 +237,41 @@ export function createGitHubClient(
 				public: isPublic,
 				description,
 			});
+			return gist.html_url || "";
+		},
+
+		async getGist(
+			gistId: string,
+		): Promise<{ files: Record<string, { content: string }>; description: string }> {
+			const { data: gist } = await octokit.rest.gists.get({
+				gist_id: gistId,
+			});
+			const files: Record<string, { content: string }> = {};
+			const filesData = gist.files as Record<string, unknown> | undefined;
+			if (filesData) {
+				for (const [name, file] of Object.entries(filesData)) {
+					if (file && typeof file === "object" && "content" in file && typeof (file as { content?: string }).content === "string") {
+						files[name] = { content: (file as { content: string }).content };
+					}
+				}
+			}
+			return { files, description: gist.description || "" };
+		},
+
+		async updateGist(
+			gistId: string,
+			filename: string,
+			content: string,
+			description?: string,
+		): Promise<string> {
+			const params: { gist_id: string; files: Record<string, { content: string }>; description?: string } = {
+				gist_id: gistId,
+				files: { [filename]: { content } },
+			};
+			if (description !== undefined) {
+				params.description = description;
+			}
+			const { data: gist } = await octokit.rest.gists.update(params);
 			return gist.html_url || "";
 		},
 

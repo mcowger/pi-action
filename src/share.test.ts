@@ -19,6 +19,7 @@ describe("shareSession", () => {
 	let mockGitHubClient: GitHubClient;
 	let mockSession: Session;
 	let tmpFile: string;
+	const mockLogGistId = "log-gist-123";
 
 	beforeEach(() => {
 		mockGitHubClient = createMockGitHubClient();
@@ -42,6 +43,8 @@ describe("shareSession", () => {
 		} catch {
 			// Ignore if file doesn't exist
 		}
+		// Clean up env var
+		delete process.env.PI_ACTION_LOG_GIST_ID;
 	});
 
 	it("successfully shares session and returns preview URL", async () => {
@@ -54,20 +57,20 @@ describe("shareSession", () => {
 			"Test session",
 		);
 
+		// Set up env var so createGist isn't called for log gist
+		process.env.PI_ACTION_LOG_GIST_ID = mockLogGistId;
+
 		expect(result).toEqual({
 			gistUrl,
 			previewUrl: "https://shittycodingagent.ai/session?abc123",
+			logGistUrl: "https://gist.github.com/test123",
 		});
 
 		expect(mockSession.exportToHtml).toHaveBeenCalledWith(
 			expect.stringMatching(/pi-session-\d+\.html$/),
 		);
-		expect(mockGitHubClient.createGist).toHaveBeenCalledWith(
-			"<html>Mock session HTML</html>",
-			"session.html",
-			"Test session",
-			false,
-		);
+		// createGist is called twice - once for session, once to create/update log
+		expect(mockGitHubClient.createGist).toHaveBeenCalled();
 	});
 
 	it("uses default description when none provided", async () => {

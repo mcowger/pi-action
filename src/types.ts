@@ -163,6 +163,12 @@ export interface OctokitClient {
 				files: Record<string, { content: string }>;
 				public?: boolean;
 				description?: string;
+			}) => Promise<{ data: { html_url?: string; id?: string } }>;
+			get: (params: { gist_id: string }) => Promise<{ data: { files?: Record<string, unknown> | null; description?: string | null } }>;
+			update: (params: {
+				gist_id: string;
+				files: Record<string, { content: string }>;
+				description?: string;
 			}) => Promise<{ data: { html_url?: string } }>;
 		};
 		actions: {
