@@ -10,6 +10,7 @@ A GitHub Action that invokes the [pi coding agent](https://github.com/mariozechn
 - 📝 Works on both issues and pull requests
 - 🆕 Trigger on issue/PR creation, not just comments
 - 🔀 Automatically includes PR diffs for code review tasks
+- 💬 Includes PR review comments in context for agent awareness
 - 📦 Uses the pi SDK directly - no separate installation needed
 - 🌿 Branch mode: Create feature branches and PRs (default) or push directly
 - 📤 Output mode for non-interactive workflows (release notes, automation)
@@ -17,6 +18,7 @@ A GitHub Action that invokes the [pi coding agent](https://github.com/mariozechn
 - 🎨 Customizable prompt templates via inline or file-based configuration
 - 💬 Agent progress comments — create and update comments during execution
 - 🔕 Suppress final comment — let the agent manage all communication
+- 🛠️ Common CLI tools included — jq and yq pre-installed for JSON/YAML processing
 
 ## Usage
 
@@ -122,7 +124,22 @@ Alternatively, set provider-specific environment variables (e.g., `ANTHROPIC_API
 ```
 
 **Template Variables:**
-- `{{type}}`, `{{type_display}}`, `{{number}}`, `{{title}}`, `{{body}}`, `{{task}}`, `{{diff}}`, `{{trigger_comment}}`
+- `{{type}}`, `{{type_display}}`, `{{number}}`, `{{title}}`, `{{body}}`, `{{task}}`, `{{diff}}`, `{{trigger_comment}}`, `{{reviewComments}}`
+
+### Pre-installed CLI Tools
+
+The action includes these CLI tools pre-installed for the agent to use:
+
+- **jq** — Command-line JSON processor
+  - Parse and query JSON: `cat config.json | jq '.key'`
+  - Transform data: `jq '{name: .firstName, age}' users.json`
+
+- **yq** — Command-line YAML processor
+  - Parse YAML: `yq '.apiVersion' deployment.yaml`
+  - Convert JSON to YAML: `cat file.json | yq -P`
+  - Modify YAML: `yq '.key = "value"' file.yaml`
+
+These are available in the action environment without any setup required.
 
 ### Branch Mode
 
