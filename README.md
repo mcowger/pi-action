@@ -81,6 +81,7 @@ Alternatively, set provider-specific environment variables (e.g., `ANTHROPIC_API
 | `prompt` | Direct prompt (requires `output_mode: output`) | No | - |
 | `pr_number` | PR number to review (for workflow_dispatch) | No | - |
 | `branch_mode` | `branch` (create PR) or `direct` (push) | No | `branch` |
+| `suppress_final_comment` | Suppress final action comment (agent manages own) | No | `false` |
 
 ### Outputs
 
@@ -266,6 +267,29 @@ Use this for:
 - Manual PR reviews on demand
 - Scheduled PR review workflows
 - CI workflows triggered by other events that need to review PRs
+
+### Suppress Final Comment
+
+When using `create_progress_comment` for agent-managed updates, you may want to suppress the final action comment:
+
+```yaml
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    suppress_final_comment: true  # Only agent comments appear
+```
+
+Combine with agent progress comments for full control:
+
+```yaml
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    suppress_final_comment: true
+    prompt_template: |
+      Start by creating a progress comment with create_progress_comment.
+      Update it throughout your work. Do not post a final summary comment.
+```
 
 ## Security
 

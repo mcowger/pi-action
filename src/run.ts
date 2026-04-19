@@ -37,6 +37,7 @@ export interface ActionInputs {
 	prompt: string | undefined;
 	prNumber: number | undefined;
 	branchMode: "branch" | "direct";
+	suppressFinalComment: boolean;
 }
 
 export interface ActionContext {
@@ -169,6 +170,7 @@ async function postResult(
 	shareSessionEnabled: boolean,
 	outputMode: "comment" | "output",
 	log: Logger,
+	suppressFinalComment: boolean,
 ): Promise<void> {
 	let shareUrl: string | undefined;
 
@@ -243,17 +245,29 @@ async function postResult(
 		}
 
 		await addReaction(ghClient, triggerInfo, "rocket");
-		await ghClient.createComment(
-			triggerInfo.issueNumber,
-			formatSuccessComment(responseText, shareUrl),
-		);
+
+		// Skip final comment if suppressed (agent manages its own comments)
+		if (suppressFinalComment) {
+			log.info("Final comment suppressed (suppress_final_comment=true)");
+		} else {
+			await ghClient.createComment(
+				triggerInfo.issueNumber,
+				formatSuccessComment(responseText, shareUrl),
+			);
+		}
 	} else {
 		log.error(`pi execution failed: ${result.error}`);
 		await addReaction(ghClient, triggerInfo, "confused");
-		await ghClient.createComment(
-			triggerInfo.issueNumber,
-			formatErrorComment(result.error, shareUrl),
-		);
+
+		// Skip error comment if suppressed
+		if (suppressFinalComment) {
+			log.info("Error comment suppressed (suppress_final_comment=true)");
+		} else {
+			await ghClient.createComment(
+				triggerInfo.issueNumber,
+				formatErrorComment(result.error, shareUrl),
+			);
+		}
 	}
 }
 
@@ -377,6 +391,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 				inputs.shareSession,
 				inputs.outputMode,
 				log,
+				inputs.suppressFinalComment,
 			);
 
 			// Set outputs
@@ -499,6 +514,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		inputs.shareSession,
 		inputs.outputMode,
 		log,
+		inputs.suppressFinalComment,
 	);
 
 	// Set PR creation outputs for downstream workflow steps

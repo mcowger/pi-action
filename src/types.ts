@@ -98,6 +98,12 @@ export interface OctokitClient {
 				repo: string;
 				issue_number: number;
 				body: string;
+			}) => Promise<{ data: { id: number; html_url: string } }>;
+			updateComment: (params: {
+				owner: string;
+				repo: string;
+				comment_id: number;
+				body: string;
 			}) => Promise<unknown>;
 		};
 		pulls: {
@@ -105,7 +111,7 @@ export interface OctokitClient {
 				owner: string;
 				repo: string;
 				pull_number: number;
-				mediaType: { format: string };
+				mediaType?: { format: string };
 			}) => Promise<{ data: { head: { sha: string } } }>;
 			createReview: (params: {
 				owner: string;

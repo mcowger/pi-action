@@ -58,6 +58,10 @@ inputs:
     description: 'How to handle git changes: branch (create a branch and PR) or direct (push to current branch)'
     required: false
     default: 'branch'
+  suppress_final_comment:
+    description: 'Suppress the final response comment from the action. Useful when the agent manages its own comments via create_progress_comment. This only applies when output_mode is comment.'
+    required: false
+    default: 'false'
   debug:
     description: 'Enable verbose debug logging for troubleshooting'
     required: false
@@ -127,4 +131,5 @@ runs:
         INPUT_BRANCH_MODE: ${{ inputs.branch_mode }}
         INPUT_PROMPT_TEMPLATE_FILE: ${{ inputs.prompt_template_file }}
         INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+        INPUT_SUPPRESS_FINAL_COMMENT: ${{ inputs.suppress_final_comment }}
         INPUT_DEBUG: ${{ inputs.debug }}

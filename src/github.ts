@@ -127,15 +127,15 @@ export function createGitHubClient(
 		},
 
 		async createIssueComment(issueNumber: number, body: string) {
-			const { data } = await octokit.rest.issues.createComment({
+			const result = await octokit.rest.issues.createComment({
 				owner,
 				repo,
 				issue_number: issueNumber,
 				body,
 			});
 			return {
-				id: data.id,
-				html_url: data.html_url || "",
+				id: result.data.id,
+				html_url: result.data.html_url || "",
 			};
 		},
 

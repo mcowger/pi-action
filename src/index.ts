@@ -44,6 +44,7 @@ run({
 		branchMode: (getInputOrDefault("branch_mode", "branch") === "direct"
 			? "direct"
 			: "branch") as "branch" | "direct",
+		suppressFinalComment: getInputOrDefault("suppress_final_comment", "false").toLowerCase() === "true",
 	},
 	context: {
 		payload: github.context.payload,
