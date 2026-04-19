@@ -20,6 +20,9 @@
 	],
 	"author": "Carlos Villela",
 	"license": "MIT",
+	"engines": {
+		"node": ">=24"
+	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/cv/pi-action.git"
