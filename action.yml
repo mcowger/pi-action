@@ -94,7 +94,7 @@ runs:
       id: run-pi
       shell: bash
       working-directory: ${{ github.workspace }}
-      run: npx tsx ${{ github.action_path }}/src/index.ts
+      run: ${{ github.action_path }}/node_modules/.bin/tsx ${{ github.action_path }}/src/index.ts
       env:
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
         INPUT_GIST_TOKEN: ${{ inputs.gist_token }}
