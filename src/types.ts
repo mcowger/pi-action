@@ -170,6 +170,10 @@ export interface OctokitClient {
 				files: Record<string, { content: string }>;
 				description?: string;
 			}) => Promise<{ data: { html_url?: string } }>;
+			listForUser: (params: {
+				username: string;
+				per_page?: number;
+			}) => Promise<{ data: Array<{ id: string; description?: string | null; files: Record<string, unknown> }> }>;
 		};
 		actions: {
 			createWorkflowDispatch: (params: {

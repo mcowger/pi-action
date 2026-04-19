@@ -22,7 +22,6 @@ export interface SessionMetadata {
 }
 
 const LOG_FILENAME = "pi-action-sessions.md";
-const LOG_GIST_ID_ENV = "PI_ACTION_LOG_GIST_ID";
 
 interface GistData {
 	files: Record<string, { content: string }>;
@@ -30,28 +29,23 @@ interface GistData {
 }
 
 /**
- * Get or create the master log gist ID.
+ * Get or create the master log gist ID by searching for a gist with description "{repo}-session-log".
  * Creates a new private gist if one doesn't exist.
  */
 async function getOrCreateLogGist(
 	githubClient: GitHubClient,
 	repo: string,
 ): Promise<string | null> {
-	// Check for existing gist ID in environment
-	const existingId = process.env[LOG_GIST_ID_ENV];
+	const expectedDescription = `${repo}-session-log`;
+
+	// First try to find existing gist by description
+	const existingId = await githubClient.findGistByDescription(expectedDescription);
 	if (existingId) {
-		try {
-			// Verify it exists
-			await githubClient.getGist(existingId);
-			return existingId;
-		} catch {
-			// Gist doesn't exist or access denied, create new one
-			process.env[LOG_GIST_ID_ENV] = "";
-		}
+		return existingId;
 	}
 
+	// Create new private log gist with the expected description
 	try {
-		// Create new private log gist
 		const initialContent = `# pi-action Session Log - ${repo}
 
 This gist tracks pi-action agent sessions with links to full session logs.
@@ -62,16 +56,14 @@ This gist tracks pi-action agent sessions with links to full session logs.
 		const gistUrl = await githubClient.createGist(
 			initialContent,
 			LOG_FILENAME,
-			`pi-action session log for ${repo}`,
+			expectedDescription,
 			false, // private gist
 		);
 
 		// Extract gist ID
 		const match = gistUrl.match(/github\.com\/[^/]+\/([a-f0-9]+)$/);
 		if (match) {
-			const gistId = match[1];
-			process.env[LOG_GIST_ID_ENV] = gistId;
-			return gistId;
+			return match[1];
 		}
 		return null;
 	} catch (error) {

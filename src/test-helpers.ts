@@ -38,6 +38,7 @@ export function createMockGitHubClient(): GitHubClient {
 			description: "test log",
 		}),
 		updateGist: vi.fn().mockResolvedValue("https://gist.github.com/test123"),
+		findGistByDescription: vi.fn().mockResolvedValue("log-gist-123"),
 		createPRReview: vi.fn().mockResolvedValue({
 			reviewId: 1,
 			reviewUrl: "https://github.com/test/repo/pull/1#pullrequestreview-1",

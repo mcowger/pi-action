@@ -76,6 +76,7 @@ export interface GitHubClient {
 	): Promise<string>;
 	getGist(gistId: string): Promise<{ files: Record<string, { content: string }>; description: string }>;
 	updateGist(gistId: string, filename: string, content: string, description?: string): Promise<string>;
+	findGistByDescription(description: string): Promise<string | null>;
 	createPRReview(
 		pullNumber: number,
 		comments: InlineComment[],
@@ -273,6 +274,23 @@ export function createGitHubClient(
 			}
 			const { data: gist } = await octokit.rest.gists.update(params);
 			return gist.html_url || "";
+		},
+
+		async findGistByDescription(description: string): Promise<string | null> {
+			// List authenticated user's gists
+			const { data: gists } = await octokit.rest.gists.listForUser({
+				// Get the authenticated user's username from the context or make a request
+				username: owner,
+				per_page: 100,
+			});
+
+			// Find gist matching the description
+			for (const gist of gists) {
+				if (gist.description === description) {
+					return gist.id;
+				}
+			}
+			return null;
 		},
 
 		async createPRReview(
