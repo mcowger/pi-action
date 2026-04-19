@@ -186,7 +186,8 @@ async function postResult(
 
 	// In output mode, just set action outputs and return
 	if (outputMode === "output") {
-		log.setOutput("success", String(result.success));
+		log.info(`Setting outputs (output mode):`);
+		log.info(`  success: ${String(result.success)}`);
 		if (result.success) {
 			let responseText = result.response;
 			if (triggerInfo.isPullRequest) {
@@ -196,14 +197,18 @@ async function postResult(
 					log.info(`Parsed ${comments.length} inline comment(s) from response (not posted in output mode)`);
 				}
 			}
+			log.info(`  response: ${responseText.substring(0, 200)}${responseText.length > 200 ? "..." : ""}`);
 			log.setOutput("response", responseText);
 		} else {
 			log.error(`pi execution failed: ${result.error}`);
+			log.info(`  response (error): ${result.error}`);
 			log.setOutput("response", result.error);
 		}
 		if (shareUrl) {
+			log.info(`  share_url: ${shareUrl}`);
 			log.setOutput("share_url", shareUrl);
 		}
+		log.setOutput("success", String(result.success));
 		return;
 	}
 
@@ -272,13 +277,17 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		});
 
 		// Set outputs
-		log.setOutput("success", String(result.success));
+		log.info(`Setting outputs (direct prompt mode):`);
+		log.info(`  success: ${String(result.success)}`);
 		if (result.success) {
+			log.info(`  response: ${result.response.substring(0, 200)}${result.response.length > 200 ? "..." : ""}`);
 			log.setOutput("response", result.response);
 		} else {
 			log.error(`pi execution failed: ${result.error}`);
+			log.info(`  response (error): ${result.error}`);
 			log.setOutput("response", result.error);
 		}
+		log.setOutput("success", String(result.success));
 
 		// Share session if enabled
 		if (inputs.shareSession && result.session && inputs.githubToken) {
@@ -382,6 +391,10 @@ export async function run(deps: ActionDependencies): Promise<void> {
 	);
 
 	// Set PR creation outputs for downstream workflow steps
+	log.info(`Setting outputs:`);
+	log.info(`  pr_created: ${prCreated ? "true" : "false"}`);
+	log.info(`  pr_number: ${prNumber}`);
+	log.info(`  pr_url: ${prUrl}`);
 	log.setOutput("pr_created", prCreated ? "true" : "false");
 	log.setOutput("pr_number", prNumber);
 	log.setOutput("pr_url", prUrl);
