@@ -108,5 +108,6 @@ export function createMockSession() {
 	return {
 		subscribe: vi.fn(),
 		prompt: vi.fn(),
+		getLastAssistantText: vi.fn(() => undefined),
 	};
 }

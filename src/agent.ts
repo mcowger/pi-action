@@ -136,7 +136,11 @@ export async function runAgent(
 			`Timeout after ${config.timeout} seconds`,
 		);
 
-		const trimmedResponse = response.trim();
+		// Get response from the session's last assistant message
+		// This is more reliable than streaming text_delta events,
+		// which may not fire for all providers/event structures
+		const sessionResponse = createdSession.getLastAssistantText();
+		const trimmedResponse = (sessionResponse ?? response).trim();
 		if (!trimmedResponse) {
 			return {
 				success: false,

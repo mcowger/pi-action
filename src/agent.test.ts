@@ -97,6 +97,7 @@ describe("runAgent", () => {
 					});
 				}
 			}),
+			getLastAssistantText: vi.fn(() => undefined),
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -138,6 +139,7 @@ describe("runAgent", () => {
 					});
 				}
 			}),
+			getLastAssistantText: vi.fn(() => undefined),
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -376,6 +378,7 @@ describe("runAgent", () => {
 					});
 				}
 			}),
+			getLastAssistantText: vi.fn(() => undefined),
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -428,6 +431,7 @@ describe("runAgent", () => {
 					});
 				}
 			}),
+			getLastAssistantText: vi.fn(() => undefined),
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -471,6 +475,7 @@ describe("runAgent", () => {
 					});
 				}
 			}),
+			getLastAssistantText: vi.fn(() => undefined),
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -492,6 +497,7 @@ describe("runAgent", () => {
 			}),
 			// biome-ignore lint/suspicious/noEmptyBlockStatements: mock implementation
 			prompt: vi.fn(async () => {}),
+			getLastAssistantText: vi.fn(() => undefined),
 		};
 
 		mockModelRegistry.create.mockReturnValue({
@@ -510,5 +516,65 @@ describe("runAgent", () => {
 		expect(mockSession.prompt).toHaveBeenCalled();
 		const promptArg = mockSession.prompt.mock.calls[0][0];
 		expect(promptArg).toBe("Custom: do something for 1");
+	});
+
+	it("prefers getLastAssistantText over streaming deltas", async () => {
+		const mockModel = { provider: "anthropic", id: "claude-sonnet-4-20250514" };
+		const mockRegistry = {
+			find: vi.fn(() => mockModel),
+		};
+		mockModelRegistry.create.mockReturnValue(mockRegistry);
+
+		let subscribeCallback: ((event: unknown) => void) | null = null;
+		const mockSession = {
+			subscribe: vi.fn((cb) => {
+				subscribeCallback = cb;
+			}),
+			prompt: vi.fn(async () => {
+				if (subscribeCallback) {
+					subscribeCallback({
+						type: "message_update",
+						assistantMessageEvent: { type: "text_delta", delta: "partial" },
+					});
+				}
+			}),
+			getLastAssistantText: vi.fn(() => "Full response from session"),
+		};
+		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
+
+		const result = await runAgent(defaultContext, defaultConfig);
+
+		expect(result.success).toBe(true);
+		expect(result.response).toBe("Full response from session");
+	});
+
+	it("falls back to streaming deltas when getLastAssistantText is undefined", async () => {
+		const mockModel = { provider: "anthropic", id: "claude-sonnet-4-20250514" };
+		const mockRegistry = {
+			find: vi.fn(() => mockModel),
+		};
+		mockModelRegistry.create.mockReturnValue(mockRegistry);
+
+		let subscribeCallback: ((event: unknown) => void) | null = null;
+		const mockSession = {
+			subscribe: vi.fn((cb) => {
+				subscribeCallback = cb;
+			}),
+			prompt: vi.fn(async () => {
+				if (subscribeCallback) {
+					subscribeCallback({
+						type: "message_update",
+						assistantMessageEvent: { type: "text_delta", delta: "Streamed response" },
+					});
+				}
+			}),
+			getLastAssistantText: vi.fn(() => undefined),
+		};
+		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
+
+		const result = await runAgent(defaultContext, defaultConfig);
+
+		expect(result.success).toBe(true);
+		expect(result.response).toBe("Streamed response");
 	});
 });
