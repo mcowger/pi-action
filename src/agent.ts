@@ -79,6 +79,26 @@ function createSessionEventHandler(
 	};
 }
 
+/**
+ * Wait for the session's internal event queue to fully drain after prompt() resolves.
+ *
+ * The pi SDK queues events via a promise chain (_agentEventQueue). When prompt()
+ * returns, the final events (message_end, agent_end) may still be queued and not
+ * yet processed. If we call getLastAssistantText() immediately, the messages array
+ * may not be updated yet, resulting in an empty response.
+ *
+ * We work around this by adding a microtask yield (setImmediate) which allows the
+ * event queue promise chain to advance before we read the messages.
+ */
+async function waitForEventsToProcess(): Promise<void> {
+	// Yield to the microtask/macrotask queue so the SDK's internal
+	// _agentEventQueue promise chain can advance
+	await new Promise((resolve) => setImmediate(resolve));
+	// One more yield for good measure — the queue chains promises
+	// which need their own microtask ticks to advance
+	await new Promise((resolve) => setImmediate(resolve));
+}
+
 export async function runAgent(
 	piContext: PIContext,
 	config: AgentConfig,
@@ -100,8 +120,8 @@ export async function runAgent(
 		};
 	}
 
-	// Collect response text
-	let response = "";
+	// Collect response text from streaming text_delta events
+	let streamedText = "";
 	let session: Session | undefined;
 
 	try {
@@ -124,7 +144,7 @@ export async function runAgent(
 		// biome-ignore lint/suspicious/noEmptyBlockStatements: noop logger
 		const log = config.logger ?? { info: () => {} };
 		const eventHandler = createSessionEventHandler(log, (delta) => {
-			response += delta;
+			streamedText += delta;
 		});
 
 		createdSession.subscribe(eventHandler);
@@ -136,11 +156,14 @@ export async function runAgent(
 			`Timeout after ${config.timeout} seconds`,
 		);
 
-		// Get response from the session's last assistant message
-		// This is more reliable than streaming text_delta events,
-		// which may not fire for all providers/event structures
+		// Wait for the SDK's internal event queue to process final events
+		// before reading from the session's message history
+		await waitForEventsToProcess();
+
+		// Primary: read from the session's message history (most reliable)
+		// Fallback: use streaming text_delta accumulator
 		const sessionResponse = createdSession.getLastAssistantText();
-		const trimmedResponse = (sessionResponse ?? response).trim();
+		const trimmedResponse = (sessionResponse ?? streamedText).trim();
 		if (!trimmedResponse) {
 			return {
 				success: false,
