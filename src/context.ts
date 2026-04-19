@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 export function hasTrigger(text: string, trigger: string): boolean {
 	return text.toLowerCase().includes(trigger.toLowerCase());
 }
@@ -20,55 +22,16 @@ export interface PIContext {
 	diff?: string;
 }
 
-export function renderTemplate(template: string, context: PIContext): string {
-	// Template variables that can be used in the custom template
-	const variables = {
-		type: context.type,
-		type_display: context.type === "pull_request" ? "Pull Request" : "Issue",
-		number: context.number.toString(),
-		title: context.title,
-		body: context.body,
-		task: context.task,
-		diff: context.diff || "",
-		trigger_comment: context.triggerComment,
-	};
-
-	// Replace all template variables
-	let rendered = template;
-	for (const [key, value] of Object.entries(variables)) {
-		const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, "g");
-		rendered = rendered.replace(placeholder, value);
-	}
-
-	return rendered;
-}
-
-export function buildPrompt(
-	context: PIContext,
-	customTemplate?: string,
-	branchMode?: "branch" | "direct",
-): string {
-	// For direct mode, the task IS the prompt
-	if (context.type === "direct") {
-		return context.task;
-	}
-
-	// If custom template is provided and not empty, use it
-	if (customTemplate?.trim()) {
-		return renderTemplate(customTemplate, context);
-	}
-
-	// Default template (preserving backward compatibility)
-	let prompt = `# GitHub ${context.type === "pull_request" ? "Pull Request" : "Issue"} #${context.number}
+const DEFAULT_MAIN_PROMPT_TEMPLATE = `# GitHub {{type_display}} #{{number}}
 
 ## Title
-${context.title}
+{{title}}
 
 ## Description
-${context.body}
+{{body}}
 
 ## Task
-${context.task}
+{{task}}
 
 ## Important: Environment Setup (DO NOT reconfigure)
 
@@ -113,11 +76,10 @@ If your last action is calling a tool (like \`create_pull_request\`), you MUST i
 - CORRECT: Tool call → text summary explaining what happened
 `;
 
-	if (context.diff) {
-		prompt += `
+const PR_DIFF_TEMPLATE = `
 ## PR Diff
 \`\`\`diff
-${context.diff}
+{{diff}}
 \`\`\`
 
 ## PR Review Guidelines
@@ -140,6 +102,73 @@ Optional fields:
 - \`start_line\`: Start line for multi-line comments
 - \`start_side\`: Side for start_line (defaults to \`side\`)
 `;
+
+export function renderTemplate(template: string, context: PIContext): string {
+	const variables: Record<string, string> = {
+		type: context.type,
+		type_display: context.type === "pull_request" ? "Pull Request" : "Issue",
+		number: context.number.toString(),
+		title: context.title,
+		body: context.body,
+		task: context.task,
+		diff: context.diff || "",
+		trigger_comment: context.triggerComment,
+	};
+
+	let rendered = template;
+	for (const [key, value] of Object.entries(variables)) {
+		const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, "g");
+		rendered = rendered.replace(placeholder, value);
+	}
+
+	return rendered;
+}
+
+function loadTemplate(customTemplate?: string): string {
+	// If inline template provided, use it
+	if (customTemplate?.trim()) {
+		return customTemplate;
+	}
+
+	// Check for file-based template
+	const templateFile = process.env.INPUT_PROMPT_TEMPLATE_FILE;
+	if (templateFile) {
+		try {
+			return readFileSync(templateFile, "utf-8");
+		} catch (error) {
+			console.warn(`Failed to load prompt template from ${templateFile}: ${error}. Using default.`);
+		}
+	}
+
+	return DEFAULT_MAIN_PROMPT_TEMPLATE;
+}
+
+export function buildPrompt(
+	context: PIContext,
+	customTemplate?: string,
+	branchMode?: "branch" | "direct",
+): string {
+	// For direct mode, the task IS the prompt
+	if (context.type === "direct") {
+		return context.task;
+	}
+
+	// Load template (from file, inline, or default)
+	const template = loadTemplate(customTemplate);
+	let prompt = renderTemplate(template, context);
+
+	// Add branch mode instructions if running in direct push mode
+	if (branchMode === "direct") {
+		prompt += `
+
+## Branch Mode: Direct Push
+You are in "direct" branch mode. Commit and push your changes directly to the current branch. Do NOT create a pull request.
+`;
+	}
+
+	// Add PR diff section if available
+	if (context.diff) {
+		prompt += renderTemplate(PR_DIFF_TEMPLATE, context);
 	}
 
 	return prompt;

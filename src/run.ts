@@ -26,6 +26,7 @@ export interface ActionInputs {
 	piAuthJson: string | undefined;
 	piModelsJson: string | undefined;
 	promptTemplate: string | undefined;
+	promptTemplateFile: string | undefined;
 	shareSession: boolean;
 	outputMode: "comment" | "output";
 	prompt: string | undefined;

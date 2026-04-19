@@ -108,7 +108,11 @@ export function createPullRequestTool(options: CreatePullRequestToolOptions) {
 			},
 			_signal?: AbortSignal,
 		): Promise<AgentToolResult<CreatePRToolDetails>> {
-			// Resolve head branch from current git state
+			// Get customizable config from environment or use defaults
+			const env = typeof process !== "undefined" ? process.env : {};
+			const prAttribution = env.INPUT_PR_TOOL_ATTRIBUTION || "\n\n---\n*Created by pi-action 🤖*";
+			const disableAttribution = prAttribution.toLowerCase() === "false";
+			const attributionSuffix = disableAttribution ? "" : prAttribution;
 			let headBranch: string;
 			try {
 				headBranch = await client.getCurrentBranch();
@@ -148,8 +152,8 @@ export function createPullRequestTool(options: CreatePullRequestToolOptions) {
 
 			// Auto-append agent attribution if not already present
 			let body = params.body ?? "";
-			if (!body.includes("pi-action") && !body.includes("pi coding agent")) {
-				body += "\n\n---\n*Created by pi-action 🤖*";
+			if (attributionSuffix && !body.includes("pi-action") && !body.includes("pi coding agent")) {
+				body += attributionSuffix;
 			}
 
 			let pr: { number: number; html_url: string };

@@ -33,6 +33,7 @@ run({
 		piAuthJson: core.getInput("pi_auth_json"),
 		piModelsJson: core.getInput("pi_models_json"),
 		promptTemplate: core.getInput("prompt_template"),
+		promptTemplateFile: core.getInput("prompt_template_file"),
 		shareSession:
 			getInputOrDefault("share_session", "true").toLowerCase() === "true",
 		outputMode: (getInputOrDefault("output_mode", "comment") === "output"

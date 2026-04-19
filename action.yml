@@ -34,7 +34,10 @@ inputs:
     description: 'Model ID'
     default: 'claude-sonnet-4-20250514'
   prompt_template:
-    description: 'Custom prompt template with placeholder variables'
+    description: 'Custom prompt template with placeholder variables ({{type}}, {{number}}, {{title}}, {{body}}, {{task}}, {{diff}})'
+    required: false
+  prompt_template_file:
+    description: 'Path to a file containing the custom prompt template (relative to workspace root)'
     required: false
   share_session:
     description: 'Include a link to the full session HTML in the response comment'
@@ -119,4 +122,5 @@ runs:
         INPUT_OUTPUT_MODE: ${{ inputs.output_mode }}
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_BRANCH_MODE: ${{ inputs.branch_mode }}
+        INPUT_PROMPT_TEMPLATE_FILE: ${{ inputs.prompt_template_file }}
         INPUT_DEBUG: ${{ inputs.debug }}
