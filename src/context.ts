@@ -148,13 +148,31 @@ export function buildPrompt(
 	customTemplate?: string,
 	branchMode?: "branch" | "direct",
 ): string {
-	// For direct mode, the task IS the prompt
-	if (context.type === "direct") {
+	// Load template (from file, inline, or default)
+	const template = loadTemplate(customTemplate);
+
+	// For direct mode without a custom template, the task IS the prompt
+	if (context.type === "direct" && !customTemplate?.trim()) {
 		return context.task;
 	}
 
-	// Load template (from file, inline, or default)
-	const template = loadTemplate(customTemplate);
+	// For direct mode WITH a custom template, render it like normal
+	if (context.type === "direct") {
+		let prompt = renderTemplate(template, context);
+
+		// Add branch mode instructions if running in direct push mode
+		if (branchMode === "direct") {
+			prompt += `
+
+## Branch Mode: Direct Push
+You are in "direct" branch mode. Commit and push your changes directly to the current branch. Do NOT create a pull request.
+`;
+		}
+
+		return prompt;
+	}
+
+	// Issue/PR mode: render template as normal
 	let prompt = renderTemplate(template, context);
 
 	// Add branch mode instructions if running in direct push mode
