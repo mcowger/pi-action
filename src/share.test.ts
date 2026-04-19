@@ -2,12 +2,12 @@ import { unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-	type Mock,
 	afterEach,
 	beforeEach,
 	describe,
 	expect,
 	it,
+	type Mock,
 	vi,
 } from "vitest";
 import type { GitHubClient } from "./github.js";
@@ -24,10 +24,11 @@ describe("shareSession", () => {
 		mockGitHubClient = createMockGitHubClient();
 		tmpFile = join(tmpdir(), `test-session-${Date.now()}.html`);
 
-		// Create mock session with exportToHtml method
+		// Create mock session with async exportToHtml method
 		mockSession = {
-			exportToHtml: vi.fn((path: string) => {
+			exportToHtml: vi.fn(async (path: string) => {
 				writeFileSync(path, "<html>Mock session HTML</html>");
+				return "<html>Mock session HTML</html>";
 			}),
 		};
 
@@ -84,7 +85,7 @@ describe("shareSession", () => {
 	});
 
 	it("returns null when session export fails", async () => {
-		mockSession.exportToHtml = vi.fn(() => {
+		mockSession.exportToHtml = vi.fn(async () => {
 			throw new Error("Export failed");
 		});
 
@@ -126,7 +127,7 @@ describe("shareSession", () => {
 	});
 
 	it("cleans up temporary file even when sharing fails", async () => {
-		mockSession.exportToHtml = vi.fn((path: string) => {
+		mockSession.exportToHtml = vi.fn(async (path: string) => {
 			writeFileSync(path, "test content");
 			throw new Error("Export failed");
 		});

@@ -30,6 +30,6 @@ export declare function createRepoRef(overrides?: Partial<RepoRef>): RepoRef;
  * Creates a mock session for pi agent testing
  */
 export declare function createMockSession(): {
-    subscribe: import("vitest").Mock<(...args: any[]) => any>;
-    prompt: import("vitest").Mock<(...args: any[]) => any>;
+    subscribe: import("vitest").Mock<import("@vitest/spy").Procedure>;
+    prompt: import("vitest").Mock<import("@vitest/spy").Procedure>;
 };

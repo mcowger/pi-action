@@ -27,7 +27,7 @@ export async function shareSession(
 
 	try {
 		// Export session to HTML
-		session.exportToHtml(tmpFile);
+		await session.exportToHtml(tmpFile);
 
 		// Read the HTML content
 		const htmlContent = readFileSync(tmpFile, "utf-8");
@@ -52,7 +52,7 @@ export async function shareSession(
 			previewUrl: `https://shittycodingagent.ai/session?${gistId}`,
 		};
 	} catch (error) {
-		// Log error but don't fail the action
+		// biome-ignore lint/suspicious/noConsole: intentional warning log for non-fatal failure
 		console.warn("Failed to share session:", error);
 		return null;
 	} finally {

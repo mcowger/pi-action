@@ -1,12 +1,12 @@
 import {
 	type AuthStorage,
-	type ModelRegistry,
-	SessionManager,
-	SettingsManager,
+	AuthStorage as AuthStorageClass,
 	createAgentSession,
 	createCodingTools,
-	discoverAuthStorage,
-	discoverModels,
+	type ModelRegistry,
+	ModelRegistry as ModelRegistryClass,
+	SessionManager,
+	SettingsManager,
 } from "@mariozechner/pi-coding-agent";
 import type { PIContext } from "./context.js";
 import { buildPrompt } from "./context.js";
@@ -87,9 +87,9 @@ export async function runAgent(
 ): Promise<AgentResult> {
 	const prompt = buildPrompt(piContext, config.promptTemplate);
 
-	// Use provided or discover auth/models
-	const auth = authStorage ?? discoverAuthStorage();
-	const models = modelRegistry ?? discoverModels(auth);
+	// Use provided or create auth/models
+	const auth = authStorage ?? AuthStorageClass.create();
+	const models = modelRegistry ?? ModelRegistryClass.create(auth);
 
 	// Find the model
 	const model = models.find(config.provider, config.model);
@@ -117,11 +117,6 @@ export async function runAgent(
 				compaction: { enabled: false },
 				retry: { enabled: true, maxRetries: 2 },
 			}),
-			// Disable discovery for hooks, skills, etc. in CI environment
-			hooks: [],
-			skills: [],
-			contextFiles: [],
-			slashCommands: [],
 		});
 
 		session = createdSession;

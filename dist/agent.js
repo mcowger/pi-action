@@ -1,4 +1,4 @@
-import { SessionManager, SettingsManager, createAgentSession, createCodingTools, discoverAuthStorage, discoverModels, } from "@mariozechner/pi-coding-agent";
+import { AuthStorage as AuthStorageClass, createAgentSession, createCodingTools, ModelRegistry as ModelRegistryClass, SessionManager, SettingsManager, } from "@mariozechner/pi-coding-agent";
 import { buildPrompt } from "./context.js";
 import { getErrorMessage, withTimeout } from "./utils.js";
 /**
@@ -44,9 +44,9 @@ function createSessionEventHandler(log, onTextDelta) {
 }
 export async function runAgent(piContext, config, authStorage, modelRegistry) {
     const prompt = buildPrompt(piContext, config.promptTemplate);
-    // Use provided or discover auth/models
-    const auth = authStorage ?? discoverAuthStorage();
-    const models = modelRegistry ?? discoverModels(auth);
+    // Use provided or create auth/models
+    const auth = authStorage ?? AuthStorageClass.create();
+    const models = modelRegistry ?? ModelRegistryClass.create(auth);
     // Find the model
     const model = models.find(config.provider, config.model);
     if (!model) {
@@ -71,11 +71,6 @@ export async function runAgent(piContext, config, authStorage, modelRegistry) {
                 compaction: { enabled: false },
                 retry: { enabled: true, maxRetries: 2 },
             }),
-            // Disable discovery for hooks, skills, etc. in CI environment
-            hooks: [],
-            skills: [],
-            contextFiles: [],
-            slashCommands: [],
         });
         session = createdSession;
         // biome-ignore lint/suspicious/noEmptyBlockStatements: noop logger
