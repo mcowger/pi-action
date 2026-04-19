@@ -11,9 +11,10 @@ A GitHub Action that invokes the [pi coding agent](https://github.com/mariozechn
 - 🆕 Trigger on issue/PR creation, not just comments
 - 🔀 Automatically includes PR diffs for code review tasks
 - 📦 Uses the pi SDK directly - no separate installation needed
-
+- 🌿 Branch mode: Create feature branches and PRs (default) or push directly
 - 📤 Output mode for non-interactive workflows (release notes, automation)
 - 🎯 Direct prompt mode — invoke the agent without an issue/PR
+- 🎨 Customizable prompt templates via inline or file-based configuration
 
 ## Usage
 
@@ -27,8 +28,6 @@ name: pi Assistant
 on:
   issues:
     types: [opened]
-  pull_request:
-    types: [opened]
   issue_comment:
     types: [created]
   pull_request_review_comment:
@@ -36,7 +35,7 @@ on:
 
 jobs:
   pi-response:
-    if: contains(github.event.comment.body || github.event.issue.body || github.event.pull_request.body || '', '@pi')
+    if: contains(github.event.comment.body || github.event.issue.body || '', '@pi')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -46,205 +45,171 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Run pi-action
-        uses: cv/pi-action@v1
+        uses: mcowger/pi-action@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
-          pi_models_json: ${{ secrets.PI_MODELS_JSON }}  # Optional: custom model definitions
 ```
 
 ### Authentication
 
-pi requires authentication with your LLM provider. Set up the `PI_AUTH_JSON` secret in your repository:
+pi requires authentication with your LLM provider. Set up the `PI_AUTH_JSON` secret:
 
 1. Run `pi` locally and complete OAuth authentication
 2. Copy the contents of `~/.pi/agent/auth.json`
-3. Add it as a repository secret named `PI_AUTH_JSON`
+3. Add as repository secret `PI_AUTH_JSON`
 
-Alternatively, you can set provider-specific environment variables (e.g., `ANTHROPIC_API_KEY`).
-
-### Custom Models
-
-To use custom model definitions (e.g., custom providers, base URLs, or model overrides), set the `PI_MODELS_JSON` secret in your repository:
-
-1. Create a `models.json` file with your provider configuration (see the [pi models.json documentation](https://github.com/mariozechner/pi-coding-agent) for schema)
-2. Add the file contents as a repository secret named `PI_MODELS_JSON`
-3. Reference it in your workflow:
-
-```yaml
-- uses: cv/pi-action@v1
-  with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}
-    pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
-    pi_models_json: ${{ secrets.PI_MODELS_JSON }}
-```
-
-This is useful for:
-- Using self-hosted LLM endpoints (Ollama, LM Studio, vLLM)
-- Adding custom providers with specific base URLs
-- Overriding built-in model settings (context window, cost, compat)
+Alternatively, set provider-specific environment variables (e.g., `ANTHROPIC_API_KEY`).
 
 ### Inputs
 
-All inputs are defined in [`action.yml`](action.yml). Default values are centralized in [`src/defaults.ts`](src/defaults.ts).
-
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `github_token` | GitHub token for API access (issues, PRs, reactions, comments) | Yes | - |
-| `gist_token` | GitHub token with gist scope for session sharing (optional) | No | - |
+| `github_token` | GitHub token for API access | Yes | - |
+| `gist_token` | GitHub token with gist scope for session sharing | No | - |
 | `pi_auth_json` | Contents of `~/.pi/agent/auth.json` | No | - |
 | `pi_models_json` | Contents of `~/.pi/agent/models.json` | No | - |
 | `trigger_phrase` | Phrase to trigger pi | No | `@pi` |
 | `allowed_bots` | Comma-separated list of allowed bot usernames | No | - |
-| `timeout` | Execution timeout in seconds | No | `300` |
-| `provider` | LLM provider (anthropic, openai, google, etc.) | No | `anthropic` |
+| `timeout` | Execution timeout in seconds | No | `1800` |
+| `provider` | LLM provider | No | `anthropic` |
 | `model` | Model ID | No | `claude-sonnet-4-20250514` |
-| `prompt_template` | Custom prompt template with placeholder variables | No | (built-in default) |
-| `share_session` | Include a link to the full session HTML in the response comment | No | `true` |
-| `output_mode` | How to deliver results: `comment` (post to issue/PR) or `output` (set action outputs only) | No | `comment` |
-| `prompt` | Direct prompt for the agent (no issue/PR context needed; requires `output_mode: output`) | No | - |
+| `prompt_template` | Custom prompt template (inline) | No | - |
+| `prompt_template_file` | Path to prompt template file | No | - |
+| `share_session` | Include session link in response | No | `true` |
+| `output_mode` | `comment` or `output` | No | `comment` |
+| `prompt` | Direct prompt (requires `output_mode: output`) | No | - |
+| `branch_mode` | `branch` (create PR) or `direct` (push) | No | `branch` |
 
 ### Outputs
 
-The following outputs are available when `output_mode` is set to `output`:
-
 | Output | Description |
 |--------|-------------|
-| `response` | The agent's response text (or error message on failure) |
-| `success` | Whether the agent succeeded (`"true"` or `"false"`) |
-| `share_url` | URL to the shared session HTML (if `share_session` is enabled) |
+| `response` | Agent's response text |
+| `success` | `true` or `false` |
+| `share_url` | Session share URL |
+| `pr_created` | `true` if PR was created |
+| `pr_number` | PR number |
+| `pr_url` | PR URL |
 
-### Examples
+### Custom Prompt Templates
 
-#### Allow Dependabot to trigger pi
-
-```yaml
-- uses: cv/pi-action@v1
-  with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}
-    allowed_bots: 'dependabot[bot],renovate[bot]'
-```
-
-#### Use a different model
+**Inline template:**
 
 ```yaml
-- uses: cv/pi-action@v1
-  with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}
-    provider: 'openai'
-    model: 'gpt-4o'
-```
-
-#### Custom trigger phrase
-
-```yaml
-- uses: cv/pi-action@v1
-  with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}
-    trigger_phrase: '@assistant'
-```
-
-#### Custom Prompt Template
-
-Customize how GitHub issue/PR context is presented to the pi agent:
-
-```yaml
-- uses: cv/pi-action@v1
+- uses: mcowger/pi-action@main
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     prompt_template: |
-      # Code Review for {{type_display}} #{{number}}
+      # Task: {{title}}
       
-      **Title:** {{title}}
-      **Task:** {{task}}
+      {{task}}
       
-      ## Description
-      {{body}}
-      
-      ## Changes
-      ```diff
-      {{diff}}
-      ```
-      
-      ## Review Guidelines
-      - Check for security vulnerabilities
-      - Verify test coverage
-      - Follow our coding standards
+      Please analyze and provide recommendations.
+```
+
+**File-based template:**
+
+```yaml
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    prompt_template_file: '.github/pi-prompt.md'
 ```
 
 **Template Variables:**
-- `{{type}}` - Context type (`issue` or `pull_request`)
-- `{{type_display}}` - Human-readable type (`Issue` or `Pull Request`)
-- `{{number}}` - Issue/PR number
-- `{{title}}` - Issue/PR title
-- `{{body}}` - Issue/PR description
-- `{{task}}` - Extracted task (text after trigger phrase)
-- `{{diff}}` - PR diff (empty for issues)
-- `{{trigger_comment}}` - Full trigger comment text
+- `{{type}}`, `{{type_display}}`, `{{number}}`, `{{title}}`, `{{body}}`, `{{task}}`, `{{diff}}`, `{{trigger_comment}}`
 
-See [examples/prompt-templates.md](examples/prompt-templates.md) for more template examples.
+### Branch Mode
 
-#### Session Sharing
+Default (`branch_mode: branch`): Creates feature branch and PR.
 
-By default, pi-action shares the complete session (including tool executions and agent reasoning) as a secret GitHub gist and includes a link in the response comment. This helps with debugging and provides full transparency of what the agent did.
+Push directly without PR:
 
 ```yaml
-- uses: cv/pi-action@v1
+- uses: mcowger/pi-action@main
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
-    pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
-    share_session: true  # Default: true
+    branch_mode: direct
 ```
 
-To disable session sharing:
+### PR Attribution Customization
+
+Disable or customize the PR attribution suffix:
 
 ```yaml
-- uses: cv/pi-action@v1
+# Disable attribution
+- uses: mcowger/pi-action@main
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
-    pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
-    share_session: false  # Disable session links
+  env:
+    INPUT_PR_TOOL_ATTRIBUTION: "false"
+
+# Custom attribution
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+  env:
+    INPUT_PR_TOOL_ATTRIBUTION: |
+      ---
+      *Generated by My Bot*
 ```
 
-**Session sharing includes:**
-- Full conversation history
-- All tool executions (file reads, bash commands, edits)
-- Agent reasoning and decision process
-- Error details when things go wrong
+### Using PR Outputs
 
-Sessions are uploaded as **secret** (non-public) GitHub gists and are accessible via a viewer at `https://shittycodingagent.ai/session?<gist_id>`.
-
-**Note:** The default `GITHUB_TOKEN` does not have permission to create gists. To enable session sharing, provide a separate Personal Access Token (PAT) with the `gist` scope via the `gist_token` input:
+Trigger downstream workflows when a PR is created:
 
 ```yaml
-- uses: cv/pi-action@v1
+- name: Run pi-action
+  id: pi
+  uses: mcowger/pi-action@main
   with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}  # For issues, PRs, reactions
-    gist_token: ${{ secrets.PAT_WITH_GIST_SCOPE }}  # PAT with gist scope only
-    pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    branch_mode: branch
+
+- name: Dispatch review workflow
+  if: steps.pi.outputs.pr_created == 'true'
+  uses: actions/github-script@v9
+  with:
+    script: |
+      await github.rest.actions.createWorkflowDispatch({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        workflow_id: 'pr-review.yml',
+        ref: context.ref,
+        inputs: {
+          pr_number: '${{ steps.pi.outputs.pr_number }}'
+        }
+      });
+```
+
+### Session Sharing
+
+By default, pi-action shares the complete session as a secret GitHub gist:
+
+```yaml
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
     share_session: true
 ```
 
-This separation follows the principle of least privilege - the PAT only needs `gist` scope, not full repo access.
+To enable, provide a PAT with `gist` scope via `gist_token`:
 
-If gist creation fails (e.g., due to missing permissions), the action will gracefully continue and post the response without a session link.
+```yaml
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    gist_token: ${{ secrets.PAT_WITH_GIST_SCOPE }}
+    share_session: true
+```
 
-#### Output Mode & Direct Prompts
+### Output Mode & Direct Prompts
 
-Use `output_mode: output` to have the agent set GitHub Actions outputs instead of posting comments. This is useful for programmatic consumption of the agent's response.
-
-Combine with the `prompt` input to run the agent without an issue/PR context — enabling use with **any GitHub event**:
+Use `output_mode: output` with `prompt` for non-interactive workflows:
 
 ```yaml
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       task:
@@ -254,73 +219,22 @@ on:
 jobs:
   pi:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: cv/pi-action@v1
+      - uses: mcowger/pi-action@main
         id: pi
         with:
           output_mode: output
-          prompt: ${{ github.event.inputs.task || 'Generate release notes based on git log since the last tag' }}
+          prompt: ${{ github.event.inputs.task }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
       - run: echo "${{ steps.pi.outputs.response }}"
 ```
 
-**Use cases:**
-- Generate release notes on publish
-- Auto-triage issues on push
-- Run custom analyses on schedule or workflow_dispatch
-- Integrate agent output into multi-step workflows
-
-#### Comments only (no issue/PR creation triggers)
-
-If you only want to trigger on comments, not when issues/PRs are created:
-
-```yaml
-on:
-  issue_comment:
-    types: [created]
-  pull_request_review_comment:
-    types: [created]
-
-jobs:
-  pi-response:
-    if: contains(github.event.comment.body, '@pi')
-```
-
-## How It Works
-
-1. **Issue/PR mode** (`output_mode: comment`): When a comment or issue/PR containing the trigger phrase is posted, the action is triggered
-2. The action validates that the author has write access to the repository (see [`src/security.ts`](src/security.ts))
-3. An 👀 reaction is added to acknowledge the request
-4. The pi SDK is invoked with the issue/PR context and the task from the trigger (see [`src/agent.ts`](src/agent.ts))
-5. **Session is shared** as a secret GitHub gist with a preview URL (if `share_session` is enabled)
-6. The response is posted as a new comment with a 🚀 reaction, including the session link
-
-**Direct prompt mode** (`output_mode: output` + `prompt`): The agent runs with the provided prompt directly — no issue/PR trigger is needed. The result is available via action outputs (`response`, `success`, `share_url`).
-
-The main orchestration logic is in [`src/run.ts`](src/run.ts), with prompt building in [`src/context.ts`](src/context.ts).
-
 ## Security
 
-The action only responds to users with write access (see [`src/security.ts`](src/security.ts)):
-- Repository owners
-- Organization members
-- Collaborators
-
-Bots are blocked by default unless explicitly added to the `allowed_bots` list.
-
-Input is sanitized to remove:
-- HTML comments (potential injection vectors)
-- Invisible Unicode characters
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, architecture details, and contribution guidelines.
+- Only responds to users with write access (owners, members, collaborators)
+- Bots blocked by default unless in `allowed_bots`
+- Input sanitized to remove HTML comments and invisible Unicode
 
 ## License
 
