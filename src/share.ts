@@ -53,7 +53,7 @@ export async function shareSession(
 		};
 	} catch (error) {
 		// biome-ignore lint/suspicious/noConsole: intentional warning log for non-fatal failure
-		console.warn("Failed to share session:", error);
+		console.warn(`Failed to share session: ${error instanceof Error ? error.message : error}`);
 		return null;
 	} finally {
 		// Clean up temp file
