@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-04-19
+
+### Added
+
+- add multi-platform support with platform abstraction (#106)
+
 ## [2.8.2] - 2026-04-18
 
 ### Changed
@@ -149,7 +155,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.2...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.2...v2.9.0
 [2.8.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.1...v2.8.2
 [2.8.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.7.2...v2.8.0
