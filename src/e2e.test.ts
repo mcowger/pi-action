@@ -56,12 +56,14 @@ function parseEnvFile(filePath: string): Record<string, string> {
 
 function loadE2EConfig(): E2EConfig | null {
 	const envPath = join(import.meta.dirname, "..", ".env.e2e");
+	if (!existsSync(envPath)) return null;
 	const env = parseEnvFile(envPath);
 
-	if (!env.PI_AUTH_JSON) return null;
+	// Need at least one of PI_AUTH_JSON or PI_MODELS_JSON to run
+	if (!env.PI_AUTH_JSON && !env.PI_MODELS_JSON) return null;
 
 	return {
-		piAuthJson: env.PI_AUTH_JSON,
+		piAuthJson: env.PI_AUTH_JSON ?? "",
 		piModelsJson: env.PI_MODELS_JSON ?? "",
 		provider: env.E2E_PROVIDER || DEFAULTS.provider,
 		model: env.E2E_MODEL || DEFAULTS.model,
@@ -210,7 +212,7 @@ describe("e2e: config detection", () => {
 		if (skipE2E) {
 			expect(skipE2E).toBe(true);
 		} else {
-			expect(config!.piAuthJson).toBeTruthy();
+			expect(config!.piAuthJson || config!.piModelsJson).toBeTruthy();
 		}
 	});
 });
