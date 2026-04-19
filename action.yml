@@ -48,6 +48,10 @@ inputs:
     description: 'Direct prompt for the agent (no issue/PR context needed, requires output_mode: output)'
     required: false
     default: ''
+  debug:
+    description: 'Enable verbose debug logging for troubleshooting'
+    required: false
+    default: 'false'
 
 outputs:
   response:
@@ -87,3 +91,4 @@ runs:
         INPUT_SHARE_SESSION: ${{ inputs.share_session }}
         INPUT_OUTPUT_MODE: ${{ inputs.output_mode }}
         INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_DEBUG: ${{ inputs.debug }}

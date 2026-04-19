@@ -11,6 +11,7 @@ vi.mock("@mariozechner/pi-coding-agent", () => {
 	const mockSession = {
 		subscribe: vi.fn(),
 		prompt: vi.fn(),
+		messages: [],
 	};
 
 	return {
@@ -98,6 +99,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
+		messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -140,6 +142,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
+		messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -174,6 +177,7 @@ describe("runAgent", () => {
 		const mockSession = {
 			subscribe: vi.fn(),
 			prompt: vi.fn().mockRejectedValue(new Error("API error")),
+		messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -194,6 +198,7 @@ describe("runAgent", () => {
 			subscribe: vi.fn(),
 			// biome-ignore lint/suspicious/noEmptyBlockStatements: intentionally never resolves for timeout test
 			prompt: vi.fn(() => new Promise(() => {})),
+		messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -379,6 +384,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
+		messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -432,6 +438,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
+		messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -476,6 +483,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
+		messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -498,6 +506,7 @@ describe("runAgent", () => {
 			// biome-ignore lint/suspicious/noEmptyBlockStatements: mock implementation
 			prompt: vi.fn(async () => {}),
 			getLastAssistantText: vi.fn(() => undefined),
+		messages: [],
 		};
 
 		mockModelRegistry.create.mockReturnValue({
@@ -539,6 +548,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => "Full response from session"),
+		messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -569,6 +579,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
+		messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 

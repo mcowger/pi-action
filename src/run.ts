@@ -41,6 +41,7 @@ export interface Logger {
 	error: (msg: string) => void;
 	setFailed: (msg: string) => void;
 	setOutput: (name: string, value: string) => void;
+	debug?: (msg: string) => void;
 }
 
 export interface ActionDependencies {

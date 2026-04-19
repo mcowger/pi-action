@@ -10,6 +10,8 @@ function getInputOrDefault(name: string, defaultValue: string): string {
 	return value || defaultValue;
 }
 
+	const isDebug = getInputOrDefault("debug", "false").toLowerCase() === "true";
+
 run({
 	inputs: {
 		triggerPhrase: getInputOrDefault("trigger_phrase", DEFAULTS.triggerPhrase),
@@ -24,6 +26,7 @@ run({
 			),
 			provider: getInputOrDefault("provider", DEFAULTS.provider),
 			model: getInputOrDefault("model", DEFAULTS.model),
+			debug: getInputOrDefault("debug", "false").toLowerCase() === "true",
 		},
 		githubToken: core.getInput("github_token") || process.env.GITHUB_TOKEN,
 		gistToken: core.getInput("gist_token") || undefined,
@@ -57,6 +60,7 @@ run({
 		error: core.error,
 		setFailed: core.setFailed,
 		setOutput: core.setOutput,
+		debug: isDebug ? core.info : undefined,
 	},
 	cwd: process.cwd(),
 }).catch((error) => {

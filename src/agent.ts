@@ -15,6 +15,7 @@ import { getErrorMessage, withTimeout } from "./utils.js";
 
 export interface AgentLogger {
 	info: (msg: string) => void;
+	debug?: (msg: string) => void;
 }
 
 export interface AgentConfig extends ModelConfig {
@@ -44,6 +45,8 @@ function createSessionEventHandler(
 	log: AgentLogger,
 	onTextDelta: (delta: string) => void,
 ): (event: SessionEvent) => void {
+	const debug = log.debug?.bind(log.debug) ?? (() => {});
+
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: switch statement handling many event types
 	return (event: SessionEvent) => {
 		switch (event.type) {
@@ -72,8 +75,24 @@ function createSessionEventHandler(
 				break;
 			case "message_update":
 				if (event.assistantMessageEvent?.type === "text_delta") {
-					onTextDelta(event.assistantMessageEvent.delta ?? "");
+					const delta = event.assistantMessageEvent.delta ?? "";
+					onTextDelta(delta);
+					debug(`📝 text_delta (${delta.length} chars)`);
+				} else {
+					debug(`message_update: assistantMessageEvent.type=${event.assistantMessageEvent?.type}`);
 				}
+				break;
+			case "message_start":
+				debug(`message_start: role=${(event as Record<string, unknown>).message?.role ?? "unknown"}`);
+				break;
+			case "message_end":
+				debug("message_end");
+				break;
+			case "agent_end":
+				debug("agent_end");
+				break;
+			default:
+				debug(`event: ${event.type}`);
 				break;
 		}
 	};
@@ -89,20 +108,31 @@ function createSessionEventHandler(
  * session still returns nothing.
  */
 async function resolveResponse(
-	session: { getLastAssistantText(): string | undefined },
+	session: { getLastAssistantText(): string | undefined; messages: unknown[] },
 	streamedText: string,
+	debug: (msg: string) => void,
 ): Promise<string> {
 	// Try immediately first (common case in non-CI environments)
 	const immediate = session.getLastAssistantText();
-	if (immediate) return immediate;
+	if (immediate) {
+		debug(`resolveResponse: got ${immediate.length} chars from getLastAssistantText() immediately`);
+		return immediate;
+	}
+
+	debug(`resolveResponse: getLastAssistantText() returned undefined, messages count=${session.messages.length}, streamedText length=${streamedText.length}`);
+	debug(`resolveResponse: polling for up to 2s...`);
 
 	// Poll for up to 2 seconds (CI environments may need this)
 	for (let i = 0; i < 20; i++) {
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		const text = session.getLastAssistantText();
-		if (text) return text;
+		if (text) {
+			debug(`resolveResponse: got ${text.length} chars from getLastAssistantText() after ${(i + 1) * 100}ms`);
+			return text;
+		}
 	}
 
+	debug(`resolveResponse: polling timed out, falling back to streamedText (${streamedText.length} chars)`);
 	// Final fallback: streaming text_delta accumulator
 	return streamedText;
 }
@@ -130,7 +160,19 @@ export async function runAgent(
 
 	// Collect response text from streaming text_delta events
 	let streamedText = "";
+	let streamedDeltaCount = 0;
 	let session: Session | undefined;
+
+	// Set up logging — debug channel is only active when config.debug is true
+	// biome-ignore lint/suspicious/noEmptyBlockStatements: noop logger
+	const log = config.logger ?? { info: () => {} };
+	const debug = config.debug
+		? (log.debug?.bind(log.debug) ?? log.info.bind(log))
+		: () => {};
+
+	debug(`runAgent: provider=${config.provider}, model=${config.model}, timeout=${config.timeout}s`);
+	debug(`runAgent: prompt length=${prompt.length} chars`);
+	debug(`runAgent: cwd=${config.cwd}`);
 
 	try {
 		const { session: createdSession } = await createAgentSession({
@@ -149,13 +191,14 @@ export async function runAgent(
 
 		session = createdSession;
 
-		// biome-ignore lint/suspicious/noEmptyBlockStatements: noop logger
-		const log = config.logger ?? { info: () => {} };
 		const eventHandler = createSessionEventHandler(log, (delta) => {
 			streamedText += delta;
+			streamedDeltaCount++;
 		});
 
 		createdSession.subscribe(eventHandler);
+
+		debug("runAgent: starting session.prompt()");
 
 		// Run with timeout
 		await withTimeout(
@@ -164,12 +207,32 @@ export async function runAgent(
 			`Timeout after ${config.timeout} seconds`,
 		);
 
+		debug(`runAgent: session.prompt() resolved, messages=${createdSession.messages.length}, streamedDeltas=${streamedDeltaCount}, streamedText=${streamedText.length} chars`);
+
+		// Log message details in debug mode
+		if (config.debug) {
+			for (let i = 0; i < createdSession.messages.length; i++) {
+				const msg = createdSession.messages[i] as { role?: string; content?: unknown };
+				const contentPreview = typeof msg.content === "string"
+					? msg.content.slice(0, 80)
+					: Array.isArray(msg.content)
+						? `[${msg.content.length} blocks, first: ${(msg.content[0] as { type?: string })?.type ?? "unknown"}]`
+						: String(msg.content).slice(0, 80);
+				debug(`  message[${i}]: role=${msg.role ?? "unknown"}, content=${contentPreview}`);
+			}
+		}
+
+		debug(`runAgent: getLastAssistantText() = ${JSON.stringify(createdSession.getLastAssistantText()?.slice(0, 100) ?? undefined)}`);
+
 		// Wait for the SDK's internal event queue to finalize messages,
 		// then read the response. Falls back to streaming accumulator.
-		const response = await resolveResponse(createdSession, streamedText);
+		const response = await resolveResponse(createdSession, streamedText, debug);
 		const trimmedResponse = response.trim();
+
+		debug(`runAgent: final response length=${trimmedResponse.length} chars, source=${createdSession.getLastAssistantText() ? "session" : streamedText ? "streaming" : "none"}`);
+
 		if (!trimmedResponse) {
-			log.info(`⚠️ Empty response (sessionText=${JSON.stringify(createdSession.getLastAssistantText())}, streamedText=${JSON.stringify(streamedText)}, messages=${createdSession.messages.length})`);
+			log.info(`⚠️ Empty response (sessionText=${JSON.stringify(createdSession.getLastAssistantText()?.slice(0, 50))}, streamedDeltas=${streamedDeltaCount}, streamedText=${streamedText.length} chars, messages=${createdSession.messages.length})`);
 			return {
 				success: false,
 				error: "Agent returned empty response",
@@ -179,6 +242,7 @@ export async function runAgent(
 
 		return { success: true, response: trimmedResponse, session };
 	} catch (error) {
+		debug(`runAgent: caught error: ${getErrorMessage(error)}`);
 		return { success: false, error: getErrorMessage(error), session };
 	}
 }

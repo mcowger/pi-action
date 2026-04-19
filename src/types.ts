@@ -54,6 +54,7 @@ export interface ModelConfig {
 	provider: string;
 	model: string;
 	timeout: number;
+	debug?: boolean;
 }
 
 // Updated TriggerInfo interface using proper types
