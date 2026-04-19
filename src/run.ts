@@ -344,6 +344,17 @@ export async function run(deps: ActionDependencies): Promise<void> {
 				: undefined,
 	});
 
+	// Check for empty response with fallback (agent ended with tool call but no summary)
+	if (result.success && (!result.response || result.response.trim() === "")) {
+		const branch = process.env.PI_ACTION_BRANCH;
+		if (inputs.branchMode === "branch" && branch) {
+			result.response = `Changes were committed and pushed to branch \`${branch}\`. If a pull request was created successfully, it should appear above with a link.`;
+		} else {
+			result.response = "The agent completed its work but did not provide a summary. Changes may have been committed.";
+		}
+		log.warning(`Agent returned empty response, using fallback message: ${result.response}`);
+	}
+
 	// Post result (use gistClient for session sharing if available)
 	await postResult(
 		ghClient,

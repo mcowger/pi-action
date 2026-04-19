@@ -107,7 +107,10 @@ Your summary should include:
 
 If you completed the task successfully, say so clearly. If you were unable to complete the task, explain what went wrong and what was attempted.
 
-**Do not end your turn with only a tool call.** Always follow the last tool call with a written summary.
+**CRITICAL -- DO NOT END WITH ONLY A TOOL CALL:**
+If your last action is calling a tool (like \`create_pull_request\`), you MUST immediately follow it with a written summary in plain text. Send additional text AFTER the tool call completes.
+- INCORRECT: Tool call → stop
+- CORRECT: Tool call → text summary explaining what happened
 `;
 
 	if (context.diff) {
