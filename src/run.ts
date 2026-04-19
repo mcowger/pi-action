@@ -84,8 +84,9 @@ function validateTrigger(
 		return null;
 	}
 
-	// Check if trigger phrase is present
-	if (!hasTrigger(triggerInfo.triggerText, inputs.triggerPhrase)) {
+	// Only require trigger phrase on comment events.
+	// For creation events (PR opened, issue opened), the event itself is the trigger.
+	if (triggerInfo.isCommentEvent && !hasTrigger(triggerInfo.triggerText, inputs.triggerPhrase)) {
 		log.info(`No trigger phrase "${inputs.triggerPhrase}" found, skipping`);
 		return null;
 	}

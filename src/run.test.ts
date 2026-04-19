@@ -140,14 +140,21 @@ describe("run", () => {
 		);
 	});
 
-	it("skips when trigger phrase not found", async () => {
+	it("skips when trigger phrase not found in comment", async () => {
+		// For comment events, the trigger phrase is required
 		const deps = createMockDeps({
 			context: {
 				payload: {
+					comment: {
+						id: 1,
+						body: "No trigger here",
+						user: { login: "user", type: "User" },
+						author_association: "OWNER",
+					},
 					issue: {
 						number: 1,
 						title: "Test",
-						body: "No trigger here",
+						body: "Some issue body",
 						user: { login: "user", type: "User" },
 						author_association: "OWNER",
 					},
@@ -160,6 +167,37 @@ describe("run", () => {
 		expect(deps.log.info).toHaveBeenCalledWith(
 			'No trigger phrase "@pi" found, skipping',
 		);
+	});
+
+	it("runs for issue creation events without trigger phrase", async () => {
+		// For creation events (non-comment), the event itself is the trigger
+		const mockClient = createMockGitHubClient();
+		const deps = createMockDeps({
+			context: {
+				payload: {
+					issue: {
+						number: 1,
+						title: "Test Issue",
+						body: "No trigger here - this is a new issue",
+						user: { login: "user", type: "User" },
+						author_association: "OWNER",
+					},
+				},
+				repo: { owner: "testowner", repo: "testrepo" },
+			},
+			createClient: vi.fn(() => mockClient),
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: true,
+			response: "Task completed",
+		});
+		vi.mocked(shareSession).mockResolvedValue(undefined);
+
+		await run(deps);
+
+		// Should run the agent (not skip) for creation events without trigger phrase
+		expect(runAgent).toHaveBeenCalled();
 	});
 
 	it("warns and skips when user lacks permission", async () => {
