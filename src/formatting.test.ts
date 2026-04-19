@@ -7,14 +7,12 @@ describe("formatSuccessComment", () => {
 		expect(result).toBe("### 🤖 pi Response\n\nHere is the answer");
 	});
 
-	it("formats response with session link", () => {
+	it("formats response without session link (link now in master log gist)", () => {
 		const result = formatSuccessComment(
 			"Here is the answer",
 			"https://shittycodingagent.ai/session?abc123",
 		);
-		expect(result).toBe(
-			"### 🤖 pi Response\n\nHere is the answer\n\n---\n📎 [View full session](https://shittycodingagent.ai/session?abc123)",
-		);
+		expect(result).toBe("### 🤖 pi Response\n\nHere is the answer");
 	});
 
 	it("handles multiline responses", () => {
@@ -36,13 +34,13 @@ describe("formatErrorComment", () => {
 		);
 	});
 
-	it("formats error with session link", () => {
+	it("formats error without session link (link now in master log gist)", () => {
 		const result = formatErrorComment(
 			"Something went wrong",
 			"https://shittycodingagent.ai/session?def456",
 		);
 		expect(result).toBe(
-			"### ❌ pi Error\n\nFailed to process request: Something went wrong\n\n---\n📎 [View full session](https://shittycodingagent.ai/session?def456)",
+			"### ❌ pi Error\n\nFailed to process request: Something went wrong",
 		);
 	});
 

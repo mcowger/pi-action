@@ -554,12 +554,10 @@ describe("run", () => {
 
 		await run(deps);
 
-		// Check that comment includes session link
+		// Check that comment includes the response
 		expect(mockClient.createComment).toHaveBeenCalledWith(
 			1,
-			expect.stringContaining(
-				"📎 [View full session](https://shittycodingagent.ai/session?abc123)",
-			),
+			expect.stringContaining("Task completed!"),
 		);
 	});
 
@@ -638,16 +636,14 @@ describe("run", () => {
 
 		await run(deps);
 
-		// Check that error comment includes session link
-		expect(mockClient.createComment).toHaveBeenCalledWith(
-			1,
-			expect.stringContaining(
-				"📎 [View full session](https://shittycodingagent.ai/session?error123)",
-			),
-		);
+		// Check that error comment includes error message
 		expect(mockClient.createComment).toHaveBeenCalledWith(
 			1,
 			expect.stringContaining("### ❌ pi Error"),
+		);
+		expect(mockClient.createComment).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining("Something went wrong"),
 		);
 	});
 

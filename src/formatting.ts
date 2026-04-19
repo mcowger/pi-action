@@ -6,25 +6,13 @@ import type { GitHubUser } from "./types.js";
 
 export function formatSuccessComment(
 	response: string,
-	shareUrl?: string,
+	_logUrl?: string,
 ): string {
-	let comment = `### 🤖 pi Response\n\n${response}`;
-
-	if (shareUrl) {
-		comment += `\n\n---\n📎 [View full session](${shareUrl})`;
-	}
-
-	return comment;
+	return `### 🤖 pi Response\n\n${response}`;
 }
 
-export function formatErrorComment(error: string, shareUrl?: string): string {
-	let comment = `### ❌ pi Error\n\nFailed to process request: ${error}`;
-
-	if (shareUrl) {
-		comment += `\n\n---\n📎 [View full session](${shareUrl})`;
-	}
-
-	return comment;
+export function formatErrorComment(error: string, _logUrl?: string): string {
+	return `### ❌ pi Error\n\nFailed to process request: ${error}`;
 }
 
 interface ReviewComment {
