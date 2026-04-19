@@ -153,7 +153,7 @@ runs:
     
     - name: Run pi-action
       shell: bash
-      run: node ${{ github.action_path }}/dist/index.js
+      run: npx tsx ${{ github.action_path }}/src/index.ts
       env:
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
         INPUT_GIST_TOKEN: ${{ inputs.gist_token }}

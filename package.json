@@ -34,7 +34,8 @@
 	"dependencies": {
 		"@actions/core": "^3.0.0",
 		"@actions/github": "^9.1.0",
-		"@mariozechner/pi-coding-agent": "^0.67.68"
+		"@mariozechner/pi-coding-agent": "^0.67.68",
+		"tsx": "^4.21.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.12",
