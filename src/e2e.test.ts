@@ -7,21 +7,22 @@
  *
  * Setup:
  *   1. Copy `.env.e2e.example` to `.env.e2e`
- *   2. Fill in PI_AUTH_JSON (contents of ~/.pi/agent/auth.json)
- *   3. Optionally set PI_MODELS_JSON, E2E_PROVIDER, E2E_MODEL
+ *   2. Fill in PI_AUTH_JSON and/or PI_MODELS_JSON
+ *   3. Optionally set E2E_PROVIDER, E2E_MODEL
  *   4. Run: npx vitest run --config vitest.e2e.config.ts
  *
- * The tests set PI_CODING_AGENT_DIR to a temp directory so your real
- * ~/.pi/agent/ is never modified.
+ * The tests isolate themselves from your real environment by:
+ * - Setting PI_CODING_AGENT_DIR to a temp directory (never touches ~/.pi/agent/)
+ * - Scrubbing all LLM API key env vars so the SDK only uses .env.e2e config
+ * - Restoring everything in afterAll
  */
-import { mkdirSync, rmSync, existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { join } from "node:path";
-import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runAgent } from "./agent.js";
 import type { PIContext } from "./context.js";
 import { DEFAULTS } from "./defaults.js";
-import { setupAuth, setupModels } from "./run.js";
 
 interface E2EConfig {
 	piAuthJson: string;
@@ -47,7 +48,6 @@ function parseEnvFile(filePath: string): Record<string, string> {
 		const eqIdx = trimmed.indexOf("=");
 		if (eqIdx === -1) continue;
 		const key = trimmed.slice(0, eqIdx).trim();
-		// Everything after the first = is the value (may contain = for JSON)
 		const value = trimmed.slice(eqIdx + 1).trim();
 		env[key] = value;
 	}
@@ -70,13 +70,84 @@ function loadE2EConfig(): E2EConfig | null {
 	};
 }
 
+/**
+ * Environment variables that the pi SDK reads for API keys.
+ * We save and scrub these so the e2e test only uses config from .env.e2e.
+ */
+const SDK_ENV_VARS = [
+	// Provider API keys (from pi-ai/env-api-keys.js)
+	"OPENAI_API_KEY",
+	"ANTHROPIC_API_KEY",
+	"ANTHROPIC_OAUTH_TOKEN",
+	"AZURE_OPENAI_API_KEY",
+	"GEMINI_API_KEY",
+	"GOOGLE_CLOUD_API_KEY",
+	"GOOGLE_CLOUD_PROJECT",
+	"GCLOUD_PROJECT",
+	"GOOGLE_CLOUD_LOCATION",
+	"GOOGLE_APPLICATION_CREDENTIALS",
+	"GROQ_API_KEY",
+	"CEREBRAS_API_KEY",
+	"XAI_API_KEY",
+	"OPENROUTER_API_KEY",
+	"AI_GATEWAY_API_KEY",
+	"ZAI_API_KEY",
+	"MISTRAL_API_KEY",
+	"MINIMAX_API_KEY",
+	"MINIMAX_CN_API_KEY",
+	"HF_TOKEN",
+	"OPENCODE_API_KEY",
+	"KIMI_API_KEY",
+	"COPILOT_GITHUB_TOKEN",
+	"GH_TOKEN",
+	"GITHUB_TOKEN",
+	"AWS_PROFILE",
+	"AWS_ACCESS_KEY_ID",
+	"AWS_SECRET_ACCESS_KEY",
+	"AWS_BEARER_TOKEN_BEDROCK",
+	"AWS_CONTAINER_CREDENTIALS_RELATIVE_URI",
+	"AWS_CONTAINER_CREDENTIALS_FULL_URI",
+	"AWS_WEB_IDENTITY_TOKEN_FILE",
+	// Common proxy/base URL overrides
+	"OPENAI_BASE_URL",
+	"ANTHROPIC_BASE_URL",
+	"OPENROUTER_BASE_URL",
+	// Custom env vars that may resolve as API keys
+	"AIHOME_API_KEY",
+	"AIHOME_API_BASE",
+	"APERTIS_API_KEY",
+	"APERTIS_SUB_API_KEY",
+	"NAGA_API_KEY",
+	// Pi SDK config dir
+	"PI_CODING_AGENT_DIR",
+];
+
+function scrubSdkEnvVars(): Record<string, string | undefined> {
+	const saved: Record<string, string | undefined> = {};
+	for (const key of SDK_ENV_VARS) {
+		saved[key] = process.env[key];
+		delete process.env[key];
+	}
+	return saved;
+}
+
+function restoreSdkEnvVars(saved: Record<string, string | undefined>): void {
+	for (const key of SDK_ENV_VARS) {
+		if (saved[key] !== undefined) {
+			process.env[key] = saved[key];
+		} else {
+			delete process.env[key];
+		}
+	}
+}
+
 const config = loadE2EConfig();
 const skipE2E = !config;
 
 describe.skipIf(skipE2E)("e2e: runAgent", () => {
 	let e2eConfig: E2EConfig;
 	let tmpDir: string;
-	let savedAgentDir: string | undefined;
+	let savedEnv: Record<string, string | undefined>;
 
 	beforeAll(() => {
 		e2eConfig = config!;
@@ -87,22 +158,27 @@ describe.skipIf(skipE2E)("e2e: runAgent", () => {
 		console.log(`  E2E provider: ${e2eConfig.provider}`);
 		console.log(`  E2E model: ${e2eConfig.model}`);
 
-		// Point the SDK at our temp dir instead of ~/.pi/agent/
-		savedAgentDir = process.env.PI_CODING_AGENT_DIR;
+		// Scrub all SDK env vars so the test only uses .env.e2e config
+		savedEnv = scrubSdkEnvVars();
+
+		// Point the SDK at our temp dir
 		process.env.PI_CODING_AGENT_DIR = tmpDir;
 
-		// Write auth/models into the temp dir (same as the action does)
-		setupAuth(e2eConfig.piAuthJson || undefined);
-		setupModels(e2eConfig.piModelsJson || undefined);
+		// Write auth/models directly into the temp dir.
+		// We can't use setupAuth/setupModels because those hardcode ~/.pi/agent/
+		// and don't respect PI_CODING_AGENT_DIR.
+		mkdirSync(tmpDir, { recursive: true });
+		if (e2eConfig.piAuthJson) {
+			writeFileSync(join(tmpDir, "auth.json"), e2eConfig.piAuthJson);
+		}
+		if (e2eConfig.piModelsJson) {
+			writeFileSync(join(tmpDir, "models.json"), e2eConfig.piModelsJson);
+		}
 	});
 
 	afterAll(() => {
-		// Restore original env var
-		if (savedAgentDir !== undefined) {
-			process.env.PI_CODING_AGENT_DIR = savedAgentDir;
-		} else {
-			delete process.env.PI_CODING_AGENT_DIR;
-		}
+		// Restore all env vars
+		restoreSdkEnvVars(savedEnv);
 
 		// Clean up temp dir
 		try {
@@ -138,24 +214,25 @@ describe.skipIf(skipE2E)("e2e: runAgent", () => {
 
 		if (!result.success) {
 			console.log(`  Error: ${result.error}`);
+		} else {
+			console.log(`  Response: ${result.response.slice(0, 200)}`);
 		}
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.response).toBeTruthy();
 			expect(result.response.length).toBeGreaterThan(0);
-			expect(result.response).toContain("4");
+			expect(result.response).toMatch(/4/);
 		}
 	}, 180_000);
 
 	it("returns a non-empty response for an issue-style prompt", async () => {
 		const context: PIContext = {
 			type: "issue",
-			title: "Test Issue",
-			body: "This is a test issue for e2e testing.",
-			number: 1,
-			triggerComment: "@pi Explain what this issue is about in one sentence.",
-			task: "Explain what this issue is about in one sentence.",
+			title: "E2E Test Issue",
+			body: "This is a test issue for e2e testing. Just say 'hello from e2e'.",
+			number: 999,
+			triggerComment: "@pi Summarize this issue in one short sentence.",
+			task: "Summarize this issue in one short sentence.",
 		};
 
 		const logMessages: string[] = [];
@@ -174,12 +251,13 @@ describe.skipIf(skipE2E)("e2e: runAgent", () => {
 
 		if (!result.success) {
 			console.log(`  Error: ${result.error}`);
+		} else {
+			console.log(`  Response: ${result.response.slice(0, 200)}`);
 		}
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.response).toBeTruthy();
-			expect(result.response.toLowerCase()).toContain("test");
+			expect(result.response.length).toBeGreaterThan(10);
 		}
 	}, 180_000);
 
