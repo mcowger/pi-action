@@ -56,10 +56,13 @@ inputs:
 outputs:
   response:
     description: 'The agent response text (when output_mode is output)'
+    value: ${{ steps.run-pi.outputs.response }}
   success:
     description: 'Whether the agent succeeded (true/false)'
+    value: ${{ steps.run-pi.outputs.success }}
   share_url:
     description: 'URL to the shared session HTML (if share_session is enabled)'
+    value: ${{ steps.run-pi.outputs.share_url }}
 
 runs:
   using: 'composite'
@@ -74,6 +77,7 @@ runs:
       run: npm ci --prefix ${{ github.action_path }}
     
     - name: Run pi-action
+      id: run-pi
       shell: bash
       working-directory: ${{ github.action_path }}
       run: npx tsx src/index.ts
