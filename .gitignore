@@ -3,3 +3,4 @@ node_modules/
 .DS_Store
 coverage/
 .env.e2e
+.e2e-tmp-*

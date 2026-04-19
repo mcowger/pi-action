@@ -10,13 +10,18 @@
  *   2. Fill in PI_AUTH_JSON (contents of ~/.pi/agent/auth.json)
  *   3. Optionally set PI_MODELS_JSON, E2E_PROVIDER, E2E_MODEL
  *   4. Run: npx vitest run --config vitest.e2e.config.ts
+ *
+ * The tests set PI_CODING_AGENT_DIR to a temp directory so your real
+ * ~/.pi/agent/ is never modified.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { mkdirSync, rmSync, existsSync, readFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { join } from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { runAgent } from "./agent.js";
 import type { PIContext } from "./context.js";
 import { DEFAULTS } from "./defaults.js";
+import { setupAuth, setupModels } from "./run.js";
 
 interface E2EConfig {
 	piAuthJson: string;
@@ -68,11 +73,41 @@ const skipE2E = !config;
 
 describe.skipIf(skipE2E)("e2e: runAgent", () => {
 	let e2eConfig: E2EConfig;
+	let tmpDir: string;
+	let savedAgentDir: string | undefined;
 
 	beforeAll(() => {
 		e2eConfig = config!;
+
+		// Create an isolated temp directory for pi agent config
+		tmpDir = mkdtempSync(join(import.meta.dirname, "..", ".e2e-tmp-"));
+		console.log(`  E2E temp dir: ${tmpDir}`);
 		console.log(`  E2E provider: ${e2eConfig.provider}`);
 		console.log(`  E2E model: ${e2eConfig.model}`);
+
+		// Point the SDK at our temp dir instead of ~/.pi/agent/
+		savedAgentDir = process.env.PI_CODING_AGENT_DIR;
+		process.env.PI_CODING_AGENT_DIR = tmpDir;
+
+		// Write auth/models into the temp dir (same as the action does)
+		setupAuth(e2eConfig.piAuthJson || undefined);
+		setupModels(e2eConfig.piModelsJson || undefined);
+	});
+
+	afterAll(() => {
+		// Restore original env var
+		if (savedAgentDir !== undefined) {
+			process.env.PI_CODING_AGENT_DIR = savedAgentDir;
+		} else {
+			delete process.env.PI_CODING_AGENT_DIR;
+		}
+
+		// Clean up temp dir
+		try {
+			rmSync(tmpDir, { recursive: true, force: true });
+		} catch {
+			// Best effort
+		}
 	});
 
 	it("returns a non-empty response for a simple prompt", async () => {
