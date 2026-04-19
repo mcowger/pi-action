@@ -71,7 +71,8 @@ runs:
     
     - name: Run pi-action
       shell: bash
-      run: node --import ${{ github.action_path }}/node_modules/tsx/dist/loader.mjs ${{ github.action_path }}/src/index.ts
+      working-directory: ${{ github.action_path }}
+      run: npx tsx src/index.ts
       env:
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
         INPUT_GIST_TOKEN: ${{ inputs.gist_token }}
