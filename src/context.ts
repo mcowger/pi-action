@@ -11,7 +11,7 @@ export function extractTask(comment: string, trigger: string): string {
 }
 
 export interface PIContext {
-	type: "issue" | "pull_request";
+	type: "issue" | "pull_request" | "direct";
 	title: string;
 	body: string;
 	number: number;
@@ -47,6 +47,11 @@ export function buildPrompt(
 	context: PIContext,
 	customTemplate?: string,
 ): string {
+	// For direct mode, the task IS the prompt
+	if (context.type === "direct") {
+		return context.task;
+	}
+
 	// If custom template is provided and not empty, use it
 	if (customTemplate?.trim()) {
 		return renderTemplate(customTemplate, context);

@@ -32,6 +32,10 @@ run({
 		promptTemplate: core.getInput("prompt_template"),
 		shareSession:
 			getInputOrDefault("share_session", "true").toLowerCase() === "true",
+		outputMode: (getInputOrDefault("output_mode", "comment") === "output"
+			? "output"
+			: "comment") as "comment" | "output",
+		prompt: core.getInput("prompt") || undefined,
 	},
 	context: {
 		payload: github.context.payload,
@@ -52,6 +56,7 @@ run({
 		warning: core.warning,
 		error: core.error,
 		setFailed: core.setFailed,
+		setOutput: core.setOutput,
 	},
 	cwd: process.cwd(),
 }).catch((error) => {

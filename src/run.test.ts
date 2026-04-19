@@ -108,6 +108,8 @@ describe("run", () => {
 				piModelsJson: undefined,
 				promptTemplate: undefined,
 				shareSession: true,
+				outputMode: "comment" as const,
+				prompt: undefined,
 			},
 			context: {
 				payload: {},
@@ -119,6 +121,7 @@ describe("run", () => {
 				warning: vi.fn(),
 				error: vi.fn(),
 				setFailed: vi.fn(),
+				setOutput: vi.fn(),
 			},
 			cwd: "/test/cwd",
 			...overrides,
@@ -185,13 +188,8 @@ describe("run", () => {
 		const mockClient = createMockGitHubClient();
 		const deps = createMockDeps({
 			inputs: {
-				triggerPhrase: DEFAULTS.triggerPhrase,
+				...createMockDeps().inputs,
 				allowedBots: ["dependabot[bot]"],
-				modelConfig: createModelConfig(),
-				githubToken: "test-token",
-				piAuthJson: undefined,
-				piModelsJson: undefined,
-				promptTemplate: undefined,
 			},
 			context: {
 				payload: {
@@ -230,13 +228,8 @@ describe("run", () => {
 	it("fails when github_token is missing", async () => {
 		const deps = createMockDeps({
 			inputs: {
-				triggerPhrase: DEFAULTS.triggerPhrase,
-				allowedBots: [],
-				modelConfig: createModelConfig(),
+				...createMockDeps().inputs,
 				githubToken: undefined,
-				piAuthJson: undefined,
-				piModelsJson: undefined,
-				promptTemplate: undefined,
 			},
 			context: {
 				payload: {
@@ -706,6 +699,246 @@ describe("run", () => {
 		expect(mockClient.createComment).toHaveBeenCalledWith(
 			1,
 			"### 🤖 pi Response\n\nTask completed!",
+		);
+	});
+
+	it("in output mode, sets outputs instead of posting comments on success", async () => {
+		const mockClient = createMockGitHubClient();
+		const deps = createMockDeps({
+			context: {
+				payload: {
+					issue: {
+						number: 42,
+						title: "Test Issue",
+						body: "@pi help me",
+						user: { login: "user", type: "User" },
+						author_association: "OWNER",
+					},
+				},
+				repo: createRepoRef(),
+			},
+			createClient: vi.fn(() => mockClient),
+			inputs: {
+				...createMockDeps().inputs,
+				outputMode: "output" as const,
+			},
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: true,
+			response: "Here is your help!",
+		});
+
+		await run(deps);
+
+		// Should NOT post any comments or reactions
+		expect(mockClient.createComment).not.toHaveBeenCalled();
+		expect(mockClient.addReactionToIssue).not.toHaveBeenCalled();
+		expect(mockClient.addReactionToComment).not.toHaveBeenCalled();
+
+		// Should set outputs
+		expect(deps.log.setOutput).toHaveBeenCalledWith("success", "true");
+		expect(deps.log.setOutput).toHaveBeenCalledWith("response", "Here is your help!");
+	});
+
+	it("in output mode, sets outputs on failure", async () => {
+		const mockClient = createMockGitHubClient();
+		const deps = createMockDeps({
+			context: {
+				payload: {
+					issue: {
+						number: 42,
+						title: "Test Issue",
+						body: "@pi do something",
+						user: { login: "user", type: "User" },
+						author_association: "OWNER",
+					},
+				},
+				repo: createRepoRef(),
+			},
+			createClient: vi.fn(() => mockClient),
+			inputs: {
+				...createMockDeps().inputs,
+				outputMode: "output" as const,
+			},
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: false,
+			error: "Model not found",
+		});
+
+		await run(deps);
+
+		// Should NOT post any comments or reactions
+		expect(mockClient.createComment).not.toHaveBeenCalled();
+
+		// Should set outputs
+		expect(deps.log.setOutput).toHaveBeenCalledWith("success", "false");
+		expect(deps.log.setOutput).toHaveBeenCalledWith("response", "Model not found");
+	});
+
+	it("in output mode, sets share_url output when session is shared", async () => {
+		const mockClient = createMockGitHubClient();
+		const mockSession = { exportToHtml: vi.fn() };
+
+		vi.mocked(shareSession).mockResolvedValue({
+			gistUrl: "https://gist.github.com/user/abc123",
+			previewUrl: "https://shittycodingagent.ai/session?abc123",
+		});
+
+		const deps = createMockDeps({
+			context: {
+				payload: {
+					issue: {
+						number: 1,
+						title: "Test Issue",
+						body: "@pi test task",
+						user: { login: "user", type: "User" },
+						author_association: "OWNER",
+					},
+				},
+				repo: createRepoRef(),
+			},
+			createClient: vi.fn(() => mockClient),
+			inputs: {
+				...createMockDeps().inputs,
+				outputMode: "output" as const,
+				shareSession: true,
+			},
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: true,
+			response: "Task completed!",
+			session: mockSession,
+		});
+
+		await run(deps);
+
+		// Should set share_url output
+		expect(deps.log.setOutput).toHaveBeenCalledWith(
+			"share_url",
+			"https://shittycodingagent.ai/session?abc123",
+		);
+		// Should NOT post comments
+		expect(mockClient.createComment).not.toHaveBeenCalled();
+	});
+
+	it("in output mode, does not add eyes reaction", async () => {
+		const mockClient = createMockGitHubClient();
+		const deps = createMockDeps({
+			context: {
+				payload: {
+					issue: {
+						number: 42,
+						title: "Test Issue",
+						body: "@pi help me",
+						user: { login: "user", type: "User" },
+						author_association: "OWNER",
+					},
+				},
+				repo: createRepoRef(),
+			},
+			createClient: vi.fn(() => mockClient),
+			inputs: {
+				...createMockDeps().inputs,
+				outputMode: "output" as const,
+			},
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: true,
+			response: "Done",
+		});
+
+		await run(deps);
+
+		// Should NOT add eyes reaction in output mode
+		expect(mockClient.addReactionToIssue).not.toHaveBeenCalled();
+	});
+
+	it("in direct prompt mode, runs agent with prompt and sets outputs", async () => {
+		const deps = createMockDeps({
+			inputs: {
+				...createMockDeps().inputs,
+				outputMode: "output" as const,
+				prompt: "Generate release notes for the last 10 commits",
+			},
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: true,
+			response: "## Release Notes\n- Fixed bug X\n- Added feature Y",
+		});
+
+		await run(deps);
+
+		// Should run agent with the direct prompt
+		expect(runAgent).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "direct",
+				task: "Generate release notes for the last 10 commits",
+			}),
+			expect.anything(),
+		);
+
+		// Should set outputs
+		expect(deps.log.setOutput).toHaveBeenCalledWith("success", "true");
+		expect(deps.log.setOutput).toHaveBeenCalledWith(
+			"response",
+			"## Release Notes\n- Fixed bug X\n- Added feature Y",
+		);
+
+		// Should NOT validate trigger or post comments
+		expect(deps.log.info).toHaveBeenCalledWith(
+			"Running pi agent with direct prompt",
+		);
+	});
+
+	it("in direct prompt mode, handles agent failure", async () => {
+		const deps = createMockDeps({
+			inputs: {
+				...createMockDeps().inputs,
+				outputMode: "output" as const,
+				prompt: "Generate release notes",
+			},
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: false,
+			error: "Agent timeout",
+		});
+
+		await run(deps);
+
+		expect(deps.log.setOutput).toHaveBeenCalledWith("success", "false");
+		expect(deps.log.setOutput).toHaveBeenCalledWith("response", "Agent timeout");
+		expect(deps.log.error).toHaveBeenCalledWith(
+			"pi execution failed: Agent timeout",
+		);
+	});
+
+	it("direct prompt mode requires output_mode: output", async () => {
+		const mockClient = createMockGitHubClient();
+		const deps = createMockDeps({
+			context: {
+				payload: {},
+				repo: createRepoRef(),
+			},
+			inputs: {
+				...createMockDeps().inputs,
+				outputMode: "comment" as const,
+				prompt: "Generate release notes",
+			},
+		});
+
+		await run(deps);
+
+		// Should NOT enter direct prompt mode — should fall through to normal validation
+		expect(runAgent).not.toHaveBeenCalled();
+		expect(deps.log.info).toHaveBeenCalledWith(
+			"No issue or pull_request in payload, skipping",
 		);
 	});
 });

@@ -26,6 +26,8 @@ export interface ActionInputs {
 	piModelsJson: string | undefined;
 	promptTemplate: string | undefined;
 	shareSession: boolean;
+	outputMode: "comment" | "output";
+	prompt: string | undefined;
 }
 
 export interface ActionContext {
@@ -38,6 +40,7 @@ export interface Logger {
 	warning: (msg: string) => void;
 	error: (msg: string) => void;
 	setFailed: (msg: string) => void;
+	setOutput: (name: string, value: string) => void;
 }
 
 export interface ActionDependencies {
@@ -149,6 +152,7 @@ async function postResult(
 		| { success: true; response: string; session?: Session }
 		| { success: false; error: string; session?: Session },
 	shareSessionEnabled: boolean,
+	outputMode: "comment" | "output",
 	log: Logger,
 ): Promise<void> {
 	let shareUrl: string | undefined;
@@ -172,6 +176,30 @@ async function postResult(
 		}
 	}
 
+	// In output mode, just set action outputs and return
+	if (outputMode === "output") {
+		log.setOutput("success", String(result.success));
+		if (result.success) {
+			let responseText = result.response;
+			if (triggerInfo.isPullRequest) {
+				const { comments, cleanResponse } = parseInlineComments(result.response);
+				responseText = cleanResponse;
+				if (comments.length > 0) {
+					log.info(`Parsed ${comments.length} inline comment(s) from response (not posted in output mode)`);
+				}
+			}
+			log.setOutput("response", responseText);
+		} else {
+			log.error(`pi execution failed: ${result.error}`);
+			log.setOutput("response", result.error);
+		}
+		if (shareUrl) {
+			log.setOutput("share_url", shareUrl);
+		}
+		return;
+	}
+
+	// Comment mode: post to issue/PR
 	if (result.success) {
 		// Parse inline comments from response for PRs
 		let responseText = result.response;
@@ -215,7 +243,60 @@ export async function run(deps: ActionDependencies): Promise<void> {
 	setupAuth(inputs.piAuthJson);
 	setupModels(inputs.piModelsJson);
 
-	// Validate and extract trigger info
+	// Direct prompt mode: run agent with a literal prompt, no issue/PR needed
+	if (inputs.outputMode === "output" && inputs.prompt) {
+		log.info(`Running pi agent with direct prompt`);
+
+		const piContext: PIContext = {
+			type: "direct",
+			title: "",
+			body: "",
+			number: 0,
+			triggerComment: inputs.prompt,
+			task: inputs.prompt,
+		};
+
+		const result = await runAgent(piContext, {
+			...inputs.modelConfig,
+			cwd,
+			logger: log,
+			promptTemplate: inputs.promptTemplate,
+		});
+
+		// Set outputs
+		log.setOutput("success", String(result.success));
+		if (result.success) {
+			log.setOutput("response", result.response);
+		} else {
+			log.error(`pi execution failed: ${result.error}`);
+			log.setOutput("response", result.error);
+		}
+
+		// Share session if enabled
+		if (inputs.shareSession && result.session && inputs.githubToken) {
+			try {
+				const ghClient = createClient(inputs.githubToken);
+				const gistClient = inputs.gistToken
+					? createClient(inputs.gistToken)
+					: ghClient;
+				const shareResult = await shareSession(
+					result.session,
+					gistClient,
+					"pi-action direct prompt session",
+				);
+				if (shareResult) {
+					log.setOutput("share_url", shareResult.previewUrl);
+					log.info(`Session shared: ${shareResult.previewUrl}`);
+				}
+			} catch (error) {
+				log.warning(`Failed to share session: ${error}`);
+			}
+		}
+
+		return;
+	}
+
+	// Issue/PR mode: validate and extract trigger info
 	const validated = validateTrigger(deps);
 	if (!validated) {
 		return;
@@ -228,8 +309,10 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		? createClient(inputs.gistToken)
 		: undefined;
 
-	// Add eyes reaction to acknowledge
-	await addReaction(ghClient, triggerInfo, "eyes");
+	// Add eyes reaction to acknowledge (only in comment mode)
+	if (inputs.outputMode === "comment") {
+		await addReaction(ghClient, triggerInfo, "eyes");
+	}
 
 	// Build context
 	const piContext = await buildPIContext(
@@ -255,6 +338,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		triggerInfo,
 		result,
 		inputs.shareSession,
+		inputs.outputMode,
 		log,
 	);
 }
