@@ -64,7 +64,7 @@ describe("renderTemplate", () => {
 		triggerComment: "@pi help me",
 		task: "help me",
 		diff: undefined,
-	};
+	} as const;
 
 	it("replaces all template variables", () => {
 		const template = "{{type}} #{{number}}: {{title}} - {{task}}";
@@ -108,6 +108,20 @@ describe("renderTemplate", () => {
 		const template = "{{title}} - {{title}}";
 		const result = renderTemplate(template, context);
 		expect(result).toBe("Test Issue - Test Issue");
+	});
+
+	it("includes branch mode instructions for branch mode", () => {
+		const template = "Instructions: {{branchModeInstructions}}";
+		const result = renderTemplate(template, context, "branch");
+		expect(result).toContain("create_pull_request");
+		expect(result).toContain("NEVER push directly to the main/default branch");
+	});
+
+	it("includes branch mode instructions for direct mode", () => {
+		const template = "Instructions: {{branchModeInstructions}}";
+		const result = renderTemplate(template, context, "direct");
+		expect(result).toContain("NEVER create a pull request");
+		expect(result).toContain("already an existing PR branch");
 	});
 });
 
@@ -190,5 +204,39 @@ describe("buildPrompt", () => {
 		);
 
 		expect(prompt).toContain("# GitHub Issue #42");
+	});
+
+	it("includes PR creation instructions in branch mode", () => {
+		const prompt = buildPrompt(
+			{
+				type: "issue",
+				title: "Bug Report",
+				body: "Something is broken",
+				number: 42,
+				triggerComment: "@pi help",
+				task: "help",
+			},
+			undefined,
+			"branch",
+		);
+		expect(prompt).toContain("create_pull_request");
+		expect(prompt).toContain("NEVER push directly to the main/default branch");
+	});
+
+	it("includes direct push instructions in direct mode", () => {
+		const prompt = buildPrompt(
+			{
+				type: "issue",
+				title: "Bug Report",
+				body: "Something is broken",
+				number: 42,
+				triggerComment: "@pi help",
+				task: "help",
+			},
+			undefined,
+			"direct",
+		);
+		expect(prompt).toContain("NEVER create a pull request.");
+		expect(prompt).toContain("already an existing PR branch");
 	});
 });

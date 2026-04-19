@@ -56,11 +56,7 @@ The git repository is already initialized and configured for you:
 
 3. **Commit and push all work** - Always end your work by committing and pushing changes to ensure they persist beyond the GitHub Action execution.
 
-**NEVER push directly to the main/default branch.** You are working on a dedicated branch (already checked out). After committing and pushing your changes, use the \`create_pull_request\` tool to open a pull request. Do NOT use \`gh pr create\` or any other shell command.
-
-If this task is related to an issue, reference it in the PR body (e.g., "Fixes #123").
-
-Do NOT merge the PR yourself — let the reviewer handle that.
+{{branchModeInstructions}}
 
 ## Important: Final Response Requirement
 
@@ -107,7 +103,11 @@ Optional fields:
 - \`start_side\`: Side for start_line (defaults to \`side\`)
 `;
 
-export function renderTemplate(template: string, context: PIContext): string {
+export function renderTemplate(template: string, context: PIContext, branchMode?: "branch" | "direct"): string {
+	const branchModeInstructions = branchMode === "direct"
+		? `**NEVER create a pull request.** You are in "direct" mode - commit and push directly to the current branch which is already an existing PR branch.`
+		: `**NEVER push directly to the main/default branch.** You are working on a dedicated feature branch (already checked out). After committing and pushing your changes, use the \`create_pull_request\` tool to open a pull request. Do NOT use \`gh pr create\` or any other shell command.\n\nIf this task is related to an issue, reference it in the PR body (e.g., "Fixes #123").\n\nDo NOT merge the PR yourself — let the reviewer handle that.`;
+
 	const variables: Record<string, string> = {
 		type: context.type,
 		type_display: context.type === "pull_request" ? "Pull Request" : "Issue",
@@ -118,6 +118,7 @@ export function renderTemplate(template: string, context: PIContext): string {
 		diff: context.diff || "",
 		trigger_comment: context.triggerComment,
 		reviewComments: context.reviewComments || "",
+		branchModeInstructions,
 	};
 
 	let rendered = template;
@@ -169,31 +170,11 @@ export function buildPrompt(
 
 	// For direct mode WITH a custom template, render it like normal
 	if (context.type === "direct") {
-		let prompt = renderTemplate(template, context);
-
-		// Add branch mode instructions if running in direct push mode
-		if (branchMode === "direct") {
-			prompt += `
-
-## Branch Mode: Direct Push
-You are in "direct" branch mode. Commit and push your changes directly to the current branch. Do NOT create a pull request.
-`;
-		}
-
-		return prompt;
+		return renderTemplate(template, context, branchMode);
 	}
 
 	// Issue/PR mode: render template as normal
-	let prompt = renderTemplate(template, context);
-
-	// Add branch mode instructions if running in direct push mode
-	if (branchMode === "direct") {
-		prompt += `
-
-## Branch Mode: Direct Push
-You are in "direct" branch mode. Commit and push your changes directly to the current branch. Do NOT create a pull request.
-`;
-	}
+	let prompt = renderTemplate(template, context, branchMode);
 
 	// Add PR diff section if available
 	if (context.diff) {
