@@ -79,6 +79,7 @@ Alternatively, set provider-specific environment variables (e.g., `ANTHROPIC_API
 | `share_session` | Include session link in response | No | `true` |
 | `output_mode` | `comment` or `output` | No | `comment` |
 | `prompt` | Direct prompt (requires `output_mode: output`) | No | - |
+| `pr_number` | PR number to review (for workflow_dispatch) | No | - |
 | `branch_mode` | `branch` (create PR) or `direct` (push) | No | `branch` |
 
 ### Outputs
@@ -229,6 +230,42 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - run: echo "${{ steps.pi.outputs.response }}"
 ```
+
+### PR Review Mode (workflow_dispatch)
+
+Review a PR when triggered via `workflow_dispatch` (no PR event context available):
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+      task:
+        description: 'Review instructions'
+        required: false
+        default: 'Please review this PR'
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mcowger/pi-action@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pr_number: ${{ github.event.inputs.pr_number }}
+          prompt: ${{ github.event.inputs.task }}
+```
+
+Use this for:
+- Manual PR reviews on demand
+- Scheduled PR review workflows
+- CI workflows triggered by other events that need to review PRs
 
 ## Security
 
