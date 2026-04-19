@@ -40,6 +40,7 @@ run({
 			? "output"
 			: "comment") as "comment" | "output",
 		prompt: core.getInput("prompt") || undefined,
+		prNumber: core.getInput("pr_number") ? Number.parseInt(core.getInput("pr_number"), 10) : undefined,
 		branchMode: (getInputOrDefault("branch_mode", "branch") === "direct"
 			? "direct"
 			: "branch") as "branch" | "direct",

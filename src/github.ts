@@ -63,6 +63,7 @@ export interface GitHubClient {
 		reaction: GitHubReaction,
 	): Promise<void>;
 	createComment(issueNumber: number, body: string): Promise<void>;
+	getPullRequest(pullNumber: number): Promise<{ number: number; title: string; body: string; user: GitHubUser; author_association: string; head: { sha: string }; base: { ref: string } }>;
 	getPullRequestDiff(pullNumber: number): Promise<string>;
 	createGist(
 		content: string,
@@ -121,6 +122,32 @@ export function createGitHubClient(
 				issue_number: issueNumber,
 				body,
 			});
+		},
+
+		async getPullRequest(pullNumber: number) {
+			const { data } = await octokit.rest.pulls.get({
+				owner,
+				repo,
+				pull_number: pullNumber,
+			});
+			const pr = data as {
+				number: number;
+				title: string;
+				body: string | null;
+				user: GitHubUser;
+				author_association: string;
+				head: { sha: string };
+				base: { ref: string };
+			};
+			return {
+				number: pr.number,
+				title: pr.title,
+				body: pr.body || "",
+				user: pr.user,
+				author_association: pr.author_association,
+				head: pr.head,
+				base: pr.base,
+			};
 		},
 
 		async getPullRequestDiff(pullNumber: number): Promise<string> {

@@ -30,6 +30,7 @@ export interface ActionInputs {
 	shareSession: boolean;
 	outputMode: "comment" | "output";
 	prompt: string | undefined;
+	prNumber: number | undefined;
 	branchMode: "branch" | "direct";
 }
 
@@ -314,7 +315,82 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		return;
 	}
 
-	// Issue/PR mode: validate and extract trigger info
+	// PR review mode: fetch PR details by number when no event context exists
+	if (inputs.prNumber && inputs.githubToken) {
+		log.info(`Running pi agent in PR review mode for PR #${inputs.prNumber}`);
+
+		const ghClient = createClient(inputs.githubToken);
+
+		try {
+			const prData = await ghClient.getPullRequest(inputs.prNumber);
+			const prDiff = await ghClient.getPullRequestDiff(inputs.prNumber);
+
+			// Build trigger info from PR data
+			const triggerInfo: TriggerInfo = {
+				isCommentEvent: false,
+				triggerText: inputs.prompt || `Review this pull request`,
+				author: prData.user,
+				authorAssociation: prData.author_association,
+				issueNumber: prData.number,
+				issueTitle: prData.title,
+				issueBody: prData.body || "",
+				commentId: undefined,
+				isPullRequest: true,
+			};
+
+			// Build PI context with PR data
+			const sanitizedBody = sanitizeInput(triggerInfo.triggerText);
+			const task = inputs.prompt || extractTask(sanitizedBody, inputs.triggerPhrase);
+
+			const piContext: PIContext = {
+				type: "pull_request",
+				title: triggerInfo.issueTitle,
+				body: triggerInfo.issueBody,
+				number: triggerInfo.issueNumber,
+				triggerComment: sanitizedBody,
+				task,
+				diff: prDiff,
+			};
+
+			log.info(`Running pi agent for: ${piContext.task}`);
+
+			// Run agent
+			const result = await runAgent(piContext, {
+				...inputs.modelConfig,
+				cwd,
+				logger: log,
+				promptTemplate: inputs.promptTemplate,
+				branchMode: inputs.branchMode,
+			});
+
+			// Post result to PR
+			await postResult(
+				ghClient,
+				inputs.gistToken ? createClient(inputs.gistToken) : undefined,
+				triggerInfo,
+				result,
+				inputs.shareSession,
+				inputs.outputMode,
+				log,
+			);
+
+			// Set outputs
+			log.info(`Setting outputs (PR review mode):`);
+			log.setOutput("success", String(result.success));
+			if (result.success) {
+				log.setOutput("response", result.response);
+			} else {
+				log.setOutput("response", result.error);
+			}
+
+			return;
+		} catch (error) {
+			log.setFailed(`Failed to fetch PR #${inputs.prNumber}: ${error}`);
+			return;
+		}
+	}
+
+	// Issue/PR mode: validate and extract trigger info from event payload
 	const validated = validateTrigger(deps);
 	if (!validated) {
 		return;

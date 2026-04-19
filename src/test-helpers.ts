@@ -16,6 +16,15 @@ export function createMockGitHubClient(): GitHubClient {
 		addReactionToComment: vi.fn(),
 		addReactionToIssue: vi.fn(),
 		createComment: vi.fn(),
+		getPullRequest: vi.fn().mockResolvedValue({
+			number: 1,
+			title: "Test PR",
+			body: "PR body",
+			user: { login: "user", type: "User" },
+			author_association: "OWNER",
+			head: { sha: "abc123" },
+			base: { ref: "main" },
+		}),
 		getPullRequestDiff: vi.fn().mockResolvedValue(""),
 		createGist: vi.fn().mockResolvedValue("https://gist.github.com/test123"),
 		createPRReview: vi.fn().mockResolvedValue({

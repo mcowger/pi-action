@@ -51,6 +51,9 @@ inputs:
     description: 'Direct prompt for the agent (no issue/PR context needed, requires output_mode: output)'
     required: false
     default: ''
+  pr_number:
+    description: 'PR number to review (when not triggered by pull_request event, e.g., workflow_dispatch)'
+    required: false
   branch_mode:
     description: 'How to handle git changes: branch (create a branch and PR) or direct (push to current branch)'
     required: false
@@ -123,4 +126,5 @@ runs:
         INPUT_PROMPT: ${{ inputs.prompt }}
         INPUT_BRANCH_MODE: ${{ inputs.branch_mode }}
         INPUT_PROMPT_TEMPLATE_FILE: ${{ inputs.prompt_template_file }}
+        INPUT_PR_NUMBER: ${{ inputs.pr_number }}
         INPUT_DEBUG: ${{ inputs.debug }}
