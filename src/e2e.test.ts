@@ -188,14 +188,17 @@ describe.skipIf(skipE2E)("e2e: runAgent", () => {
 		}
 	});
 
-	it("returns a non-empty response for a simple prompt", async () => {
+	it("captures a long streaming response from a direct prompt", async () => {
+		// Deliberately request a multi-paragraph response to exercise
+		// the full streaming pipeline (text_delta events → response capture)
 		const context: PIContext = {
 			type: "direct",
 			title: "",
 			body: "",
 			number: 0,
-			triggerComment: "What is 2+2? Reply with just the number.",
-			task: "What is 2+2? Reply with just the number.",
+			triggerComment:
+				"Write a short essay (3-4 paragraphs) about why automated testing is important for software development. Include specific examples. Do NOT use any tools - just respond with text.",
+			task: "Write a short essay (3-4 paragraphs) about why automated testing is important for software development. Include specific examples. Do NOT use any tools - just respond with text.",
 		};
 
 		const logMessages: string[] = [];
@@ -215,24 +218,53 @@ describe.skipIf(skipE2E)("e2e: runAgent", () => {
 		if (!result.success) {
 			console.log(`  Error: ${result.error}`);
 		} else {
-			console.log(`  Response: ${result.response.slice(0, 200)}`);
+			console.log(`  Response length: ${result.response.length}`);
+			console.log(`  Response (first 300 chars): ${result.response.slice(0, 300)}`);
+			console.log(`  Response (last 100 chars): ...${result.response.slice(-100)}`);
 		}
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.response.length).toBeGreaterThan(0);
-			expect(result.response).toMatch(/4/);
+			// A 3-4 paragraph essay must be at least 200 characters
+			expect(result.response.length).toBeGreaterThan(200);
+			const wordCount = result.response.split(/\s+/).filter((w: string) => w.length > 0).length;
+			expect(wordCount).toBeGreaterThan(50);
 		}
 	}, 180_000);
 
-	it("returns a non-empty response for an issue-style prompt", async () => {
+	it("captures a long streaming response from an issue-style prompt", async () => {
+		// Use type: "direct" to prevent the agent from trying to commit/push.
+		// The prompt simulates an issue analysis task that requires
+		// a detailed multi-paragraph response with no tool usage.
 		const context: PIContext = {
-			type: "issue",
-			title: "E2E Test Issue",
-			body: "This is a test issue for e2e testing. Just say 'hello from e2e'.",
-			number: 999,
-			triggerComment: "@pi Summarize this issue in one short sentence.",
-			task: "Summarize this issue in one short sentence.",
+			type: "direct",
+			title: "",
+			body: "",
+			number: 0,
+			triggerComment: `Analyze this API gateway performance issue and provide a detailed investigation plan with at least 5 specific debugging steps. Do NOT use any tools - just respond with text.
+
+Symptoms:
+- P99 latency increased from 200ms to 2.5s
+- Intermittent 503 errors during peak hours (2-4 PM EST)
+- Memory usage on gateway pods has doubled
+- Connection pool exhaustion alerts firing every 30 minutes
+
+Environment:
+- Kubernetes 1.29 with 6 gateway replicas
+- Each pod: 4 CPU, 8GB RAM
+- Handling ~10k requests/second at peak`,
+			task: `Analyze this API gateway performance issue and provide a detailed investigation plan with at least 5 specific debugging steps. Do NOT use any tools - just respond with text.
+
+Symptoms:
+- P99 latency increased from 200ms to 2.5s
+- Intermittent 503 errors during peak hours (2-4 PM EST)
+- Memory usage on gateway pods has doubled
+- Connection pool exhaustion alerts firing every 30 minutes
+
+Environment:
+- Kubernetes 1.29 with 6 gateway replicas
+- Each pod: 4 CPU, 8GB RAM
+- Handling ~10k requests/second at peak`,
 		};
 
 		const logMessages: string[] = [];
@@ -252,12 +284,17 @@ describe.skipIf(skipE2E)("e2e: runAgent", () => {
 		if (!result.success) {
 			console.log(`  Error: ${result.error}`);
 		} else {
-			console.log(`  Response: ${result.response.slice(0, 200)}`);
+			console.log(`  Response length: ${result.response.length}`);
+			console.log(`  Response (first 300 chars): ${result.response.slice(0, 300)}`);
+			console.log(`  Response (last 100 chars): ...${result.response.slice(-100)}`);
 		}
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.response.length).toBeGreaterThan(10);
+			// A detailed investigation plan with 5+ steps must be at least 300 characters
+			expect(result.response.length).toBeGreaterThan(300);
+			const wordCount = result.response.split(/\s+/).filter((w: string) => w.length > 0).length;
+			expect(wordCount).toBeGreaterThan(75);
 		}
 	}, 180_000);
 
