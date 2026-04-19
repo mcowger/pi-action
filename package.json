@@ -6,6 +6,7 @@
 	"scripts": {
 		"build": "tsc",
 		"test": "vitest run",
+		"test:e2e": "vitest run --config vitest.e2e.config.ts",
 		"test:watch": "vitest",
 		"check": "biome check --write .",
 		"typecheck": "tsc --noEmit",
