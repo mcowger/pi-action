@@ -80,7 +80,7 @@ Alternatively, set provider-specific environment variables (e.g., `ANTHROPIC_API
 | `model` | Model ID | No | `claude-sonnet-4-20250514` |
 | `prompt_template` | Custom prompt template (inline) | No | - |
 | `prompt_template_file` | Path to prompt template file | No | - |
-| `share_session` | Include session link in response | No | `true` |
+| `share_session` | Share session to log gist (creates/updates `{owner}/{repo}-session-log`) | No | `true` |
 | `output_mode` | `comment` or `output` | No | `comment` |
 | `prompt` | Direct prompt (requires `output_mode: output`) | No | - |
 | `pr_number` | PR number to review (for workflow_dispatch) | No | - |
@@ -125,6 +125,19 @@ Alternatively, set provider-specific environment variables (e.g., `ANTHROPIC_API
 
 **Template Variables:**
 - `{{type}}`, `{{type_display}}`, `{{number}}`, `{{title}}`, `{{body}}`, `{{task}}`, `{{diff}}`, `{{trigger_comment}}`, `{{reviewComments}}`
+
+### Session Log Gist
+
+Sessions are automatically logged to a private gist for reference:
+
+- **Gist name:** `{owner}/{repo}-session-log` (e.g., `mcowger/plexus-session-log`)
+- **Auto-discovered:** Reuses existing gist or creates new one
+- **Organized by date:** Entries grouped under `## YYYY-MM-DD` headers
+- **Each entry:** Time, session link (viewable at shittycodingagent.ai), PR info, result status, brief description
+
+**Requirement:** Needs `gist_token` with gist scope (or use `github_token` if it has gist scope)
+
+**To disable:** Set `share_session: false`
 
 ### Pre-installed CLI Tools
 
