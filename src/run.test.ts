@@ -200,16 +200,23 @@ describe("run", () => {
 		expect(runAgent).toHaveBeenCalled();
 	});
 
-	it("warns and skips when user lacks permission", async () => {
+	it("warns and skips when user lacks permission on comment", async () => {
+		// For comment events, permission check is performed
 		const deps = createMockDeps({
 			context: {
 				payload: {
-					issue: {
-						number: 1,
-						title: "Test",
+					comment: {
+						id: 1,
 						body: "@pi do something",
 						user: { login: "stranger", type: "User" },
 						author_association: "NONE",
+					},
+					issue: {
+						number: 1,
+						title: "Test",
+						body: "Issue body",
+						user: { login: "author", type: "User" },
+						author_association: "OWNER",
 					},
 				},
 				repo: { owner: "testowner", repo: "testrepo" },
@@ -220,6 +227,38 @@ describe("run", () => {
 		expect(deps.log.warning).toHaveBeenCalledWith(
 			"User stranger (NONE) does not have permission",
 		);
+	});
+
+	it("runs for issue creation events regardless of author role", async () => {
+		// For creation events, permission check is skipped - the workflow is the gate
+		const mockClient = createMockGitHubClient();
+		const deps = createMockDeps({
+			context: {
+				payload: {
+					issue: {
+						number: 1,
+						title: "Test Issue",
+						body: "New issue body",
+						user: { login: "stranger", type: "User" },
+						author_association: "NONE",
+					},
+				},
+				repo: { owner: "testowner", repo: "testrepo" },
+			},
+			createClient: vi.fn(() => mockClient),
+		});
+
+		vi.mocked(runAgent).mockResolvedValue({
+			success: true,
+			response: "Task completed",
+		});
+		vi.mocked(shareSession).mockResolvedValue(undefined);
+
+		await run(deps);
+
+		// Should run the agent even though user lacks permission (creation event)
+		expect(runAgent).toHaveBeenCalled();
+		expect(deps.log.warning).not.toHaveBeenCalled();
 	});
 
 	it("allows bots in allowedBots list", async () => {

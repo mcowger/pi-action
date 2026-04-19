@@ -91,19 +91,23 @@ function validateTrigger(
 		return null;
 	}
 
-	// Validate permissions
-	const securityContext: SecurityContext = {
-		authorAssociation: triggerInfo.authorAssociation,
-		authorLogin: triggerInfo.author.login,
-		isBot: triggerInfo.author.type === "Bot",
-		allowedBots: inputs.allowedBots,
-	};
+	// Only validate author permissions on comment-triggered invocations.
+	// For creation events (PR opened, issue opened), the workflow itself
+	// is the gate — the event is the intent.
+	if (triggerInfo.isCommentEvent) {
+		const securityContext: SecurityContext = {
+			authorAssociation: triggerInfo.authorAssociation,
+			authorLogin: triggerInfo.author.login,
+			isBot: triggerInfo.author.type === "Bot",
+			allowedBots: inputs.allowedBots,
+		};
 
-	if (!validatePermissions(securityContext)) {
-		log.warning(
-			`User ${triggerInfo.author.login} (${triggerInfo.authorAssociation}) does not have permission`,
-		);
-		return null;
+		if (!validatePermissions(securityContext)) {
+			log.warning(
+				`User ${triggerInfo.author.login} (${triggerInfo.authorAssociation}) does not have permission`,
+			);
+			return null;
+		}
 	}
 
 	if (!inputs.githubToken) {
