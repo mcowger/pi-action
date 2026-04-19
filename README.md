@@ -15,6 +15,8 @@ A GitHub Action that invokes the [pi coding agent](https://github.com/mariozechn
 - 📤 Output mode for non-interactive workflows (release notes, automation)
 - 🎯 Direct prompt mode — invoke the agent without an issue/PR
 - 🎨 Customizable prompt templates via inline or file-based configuration
+- 💬 Agent progress comments — create and update comments during execution
+- 🔕 Suppress final comment — let the agent manage all communication
 
 ## Usage
 
@@ -267,6 +269,42 @@ Use this for:
 - Manual PR reviews on demand
 - Scheduled PR review workflows
 - CI workflows triggered by other events that need to review PRs
+
+### Agent Progress Comments
+
+The pi agent can create and update its own comments during execution for progress reporting:
+
+**`create_progress_comment`** — Create a new comment
+```markdown
+The agent can call: create_progress_comment(body)
+Returns: comment_id (save this to update later)
+```
+
+**`update_progress_comment`** — Update an existing comment
+```markdown
+The agent can call: update_progress_comment(comment_id, body)
+Use the comment_id returned from create_progress_comment
+```
+
+**Example workflow:**
+```yaml
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    prompt: 'Analyze this codebase'
+    prompt_template: |
+      Start by creating a progress comment explaining what you'll do.
+      Update the comment as you make progress.
+      Example updates:
+      - "🔍 Analyzing file structure..."
+      - "💾 Found issues in src/auth.ts and src/db.ts"
+      - "✅ Fixes pushed to branch fix/auth-issues"
+```
+
+The agent will:
+1. Create a "Starting analysis..." comment
+2. Update it with "Found 3 issues..."
+3. Update it with "Fixes complete..."
 
 ### Suppress Final Comment
 
