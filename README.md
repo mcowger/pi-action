@@ -66,6 +66,27 @@ pi requires authentication with your LLM provider. Set up the `PI_AUTH_JSON` sec
 
 Alternatively, you can set provider-specific environment variables (e.g., `ANTHROPIC_API_KEY`).
 
+### Custom Models
+
+To use custom model definitions (e.g., custom providers, base URLs, or model overrides), set the `PI_MODELS_JSON` secret in your repository:
+
+1. Create a `models.json` file with your provider configuration (see the [pi models.json documentation](https://github.com/mariozechner/pi-coding-agent) for schema)
+2. Add the file contents as a repository secret named `PI_MODELS_JSON`
+3. Reference it in your workflow:
+
+```yaml
+- uses: cv/pi-action@v1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    pi_auth_json: ${{ secrets.PI_AUTH_JSON }}
+    pi_models_json: ${{ secrets.PI_MODELS_JSON }}
+```
+
+This is useful for:
+- Using self-hosted LLM endpoints (Ollama, LM Studio, vLLM)
+- Adding custom providers with specific base URLs
+- Overriding built-in model settings (context window, cost, compat)
+
 ### Inputs
 
 All inputs are defined in [`action.yml`](action.yml). Default values are centralized in [`src/defaults.ts`](src/defaults.ts).
@@ -75,6 +96,7 @@ All inputs are defined in [`action.yml`](action.yml). Default values are central
 | `github_token` | GitHub token for API access (issues, PRs, reactions, comments) | Yes | - |
 | `gist_token` | GitHub token with gist scope for session sharing (optional) | No | - |
 | `pi_auth_json` | Contents of `~/.pi/agent/auth.json` | No | - |
+| `pi_models_json` | Contents of `~/.pi/agent/models.json` | No | - |
 | `trigger_phrase` | Phrase to trigger pi | No | `@pi` |
 | `allowed_bots` | Comma-separated list of allowed bot usernames | No | - |
 | `timeout` | Execution timeout in seconds | No | `300` |

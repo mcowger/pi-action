@@ -7,6 +7,7 @@ export interface ActionInputs {
     githubToken: string | undefined;
     gistToken: string | undefined;
     piAuthJson: string | undefined;
+    piModelsJson: string | undefined;
     promptTemplate: string | undefined;
     shareSession: boolean;
 }
@@ -28,4 +29,5 @@ export interface ActionDependencies {
     cwd: string;
 }
 export declare function setupAuth(piAuthJson: string | undefined): void;
+export declare function setupModels(piModelsJson: string | undefined): void;
 export declare function run(deps: ActionDependencies): Promise<void>;

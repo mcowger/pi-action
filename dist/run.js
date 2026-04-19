@@ -14,6 +14,13 @@ export function setupAuth(piAuthJson) {
         writeFileSync(join(authDir, "auth.json"), piAuthJson);
     }
 }
+export function setupModels(piModelsJson) {
+    if (piModelsJson) {
+        const authDir = join(homedir(), ".pi", "agent");
+        mkdirSync(authDir, { recursive: true });
+        writeFileSync(join(authDir, "models.json"), piModelsJson);
+    }
+}
 /**
  * Validates that the trigger is authorized to run the agent.
  * Returns the trigger info if valid, null otherwise.
@@ -102,6 +109,7 @@ async function postResult(ghClient, gistClient, triggerInfo, result, shareSessio
 export async function run(deps) {
     const { inputs, log, cwd, createClient } = deps;
     setupAuth(inputs.piAuthJson);
+    setupModels(inputs.piModelsJson);
     // Validate and extract trigger info
     const validated = validateTrigger(deps);
     if (!validated) {

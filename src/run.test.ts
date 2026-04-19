@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULTS } from "./defaults.js";
-import { type ActionDependencies, run, setupAuth } from "./run.js";
+import { type ActionDependencies, run, setupAuth, setupModels } from "./run.js";
 import {
 	createMockGitHubClient,
 	createModelConfig,
@@ -62,6 +62,37 @@ describe("setupAuth", () => {
 	});
 });
 
+describe("setupModels", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("does nothing when piModelsJson is undefined", () => {
+		setupModels(undefined);
+		expect(fs.mkdirSync).not.toHaveBeenCalled();
+		expect(fs.writeFileSync).not.toHaveBeenCalled();
+	});
+
+	it("does nothing when piModelsJson is empty string", () => {
+		setupModels("");
+		expect(fs.mkdirSync).not.toHaveBeenCalled();
+		expect(fs.writeFileSync).not.toHaveBeenCalled();
+	});
+
+	it("writes models.json when piModelsJson is provided", () => {
+		const modelsJson = '{"providers":{"openai":{"apiKey":"test"}}}';
+		setupModels(modelsJson);
+
+		expect(fs.mkdirSync).toHaveBeenCalledWith("/home/testuser/.pi/agent", {
+			recursive: true,
+		});
+		expect(fs.writeFileSync).toHaveBeenCalledWith(
+			"/home/testuser/.pi/agent/models.json",
+			modelsJson,
+		);
+	});
+});
+
 describe("run", () => {
 	function createMockDeps(
 		overrides: Partial<ActionDependencies> = {},
@@ -74,6 +105,7 @@ describe("run", () => {
 				githubToken: "test-token",
 				gistToken: undefined,
 				piAuthJson: undefined,
+				piModelsJson: undefined,
 				promptTemplate: undefined,
 				shareSession: true,
 			},
@@ -158,6 +190,7 @@ describe("run", () => {
 				modelConfig: createModelConfig(),
 				githubToken: "test-token",
 				piAuthJson: undefined,
+				piModelsJson: undefined,
 				promptTemplate: undefined,
 			},
 			context: {
@@ -202,6 +235,7 @@ describe("run", () => {
 				modelConfig: createModelConfig(),
 				githubToken: undefined,
 				piAuthJson: undefined,
+				piModelsJson: undefined,
 				promptTemplate: undefined,
 			},
 			context: {

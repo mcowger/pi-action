@@ -22,6 +22,7 @@ export interface ActionInputs {
 	githubToken: string | undefined;
 	gistToken: string | undefined;
 	piAuthJson: string | undefined;
+	piModelsJson: string | undefined;
 	promptTemplate: string | undefined;
 	shareSession: boolean;
 }
@@ -51,6 +52,14 @@ export function setupAuth(piAuthJson: string | undefined): void {
 		const authDir = join(homedir(), ".pi", "agent");
 		mkdirSync(authDir, { recursive: true });
 		writeFileSync(join(authDir, "auth.json"), piAuthJson);
+	}
+}
+
+export function setupModels(piModelsJson: string | undefined): void {
+	if (piModelsJson) {
+		const authDir = join(homedir(), ".pi", "agent");
+		mkdirSync(authDir, { recursive: true });
+		writeFileSync(join(authDir, "models.json"), piModelsJson);
 	}
 }
 
@@ -182,6 +191,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 	const { inputs, log, cwd, createClient } = deps;
 
 	setupAuth(inputs.piAuthJson);
+	setupModels(inputs.piModelsJson);
 
 	// Validate and extract trigger info
 	const validated = validateTrigger(deps);

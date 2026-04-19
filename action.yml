@@ -15,6 +15,9 @@ inputs:
   pi_auth_json:
     description: 'Contents of ~/.pi/agent/auth.json for OAuth authentication'
     required: false
+  pi_models_json:
+    description: 'Contents of ~/.pi/agent/models.json for custom model definitions'
+    required: false
   trigger_phrase:
     description: 'Phrase to trigger pi (e.g., @pi)'
     default: '@pi'
@@ -134,6 +137,7 @@ runs:
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
         INPUT_GIST_TOKEN: ${{ inputs.gist_token }}
         INPUT_PI_AUTH_JSON: ${{ inputs.pi_auth_json }}
+        INPUT_PI_MODELS_JSON: ${{ inputs.pi_models_json }}
         INPUT_TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
         INPUT_ALLOWED_BOTS: ${{ inputs.allowed_bots }}
         INPUT_TIMEOUT: ${{ inputs.timeout }}
