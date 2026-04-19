@@ -99,16 +99,17 @@ runs:
       shell: bash
       run: |
         # Install jq (JSON processor)
-        sudo apt-get update && sudo apt-get install -y jq
+        sudo apt-get update -qq && sudo apt-get install -y -qq jq
         
-        # Install yq (YAML processor)
-        YQ_VERSION="v4.44.1"
-        wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+        # Install yq (YAML processor) - latest release
+        wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64"
         chmod +x /usr/local/bin/yq
         
         # Verify installations
-        echo "jq version: $(jq --version)"
-        echo "yq version: $(yq --version)"
+        echo "jq: $(jq --version)"
+        echo "yq: $(yq --version)"
+
+    - name: Install action dependencies
       shell: bash
       run: npm ci --prefix ${{ github.action_path }}
 
