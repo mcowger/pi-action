@@ -80,23 +80,31 @@ function createSessionEventHandler(
 }
 
 /**
- * Wait for the session's internal event queue to fully drain after prompt() resolves.
+ * After session.prompt() resolves, the SDK's internal _agentEventQueue
+ * (a promise chain) may not have finished processing the final events
+ * (message_end, agent_end) that update the session's messages array.
  *
- * The pi SDK queues events via a promise chain (_agentEventQueue). When prompt()
- * returns, the final events (message_end, agent_end) may still be queued and not
- * yet processed. If we call getLastAssistantText() immediately, the messages array
- * may not be updated yet, resulting in an empty response.
- *
- * We work around this by adding a microtask yield (setImmediate) which allows the
- * event queue promise chain to advance before we read the messages.
+ * Poll getLastAssistantText() for up to 2 seconds to give the queue
+ * time to drain. Falls back to the streaming text accumulator if the
+ * session still returns nothing.
  */
-async function waitForEventsToProcess(): Promise<void> {
-	// Yield to the microtask/macrotask queue so the SDK's internal
-	// _agentEventQueue promise chain can advance
-	await new Promise((resolve) => setImmediate(resolve));
-	// One more yield for good measure — the queue chains promises
-	// which need their own microtask ticks to advance
-	await new Promise((resolve) => setImmediate(resolve));
+async function resolveResponse(
+	session: { getLastAssistantText(): string | undefined },
+	streamedText: string,
+): Promise<string> {
+	// Try immediately first (common case in non-CI environments)
+	const immediate = session.getLastAssistantText();
+	if (immediate) return immediate;
+
+	// Poll for up to 2 seconds (CI environments may need this)
+	for (let i = 0; i < 20; i++) {
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		const text = session.getLastAssistantText();
+		if (text) return text;
+	}
+
+	// Final fallback: streaming text_delta accumulator
+	return streamedText;
 }
 
 export async function runAgent(
@@ -156,15 +164,12 @@ export async function runAgent(
 			`Timeout after ${config.timeout} seconds`,
 		);
 
-		// Wait for the SDK's internal event queue to process final events
-		// before reading from the session's message history
-		await waitForEventsToProcess();
-
-		// Primary: read from the session's message history (most reliable)
-		// Fallback: use streaming text_delta accumulator
-		const sessionResponse = createdSession.getLastAssistantText();
-		const trimmedResponse = (sessionResponse ?? streamedText).trim();
+		// Wait for the SDK's internal event queue to finalize messages,
+		// then read the response. Falls back to streaming accumulator.
+		const response = await resolveResponse(createdSession, streamedText);
+		const trimmedResponse = response.trim();
 		if (!trimmedResponse) {
+			log.info(`⚠️ Empty response (sessionText=${JSON.stringify(createdSession.getLastAssistantText())}, streamedText=${JSON.stringify(streamedText)}, messages=${createdSession.messages.length})`);
 			return {
 				success: false,
 				error: "Agent returned empty response",
