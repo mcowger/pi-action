@@ -76,7 +76,32 @@ ${context.task}
 `;
 
 	if (context.diff) {
-		prompt += `\n## PR Diff\n\`\`\`diff\n${context.diff}\n\`\`\`\n`;
+		prompt += `
+## PR Diff
+\`\`\`diff
+${context.diff}
+\`\`\`
+
+## PR Review Guidelines
+When reviewing this PR, you can provide inline comments on specific lines by including a \`\`\`pr-review code block in your response:
+
+\`\`\`pr-review
+[
+  { "path": "src/file.ts", "line": 10, "body": "Consider using const here" },
+  { "path": "src/other.ts", "line": 25, "start_line": 20, "body": "This block could be simplified" }
+]
+\`\`\`
+
+Each comment requires:
+- \`path\`: File path relative to repository root
+- \`line\`: End line number (1-indexed)
+- \`body\`: Comment text in Markdown
+
+Optional fields:
+- \`side\`: "LEFT" (old code) or "RIGHT" (new code, default)
+- \`start_line\`: Start line for multi-line comments
+- \`start_side\`: Side for start_line (defaults to \`side\`)
+`;
 	}
 
 	return prompt;

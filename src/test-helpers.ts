@@ -18,6 +18,11 @@ export function createMockGitHubClient(): GitHubClient {
 		createComment: vi.fn(),
 		getPullRequestDiff: vi.fn().mockResolvedValue(""),
 		createGist: vi.fn().mockResolvedValue("https://gist.github.com/test123"),
+		createPRReview: vi.fn().mockResolvedValue({
+			reviewId: 1,
+			reviewUrl: "https://github.com/test/repo/pull/1#pullrequestreview-1",
+			commentsAdded: 1,
+		}),
 	};
 }
 

@@ -1,6 +1,7 @@
 import type {
 	GitHubReaction,
 	GitHubUser,
+	InlineComment,
 	OctokitClient,
 	RepoRef,
 	TriggerInfo,
@@ -67,6 +68,12 @@ export interface GitHubClient {
 		description: string,
 		isPublic?: boolean,
 	): Promise<string>;
+	createPRReview(
+		pullNumber: number,
+		comments: InlineComment[],
+		body?: string,
+		event?: "COMMENT" | "APPROVE" | "REQUEST_CHANGES",
+	): Promise<{ reviewId: number; reviewUrl: string; commentsAdded: number }>;
 }
 
 export function createGitHubClient(
@@ -125,6 +132,81 @@ export function createGitHubClient(
 				description,
 			});
 			return gist.html_url || "";
+		},
+
+		async createPRReview(
+			pullNumber: number,
+			comments: InlineComment[],
+			body?: string,
+			event: "COMMENT" | "APPROVE" | "REQUEST_CHANGES" = "COMMENT",
+		): Promise<{ reviewId: number; reviewUrl: string; commentsAdded: number }> {
+			// Get the head SHA for the PR
+			const { data: prData } = await octokit.rest.pulls.get({
+				owner,
+				repo,
+				pull_number: pullNumber,
+				mediaType: { format: "json" },
+			});
+			const headSha = (prData as { head: { sha: string } }).head.sha;
+
+			const apiComments = comments.map((comment) => {
+				const base: {
+					path: string;
+					line: number;
+					body: string;
+					side: string;
+					start_line?: number;
+					start_side?: string;
+				} = {
+					path: comment.path,
+					line: comment.line,
+					body: comment.body,
+					side: comment.side ?? "RIGHT",
+				};
+
+				if (comment.start_line !== undefined) {
+					base.start_line = comment.start_line;
+					base.start_side = comment.start_side ?? comment.side ?? "RIGHT";
+				}
+
+				return base;
+			});
+
+			const reviewParams: {
+				owner: string;
+				repo: string;
+				pull_number: number;
+				commit_id: string;
+				event: "COMMENT" | "APPROVE" | "REQUEST_CHANGES";
+				comments: Array<{
+					path: string;
+					line: number;
+					body: string;
+					side: string;
+					start_line?: number;
+					start_side?: string;
+				}>;
+				body?: string;
+			} = {
+				owner,
+				repo,
+				pull_number: pullNumber,
+				commit_id: headSha,
+				event,
+				comments: apiComments,
+			};
+
+			if (body !== undefined) {
+				reviewParams.body = body;
+			}
+
+			const review = await octokit.rest.pulls.createReview(reviewParams);
+
+			return {
+				reviewId: review.data.id,
+				reviewUrl: review.data.html_url,
+				commentsAdded: comments.length,
+			};
 		},
 	};
 }

@@ -30,6 +30,24 @@ export interface Session {
 }
 
 /**
+ * Inline comment on a specific line of a PR diff
+ */
+export interface InlineComment {
+	/** File path relative to repository root */
+	path: string;
+	/** End line number (1-indexed) */
+	line: number;
+	/** Comment body in Markdown */
+	body: string;
+	/** Which side of the diff: LEFT (old) or RIGHT (new). Defaults to RIGHT. */
+	side?: "LEFT" | "RIGHT";
+	/** Start line for multi-line comments (1-indexed). Must be less than line. */
+	start_line?: number;
+	/** Side for start_line. Defaults to side value. */
+	start_side?: "LEFT" | "RIGHT";
+}
+
+/**
  * Model configuration - commonly passed together
  */
 export interface ModelConfig {
@@ -87,7 +105,23 @@ export interface OctokitClient {
 				repo: string;
 				pull_number: number;
 				mediaType: { format: string };
-			}) => Promise<{ data: unknown }>;
+			}) => Promise<{ data: { head: { sha: string } } }>;
+			createReview: (params: {
+				owner: string;
+				repo: string;
+				pull_number: number;
+				commit_id: string;
+				event: "COMMENT" | "APPROVE" | "REQUEST_CHANGES";
+				comments: Array<{
+					path: string;
+					line: number;
+					body: string;
+					side: string;
+					start_line?: number;
+					start_side?: string;
+				}>;
+				body?: string;
+			}) => Promise<{ data: { id: number; html_url: string } }>;
 		};
 		gists: {
 			create: (params: {

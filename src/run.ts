@@ -10,6 +10,7 @@ import {
 	extractTriggerInfo,
 	type GitHubClient,
 } from "./github.js";
+import { parseInlineComments } from "./inline-comments.js";
 import type { SecurityContext } from "./security.js";
 import { sanitizeInput, validatePermissions } from "./security.js";
 import { shareSession } from "./share.js";
@@ -172,10 +173,31 @@ async function postResult(
 	}
 
 	if (result.success) {
+		// Parse inline comments from response for PRs
+		let responseText = result.response;
+		if (triggerInfo.isPullRequest) {
+			const { comments, cleanResponse } = parseInlineComments(result.response);
+			responseText = cleanResponse;
+
+			if (comments.length > 0) {
+				try {
+					const reviewResult = await ghClient.createPRReview(
+						triggerInfo.issueNumber,
+						comments,
+					);
+					log.info(
+						`Created PR review with ${reviewResult.commentsAdded} inline comment(s): ${reviewResult.reviewUrl}`,
+					);
+				} catch (error) {
+					log.warning(`Failed to create PR review comments: ${error}`);
+				}
+			}
+		}
+
 		await addReaction(ghClient, triggerInfo, "rocket");
 		await ghClient.createComment(
 			triggerInfo.issueNumber,
-			formatSuccessComment(result.response, shareUrl),
+			formatSuccessComment(responseText, shareUrl),
 		);
 	} else {
 		log.error(`pi execution failed: ${result.error}`);
