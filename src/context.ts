@@ -21,6 +21,7 @@ export interface PIContext {
 	triggerComment: string;
 	task: string;
 	diff?: string;
+	reviewComments?: string;
 }
 
 const DEFAULT_MAIN_PROMPT_TEMPLATE = `# GitHub {{type_display}} #{{number}}
@@ -30,6 +31,8 @@ const DEFAULT_MAIN_PROMPT_TEMPLATE = `# GitHub {{type_display}} #{{number}}
 
 ## Description
 {{body}}
+
+{{reviewComments}}
 
 ## Task
 {{task}}
@@ -114,6 +117,7 @@ export function renderTemplate(template: string, context: PIContext): string {
 		task: context.task,
 		diff: context.diff || "",
 		trigger_comment: context.triggerComment,
+		reviewComments: context.reviewComments || "",
 	};
 
 	let rendered = template;

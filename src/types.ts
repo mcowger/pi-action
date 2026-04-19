@@ -11,7 +11,7 @@ export type GitHubReaction =
 
 export interface GitHubUser {
 	login: string;
-	type: "User" | "Bot" | "Organization";
+	type: string;
 }
 
 /**
@@ -113,6 +113,20 @@ export interface OctokitClient {
 				pull_number: number;
 				mediaType?: { format: string };
 			}) => Promise<{ data: { head: { sha: string } } }>;
+			listReviewComments: (params: {
+				owner: string;
+				repo: string;
+				pull_number: number;
+			}) => Promise<{
+				data: Array<{
+					id: number;
+					body: string;
+					user: GitHubUser;
+					path?: string;
+					line?: number;
+					created_at: string;
+				}>;
+			}>;
 			createReview: (params: {
 				owner: string;
 				repo: string;

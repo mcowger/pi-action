@@ -67,6 +67,7 @@ export interface GitHubClient {
 	updateComment(commentId: number, body: string): Promise<void>;
 	getPullRequest(pullNumber: number): Promise<{ number: number; title: string; body: string; user: GitHubUser; author_association: string; head: { sha: string }; base: { ref: string } }>;
 	getPullRequestDiff(pullNumber: number): Promise<string>;
+	getPullRequestReviewComments(pullNumber: number): Promise<Array<{ id: number; body: string; user: GitHubUser; path?: string; line?: number; created_at: string }>>;
 	createGist(
 		content: string,
 		filename: string,
@@ -182,6 +183,38 @@ export function createGitHubClient(
 				mediaType: { format: "diff" },
 			});
 			return diff as unknown as string;
+		},
+
+		async getPullRequestReviewComments(pullNumber: number): Promise<
+			Array<{
+				id: number;
+				body: string;
+				user: GitHubUser;
+				path?: string;
+				line?: number;
+				created_at: string;
+			}>
+		> {
+			const { data: comments } = await octokit.rest.pulls.listReviewComments({
+				owner,
+				repo,
+				pull_number: pullNumber,
+			});
+			return (comments as unknown as Array<{
+				id: number;
+				body: string;
+				user: GitHubUser;
+				path?: string;
+				line?: number;
+				created_at: string;
+			}>).map((c) => ({
+				id: c.id,
+				body: c.body,
+				user: c.user,
+				path: c.path,
+				line: c.line,
+				created_at: c.created_at,
+			}));
 		},
 
 		async createGist(

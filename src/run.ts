@@ -10,7 +10,7 @@ import {
 	type CommentState,
 } from "./comment-tools.js";
 import { createPullRequestTool } from "./create-pr-tool.js";
-import { formatErrorComment, formatSuccessComment } from "./formatting.js";
+import { formatErrorComment, formatSuccessComment, formatReviewComments } from "./formatting.js";
 import {
 	addReaction,
 	extractTriggerInfo,
@@ -136,6 +136,7 @@ async function buildPIContext(
 	triggerInfo: TriggerInfo,
 	ghClient: GitHubClient,
 	triggerPhrase: string,
+	logger: Logger,
 ): Promise<PIContext> {
 	const sanitizedBody = sanitizeInput(triggerInfo.triggerText);
 	const task = extractTask(sanitizedBody, triggerPhrase);
@@ -152,6 +153,18 @@ async function buildPIContext(
 	// Get PR diff if applicable
 	if (triggerInfo.isPullRequest) {
 		piContext.diff = await ghClient.getPullRequestDiff(triggerInfo.issueNumber);
+
+		// Get PR review comments for context
+		try {
+			const comments = await ghClient.getPullRequestReviewComments(
+				triggerInfo.issueNumber,
+			);
+			if (comments.length > 0) {
+				piContext.reviewComments = formatReviewComments(comments);
+			}
+		} catch (error) {
+			logger.warning(`Failed to fetch PR review comments: ${error}`);
+		}
 	}
 
 	return piContext;
@@ -433,6 +446,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		triggerInfo,
 		ghClient,
 		inputs.triggerPhrase,
+		log,
 	);
 
 	log.info(`Running pi agent for: ${piContext.task}`);
