@@ -6,6 +6,7 @@
 
 import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
 import { resolveExtensions, getResourceLoader } from '../../src/pi/resource-loader';
+import type { PlatformProvider } from '../../src/platform';
 import { DefaultPackageManager, DefaultResourceLoader } from '@mariozechner/pi-coding-agent';
 
 // Mock CoreAdapter for testing
@@ -23,6 +24,46 @@ const mockCoreAdapter = {
   debug: mock(),
   info: mock(),
   warning: mock(),
+};
+
+// Mock platform provider for getResourceLoader
+const mockPlatformProvider: PlatformProvider = {
+  type: 'github',
+  getContext: () => ({
+    repo: { owner: 'test-owner', repo: 'test-repo' },
+    issue: { number: 1 },
+    eventName: 'issue_comment',
+    payload: {},
+    serverUrl: 'https://github.com',
+    runId: 123,
+    workspace: '/tmp',
+  }),
+  addReaction: async () => undefined,
+  deleteReaction: async () => {},
+  createFinalComment: async () => {},
+  getPrompt: async () => undefined,
+  getStartTime: () => undefined,
+  createPullRequest: async () => ({
+    content: [],
+    details: {
+      pullRequestNumber: 1,
+      pullRequestUrl: '',
+      headBranch: 'main',
+      baseBranch: 'main',
+      dryRun: false,
+    },
+  }),
+  updatePullRequest: async () => ({
+    content: [],
+    details: {
+      pullRequestNumber: 1,
+      pullRequestUrl: '',
+      headBranch: 'main',
+      baseBranch: 'main',
+      dryRun: false,
+    },
+  }),
+  getIssueOrPRThread: async () => undefined,
 };
 
 // Set env vars before importing
@@ -247,7 +288,7 @@ describe('getResourceLoader', () => {
 
   describe('resource loader configuration', () => {
     test('creates loader with noThemes enabled for headless environments', async () => {
-      const loader = await getResourceLoader(mockCoreAdapter);
+      const loader = await getResourceLoader(mockCoreAdapter, mockPlatformProvider);
 
       // The loader should be created successfully
       expect(loader).toBeDefined();
@@ -259,7 +300,7 @@ describe('getResourceLoader', () => {
     });
 
     test('includes system prompt override', async () => {
-      const loader = await getResourceLoader(mockCoreAdapter);
+      const loader = await getResourceLoader(mockCoreAdapter, mockPlatformProvider);
 
       // Loader should be created with system prompt override
       expect(loader).toBeDefined();
@@ -267,7 +308,7 @@ describe('getResourceLoader', () => {
     });
 
     test('includes custom extension factory', async () => {
-      const loader = await getResourceLoader(mockCoreAdapter);
+      const loader = await getResourceLoader(mockCoreAdapter, mockPlatformProvider);
 
       // Loader should include our custom tools extension factory
       expect(loader).toBeDefined();
@@ -278,7 +319,7 @@ describe('getResourceLoader', () => {
   describe('with extensions', () => {
     test('resolves and includes extension paths', async () => {
       const extensions = ['npm:package-one', 'npm:package-two'];
-      const loader = await getResourceLoader(mockCoreAdapter, extensions);
+      const loader = await getResourceLoader(mockCoreAdapter, mockPlatformProvider, extensions);
 
       // Verify extensions were resolved
       expect(mockResolveExtensionSources).toHaveBeenCalledWith(
@@ -292,7 +333,7 @@ describe('getResourceLoader', () => {
     });
 
     test('handles no extensions', async () => {
-      const loader = await getResourceLoader(mockCoreAdapter, []);
+      const loader = await getResourceLoader(mockCoreAdapter, mockPlatformProvider, []);
 
       // Loader should be created successfully even with no extensions
       expect(loader).toBeDefined();
@@ -300,7 +341,7 @@ describe('getResourceLoader', () => {
     });
 
     test('handles undefined extensions', async () => {
-      const loader = await getResourceLoader(mockCoreAdapter, undefined);
+      const loader = await getResourceLoader(mockCoreAdapter, mockPlatformProvider, undefined);
 
       // Loader should be created successfully
       expect(loader).toBeDefined();
@@ -315,9 +356,9 @@ describe('getResourceLoader', () => {
       });
       DefaultPackageManager.prototype.resolveExtensionSources = mockResolveExtensionSources;
 
-      await expect(getResourceLoader(mockCoreAdapter, ['npm:package'])).rejects.toThrow(
-        'Extension resolution failed'
-      );
+      await expect(
+        getResourceLoader(mockCoreAdapter, mockPlatformProvider, ['npm:package'])
+      ).rejects.toThrow('Extension resolution failed');
     });
   });
 });
