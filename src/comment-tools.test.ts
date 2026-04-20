@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	type CommentState,
 	createProgressCommentTool,
 	createUpdateCommentTool,
-	type CommentState,
 } from "./comment-tools.js";
 import type { GitHubClient } from "./github.js";
 
-function createMockClient(): Pick<GitHubClient, "createIssueComment" | "updateComment"> {
+function createMockClient(): Pick<
+	GitHubClient,
+	"createIssueComment" | "updateComment"
+> {
 	return {
 		createIssueComment: vi.fn(),
 		updateComment: vi.fn(),
@@ -34,7 +37,10 @@ describe("createProgressCommentTool", () => {
 
 		const result = await tool.execute("tool-1", { body: "Starting work..." });
 
-		expect(mockClient.createIssueComment).toHaveBeenCalledWith(42, "Starting work...");
+		expect(mockClient.createIssueComment).toHaveBeenCalledWith(
+			42,
+			"Starting work...",
+		);
 		expect(result.content[0]).toMatchObject({
 			type: "text",
 			text: expect.stringContaining("Created progress comment #12345"),
@@ -51,7 +57,9 @@ describe("createProgressCommentTool", () => {
 
 	it("should handle errors gracefully", async () => {
 		const mockClient = createMockClient();
-		vi.mocked(mockClient.createIssueComment).mockRejectedValue(new Error("API Error"));
+		vi.mocked(mockClient.createIssueComment).mockRejectedValue(
+			new Error("API Error"),
+		);
 
 		const tool = createProgressCommentTool(
 			mockClient,
@@ -83,7 +91,9 @@ describe("createProgressCommentTool", () => {
 			42,
 		);
 
-		const result = await tool.execute("tool-1", { body: "Test without callback" });
+		const result = await tool.execute("tool-1", {
+			body: "Test without callback",
+		});
 
 		expect(result.content[0]).toMatchObject({
 			type: "text",
@@ -97,18 +107,17 @@ describe("createUpdateCommentTool", () => {
 		const mockClient = createMockClient();
 		vi.mocked(mockClient.updateComment).mockResolvedValue(undefined);
 
-		const tool = createUpdateCommentTool(
-			mockClient,
-			"test-owner",
-			"test-repo",
-		);
+		const tool = createUpdateCommentTool(mockClient, "test-owner", "test-repo");
 
 		const result = await tool.execute("tool-1", {
 			comment_id: 12345,
 			body: "Updated progress...",
 		});
 
-		expect(mockClient.updateComment).toHaveBeenCalledWith(12345, "Updated progress...");
+		expect(mockClient.updateComment).toHaveBeenCalledWith(
+			12345,
+			"Updated progress...",
+		);
 		expect(result.content[0]).toMatchObject({
 			type: "text",
 			text: "Updated comment #12345 successfully.",
@@ -118,13 +127,11 @@ describe("createUpdateCommentTool", () => {
 
 	it("should handle errors gracefully", async () => {
 		const mockClient = createMockClient();
-		vi.mocked(mockClient.updateComment).mockRejectedValue(new Error("Not Found"));
-
-		const tool = createUpdateCommentTool(
-			mockClient,
-			"test-owner",
-			"test-repo",
+		vi.mocked(mockClient.updateComment).mockRejectedValue(
+			new Error("Not Found"),
 		);
+
+		const tool = createUpdateCommentTool(mockClient, "test-owner", "test-repo");
 
 		const result = await tool.execute("tool-1", {
 			comment_id: 12345,

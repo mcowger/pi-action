@@ -16,13 +16,8 @@ export interface GitHubContext {
 export function extractTriggerInfo(
 	payload: Record<string, unknown>,
 ): TriggerInfo | null {
-	console.error(`DEBUG extractTriggerInfo: event payload keys=${Object.keys(payload).join(',')}`);
-	console.error(`DEBUG extractTriggerInfo: payload.pull_request exists=${!!payload.pull_request}`);
-	console.error(`DEBUG extractTriggerInfo: payload.issue exists=${!!payload.issue}`);
 	if (payload.issue) {
-		const issue = payload.issue as Record<string, unknown>;
-		console.error(`DEBUG extractTriggerInfo: issue.pull_request exists=${!!issue.pull_request}`);
-		console.error(`DEBUG extractTriggerInfo: issue.number=${issue.number}`);
+		const _issue = payload.issue as Record<string, unknown>;
 	}
 
 	const comment = payload.comment as Record<string, unknown> | undefined;
@@ -31,7 +26,6 @@ export function extractTriggerInfo(
 		| undefined;
 
 	if (!issue) {
-		console.error(`DEBUG extractTriggerInfo: No issue found, returning null`);
 		return null;
 	}
 
@@ -47,12 +41,13 @@ export function extractTriggerInfo(
 		: (issue.author_association as string);
 
 	if (!(triggerText && author)) {
-		console.error(`DEBUG extractTriggerInfo: No triggerText or author, returning null`);
 		return null;
 	}
 
-	const isPullRequest = !!(payload.pull_request || (payload.issue as Record<string, unknown>)?.pull_request);
-	console.error(`DEBUG extractTriggerInfo: isPullRequest=${isPullRequest}, isCommentEvent=${isCommentEvent}, issueNumber=${issue.number}`);
+	const isPullRequest = !!(
+		payload.pull_request ||
+		(payload.issue as Record<string, unknown>)?.pull_request
+	);
 
 	return {
 		isCommentEvent,
@@ -77,19 +72,47 @@ export interface GitHubClient {
 		reaction: GitHubReaction,
 	): Promise<void>;
 	createComment(issueNumber: number, body: string): Promise<void>;
-	createIssueComment(issueNumber: number, body: string): Promise<{ id: number; html_url: string }>;
+	createIssueComment(
+		issueNumber: number,
+		body: string,
+	): Promise<{ id: number; html_url: string }>;
 	updateComment(commentId: number, body: string): Promise<void>;
-	getPullRequest(pullNumber: number): Promise<{ number: number; title: string; body: string; user: GitHubUser; author_association: string; head: { sha: string }; base: { ref: string } }>;
+	getPullRequest(pullNumber: number): Promise<{
+		number: number;
+		title: string;
+		body: string;
+		user: GitHubUser;
+		author_association: string;
+		head: { sha: string };
+		base: { ref: string };
+	}>;
 	getPullRequestDiff(pullNumber: number): Promise<string>;
-	getPullRequestReviewComments(pullNumber: number): Promise<Array<{ id: number; body: string; user: GitHubUser; path?: string; line?: number; created_at: string }>>;
+	getPullRequestReviewComments(pullNumber: number): Promise<
+		Array<{
+			id: number;
+			body: string;
+			user: GitHubUser;
+			path?: string;
+			line?: number;
+			created_at: string;
+		}>
+	>;
 	createGist(
 		content: string,
 		filename: string,
 		description: string,
 		isPublic?: boolean,
 	): Promise<string>;
-	getGist(gistId: string): Promise<{ files: Record<string, { content: string }>; description: string }>;
-	updateGist(gistId: string, filename: string, content: string, description?: string): Promise<string>;
+	getGist(gistId: string): Promise<{
+		files: Record<string, { content: string }>;
+		description: string;
+	}>;
+	updateGist(
+		gistId: string,
+		filename: string,
+		content: string,
+		description?: string,
+	): Promise<string>;
 	findGistByDescription(description: string): Promise<string | null>;
 	createPRReview(
 		pullNumber: number,
@@ -224,14 +247,16 @@ export function createGitHubClient(
 				repo,
 				pull_number: pullNumber,
 			});
-			return (comments as unknown as Array<{
-				id: number;
-				body: string;
-				user: GitHubUser;
-				path?: string;
-				line?: number;
-				created_at: string;
-			}>).map((c) => ({
+			return (
+				comments as unknown as Array<{
+					id: number;
+					body: string;
+					user: GitHubUser;
+					path?: string;
+					line?: number;
+					created_at: string;
+				}>
+			).map((c) => ({
 				id: c.id,
 				body: c.body,
 				user: c.user,
@@ -255,9 +280,10 @@ export function createGitHubClient(
 			return gist.html_url || "";
 		},
 
-		async getGist(
-			gistId: string,
-		): Promise<{ files: Record<string, { content: string }>; description: string }> {
+		async getGist(gistId: string): Promise<{
+			files: Record<string, { content: string }>;
+			description: string;
+		}> {
 			const { data: gist } = await octokit.rest.gists.get({
 				gist_id: gistId,
 			});
@@ -265,7 +291,12 @@ export function createGitHubClient(
 			const filesData = gist.files as Record<string, unknown> | undefined;
 			if (filesData) {
 				for (const [name, file] of Object.entries(filesData)) {
-					if (file && typeof file === "object" && "content" in file && typeof (file as { content?: string }).content === "string") {
+					if (
+						file &&
+						typeof file === "object" &&
+						"content" in file &&
+						typeof (file as { content?: string }).content === "string"
+					) {
 						files[name] = { content: (file as { content: string }).content };
 					}
 				}
@@ -279,7 +310,11 @@ export function createGitHubClient(
 			content: string,
 			description?: string,
 		): Promise<string> {
-			const params: { gist_id: string; files: Record<string, { content: string }>; description?: string } = {
+			const params: {
+				gist_id: string;
+				files: Record<string, { content: string }>;
+				description?: string;
+			} = {
 				gist_id: gistId,
 				files: { [filename]: { content } },
 			};
@@ -417,7 +452,10 @@ export function createGitHubClient(
 			});
 		},
 
-		async getDefaultBranch(repoOwner: string, repoName: string): Promise<string> {
+		async getDefaultBranch(
+			repoOwner: string,
+			repoName: string,
+		): Promise<string> {
 			const { data: repoData } = await octokit.rest.repos.get({
 				owner: repoOwner,
 				repo: repoName,

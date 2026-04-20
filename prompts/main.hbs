@@ -1,0 +1,28 @@
+# GitHub {{type_display}} #{{number}}
+
+## Title
+{{title}}
+
+## Description
+{{body}}
+
+{{#if reviewComments}}
+{{reviewComments}}
+
+**IMPORTANT: The PR review comments above are provided for your reference. You do NOT need to fetch them again - they are already included in this prompt. Address these comments by making the requested code changes.**
+{{/if}}
+
+## Task
+{{task}}
+
+{{> environment-setup }}
+
+{{> artifact-requirements }}
+
+{{#if isBranchMode}}
+{{> branch-mode-branch }}
+{{else}}
+{{> branch-mode-direct }}
+{{/if}}
+
+{{> final-response-requirement }}

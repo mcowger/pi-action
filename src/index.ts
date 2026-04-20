@@ -10,7 +10,7 @@ function getInputOrDefault(name: string, defaultValue: string): string {
 	return value || defaultValue;
 }
 
-	const isDebug = getInputOrDefault("debug", "false").toLowerCase() === "true";
+const isDebug = getInputOrDefault("debug", "false").toLowerCase() === "true";
 
 run({
 	inputs: {
@@ -40,11 +40,15 @@ run({
 			? "output"
 			: "comment") as "comment" | "output",
 		prompt: core.getInput("prompt") || undefined,
-		prNumber: core.getInput("pr_number") ? Number.parseInt(core.getInput("pr_number"), 10) : undefined,
+		prNumber: core.getInput("pr_number")
+			? Number.parseInt(core.getInput("pr_number"), 10)
+			: undefined,
 		branchMode: (getInputOrDefault("branch_mode", "branch") === "direct"
 			? "direct"
 			: "branch") as "branch" | "direct",
-		suppressFinalComment: getInputOrDefault("suppress_final_comment", "false").toLowerCase() === "true",
+		suppressFinalComment:
+			getInputOrDefault("suppress_final_comment", "false").toLowerCase() ===
+			"true",
 	},
 	context: {
 		payload: github.context.payload,

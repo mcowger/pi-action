@@ -1,0 +1,16 @@
+## Important: Final Response Requirement
+
+**You MUST end your response with a plain-text summary of what you did.** This summary is posted as a comment on the issue/PR, so it must be informative and stand alone without any tool output context. Do NOT assume the reader can see tool execution logs.
+
+Your summary should include:
+- What changes were made and why
+- Which files were modified/created/deleted
+- The pull request URL (if one was created)
+- Any follow-up actions the reviewer should take
+
+If you completed the task successfully, say so clearly. If you were unable to complete the task, explain what went wrong and what was attempted.
+
+**CRITICAL -- DO NOT END WITH ONLY A TOOL CALL:**
+If your last action is calling a tool (like `create_pull_request`), you MUST immediately follow it with a written summary in plain text. Send additional text AFTER the tool call completes.
+- INCORRECT: Tool call → stop
+- CORRECT: Tool call → text summary explaining what happened

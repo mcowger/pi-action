@@ -7,8 +7,12 @@
  * the `gh` CLI being available.
  */
 
+import {
+	type AgentToolResult,
+	defineTool,
+} from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { defineTool, type AgentToolResult } from "@mariozechner/pi-coding-agent";
+import { loadToolPrompt } from "./templates.js";
 
 /**
  * Details returned by the create_pull_request tool.
@@ -23,6 +27,8 @@ export interface CreatePRToolDetails {
 /**
  * Parameters schema for the create_pull_request tool.
  */
+const createPRPrompt = loadToolPrompt("create-pull-request");
+
 const createPRSchema = Type.Object({
 	title: Type.String({
 		description:
@@ -62,7 +68,12 @@ interface PRGitHubClient {
 /**
  * Callback invoked when a PR is successfully created.
  */
-export type OnPRCreated = (pr: { number: number; url: string; headBranch: string; baseBranch: string }) => void;
+export type OnPRCreated = (pr: {
+	number: number;
+	url: string;
+	headBranch: string;
+	baseBranch: string;
+}) => void;
 
 /**
  * Options for creating the PR tool.
@@ -87,17 +98,9 @@ export function createPullRequestTool(options: CreatePullRequestToolOptions) {
 	return defineTool({
 		name: "create_pull_request",
 		label: "Create Pull Request",
-		description:
-			"Create a pull request on GitHub. Use this tool after committing and pushing your changes to a branch. " +
-			"This is the ONLY way to create pull requests - do NOT use `gh pr create` or any other shell command. " +
-			"The tool uses the GitHub API directly with the action's authenticated token.",
-		promptSnippet:
-			"create_pull_request: Create a pull request on GitHub (use after committing and pushing changes)",
-		promptGuidelines: [
-			"Always use the `create_pull_request` tool to open PRs - never use `gh pr create` via bash.",
-			"Commit and push your changes before calling create_pull_request.",
-			"Include issue references in the PR body (e.g., 'Fixes #123').",
-		],
+		description: createPRPrompt.description,
+		promptSnippet: createPRPrompt.promptSnippet,
+		promptGuidelines: createPRPrompt.promptGuidelines,
 		parameters: createPRSchema,
 		async execute(
 			_toolCallId: string,
@@ -109,8 +112,9 @@ export function createPullRequestTool(options: CreatePullRequestToolOptions) {
 			_signal?: AbortSignal,
 		): Promise<AgentToolResult<CreatePRToolDetails>> {
 			// Get customizable config from environment or use defaults
-			const env = typeof process !== "undefined" ? process.env : {};
-			const prAttribution = env.INPUT_PR_TOOL_ATTRIBUTION || "\n\n---\n*Created by pi-action 🤖*";
+			const env = typeof process === "undefined" ? {} : process.env;
+			const prAttribution =
+				env.INPUT_PR_TOOL_ATTRIBUTION || "\n\n---\n*Created by pi-action 🤖*";
 			const disableAttribution = prAttribution.toLowerCase() === "false";
 			const attributionSuffix = disableAttribution ? "" : prAttribution;
 			let headBranch: string;
@@ -118,18 +122,39 @@ export function createPullRequestTool(options: CreatePullRequestToolOptions) {
 				headBranch = await client.getCurrentBranch();
 			} catch (error) {
 				return {
-					content: [{ type: "text" as const, text: `Error: Failed to determine current git branch: ${error instanceof Error ? error.message : String(error)}` }],
-					details: { pullRequestNumber: 0, pullRequestUrl: "", headBranch: "", baseBranch: "" },
+					content: [
+						{
+							type: "text" as const,
+							text: `Error: Failed to determine current git branch: ${error instanceof Error ? error.message : String(error)}`,
+						},
+					],
+					details: {
+						pullRequestNumber: 0,
+						pullRequestUrl: "",
+						headBranch: "",
+						baseBranch: "",
+					},
 				};
 			}
 
 			let baseBranch: string;
 			try {
-				baseBranch = params.base ?? (await client.getDefaultBranch(owner, repo));
+				baseBranch =
+					params.base ?? (await client.getDefaultBranch(owner, repo));
 			} catch (error) {
 				return {
-					content: [{ type: "text" as const, text: `Error: Failed to determine default branch: ${error instanceof Error ? error.message : String(error)}. You can specify it explicitly using the 'base' parameter.` }],
-					details: { pullRequestNumber: 0, pullRequestUrl: "", headBranch, baseBranch: params.base ?? "" },
+					content: [
+						{
+							type: "text" as const,
+							text: `Error: Failed to determine default branch: ${error instanceof Error ? error.message : String(error)}. You can specify it explicitly using the 'base' parameter.`,
+						},
+					],
+					details: {
+						pullRequestNumber: 0,
+						pullRequestUrl: "",
+						headBranch,
+						baseBranch: params.base ?? "",
+					},
 				};
 			}
 
@@ -152,7 +177,11 @@ export function createPullRequestTool(options: CreatePullRequestToolOptions) {
 
 			// Auto-append agent attribution if not already present
 			let body = params.body ?? "";
-			if (attributionSuffix && !body.includes("pi-action") && !body.includes("pi coding agent")) {
+			if (
+				attributionSuffix &&
+				!body.includes("pi-action") &&
+				!body.includes("pi coding agent")
+			) {
 				body += attributionSuffix;
 			}
 
@@ -169,14 +198,29 @@ export function createPullRequestTool(options: CreatePullRequestToolOptions) {
 			} catch (error) {
 				const msg = error instanceof Error ? error.message : String(error);
 				return {
-					content: [{ type: "text" as const, text: `Error: Failed to create pull request: ${msg}\n\nBranch ${headBranch} exists with your changes. You can create the PR manually or try again. Make sure the branch was pushed (git push --set-upstream origin ${headBranch}).` }],
-					details: { pullRequestNumber: 0, pullRequestUrl: "", headBranch, baseBranch },
+					content: [
+						{
+							type: "text" as const,
+							text: `Error: Failed to create pull request: ${msg}\n\nBranch ${headBranch} exists with your changes. You can create the PR manually or try again. Make sure the branch was pushed (git push --set-upstream origin ${headBranch}).`,
+						},
+					],
+					details: {
+						pullRequestNumber: 0,
+						pullRequestUrl: "",
+						headBranch,
+						baseBranch,
+					},
 				};
 			}
 
 			// Notify callback if PR was successfully created
 			if (onPRCreated) {
-				onPRCreated({ number: pr.number, url: pr.html_url, headBranch, baseBranch });
+				onPRCreated({
+					number: pr.number,
+					url: pr.html_url,
+					headBranch,
+					baseBranch,
+				});
 			}
 
 			const successMsg = `Pull request #${pr.number} created: ${pr.html_url}`;

@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	buildPrompt,
-	extractTask,
-	hasTrigger,
-	renderTemplate,
-} from "./context.js";
+import { buildPrompt, extractTask, hasTrigger } from "./context.js";
 
 describe("hasTrigger", () => {
 	it("detects @pi at start", () => {
@@ -52,76 +47,6 @@ describe("extractTask", () => {
 		expect(extractTask("@pi first line\nsecond line", "@pi")).toBe(
 			"first line\nsecond line",
 		);
-	});
-});
-
-describe("renderTemplate", () => {
-	const context = {
-		type: "issue" as const,
-		title: "Test Issue",
-		body: "Issue body",
-		number: 42,
-		triggerComment: "@pi help me",
-		task: "help me",
-		diff: undefined,
-	} as const;
-
-	it("replaces all template variables", () => {
-		const template = "{{type}} #{{number}}: {{title}} - {{task}}";
-		const result = renderTemplate(template, context);
-		expect(result).toBe("issue #42: Test Issue - help me");
-	});
-
-	it("handles type_display variable", () => {
-		const template = "{{type_display}} {{number}}";
-		const result = renderTemplate(template, context);
-		expect(result).toBe("Issue 42");
-	});
-
-	it("handles PR type_display", () => {
-		const template = "{{type_display}} {{number}}";
-		const prContext = { ...context, type: "pull_request" as const };
-		const result = renderTemplate(template, prContext);
-		expect(result).toBe("Pull Request 42");
-	});
-
-	it("handles empty diff", () => {
-		const template = "Diff: {{diff}}";
-		const result = renderTemplate(template, context);
-		expect(result).toBe("Diff: ");
-	});
-
-	it("handles diff with content", () => {
-		const template = "Changes:\n{{diff}}";
-		const contextWithDiff = { ...context, diff: "+ added line" };
-		const result = renderTemplate(template, contextWithDiff);
-		expect(result).toBe("Changes:\n+ added line");
-	});
-
-	it("leaves unknown placeholders unchanged", () => {
-		const template = "{{unknown}} {{title}}";
-		const result = renderTemplate(template, context);
-		expect(result).toBe("{{unknown}} Test Issue");
-	});
-
-	it("handles multiple occurrences of same variable", () => {
-		const template = "{{title}} - {{title}}";
-		const result = renderTemplate(template, context);
-		expect(result).toBe("Test Issue - Test Issue");
-	});
-
-	it("includes branch mode instructions for branch mode", () => {
-		const template = "Instructions: {{branchModeInstructions}}";
-		const result = renderTemplate(template, context, "branch");
-		expect(result).toContain("create_pull_request");
-		expect(result).toContain("NEVER push directly to the main/default branch");
-	});
-
-	it("includes branch mode instructions for direct mode", () => {
-		const template = "Instructions: {{branchModeInstructions}}";
-		const result = renderTemplate(template, context, "direct");
-		expect(result).toContain("NEVER create a pull request");
-		expect(result).toContain("already an existing PR branch");
 	});
 });
 
@@ -238,5 +163,51 @@ describe("buildPrompt", () => {
 		);
 		expect(prompt).toContain("NEVER create a pull request.");
 		expect(prompt).toContain("already an existing PR branch");
+	});
+
+	it("returns task only in direct mode without custom template", () => {
+		const prompt = buildPrompt({
+			type: "direct",
+			title: "",
+			body: "",
+			number: 0,
+			triggerComment: "Generate tests",
+			task: "Generate tests",
+		});
+
+		expect(prompt).toBe("Generate tests");
+	});
+
+	it("handles Handlebars conditionals for review comments", () => {
+		const contextWithoutComments = {
+			type: "pull_request" as const,
+			title: "PR Title",
+			body: "PR Body",
+			number: 42,
+			triggerComment: "@pi review",
+			task: "review",
+		};
+
+		const prompt = buildPrompt(contextWithoutComments);
+
+		// Should NOT contain review comments section when no comments
+		expect(prompt).not.toContain("PR Review Comments");
+	});
+
+	it("uses custom template with Handlebars in direct mode", () => {
+		const customTemplate = "Custom: {{task}} - {{type}}";
+		const prompt = buildPrompt(
+			{
+				type: "direct",
+				title: "",
+				body: "",
+				number: 0,
+				triggerComment: "Do something",
+				task: "Do something",
+			},
+			customTemplate,
+		);
+
+		expect(prompt).toBe("Custom: Do something - direct");
 	});
 });

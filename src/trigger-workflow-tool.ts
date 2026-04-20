@@ -6,8 +6,12 @@
  * not trigger workflows due to GITHUB_TOKEN limitations).
  */
 
+import {
+	type AgentToolResult,
+	defineTool,
+} from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { defineTool, type AgentToolResult } from "@mariozechner/pi-coding-agent";
+import { loadToolPrompt } from "./templates.js";
 
 /**
  * Details returned by the trigger_workflow_dispatch tool.
@@ -21,6 +25,8 @@ export interface TriggerWorkflowToolDetails {
 /**
  * Parameters schema for the trigger_workflow_dispatch tool.
  */
+const triggerWorkflowPrompt = loadToolPrompt("trigger-workflow-dispatch");
+
 const triggerWorkflowSchema = Type.Object({
 	workflowFile: Type.String({
 		description:
@@ -78,24 +84,17 @@ export interface TriggerWorkflowToolOptions {
  *
  * @param options - Tool options including client, owner, repo, and optional callback.
  */
-export function triggerWorkflowDispatchTool(options: TriggerWorkflowToolOptions) {
+export function triggerWorkflowDispatchTool(
+	options: TriggerWorkflowToolOptions,
+) {
 	const { client, owner, repo, onWorkflowTriggered } = options;
 
 	return defineTool({
 		name: "trigger_workflow_dispatch",
 		label: "Trigger Workflow Dispatch",
-		description:
-			"Trigger a GitHub Actions workflow_dispatch event. Use this to run downstream workflows " +
-			"on PRs created by this agent (since GITHUB_TOKEN-created PRs don't automatically trigger workflows). " +
-			"After creating a PR, trigger its review/test workflow to verify your changes.",
-		promptSnippet:
-			"trigger_workflow_dispatch: Trigger a GitHub Actions workflow to run on the current branch",
-		promptGuidelines: [
-			"Use after creating a PR to trigger CI/CD workflows on that PR.",
-			"Common use case: trigger a PR review workflow like 'pi-pr-review.yml' with inputs.pr_number",
-			"The workflow file path can be relative to .github/workflows/ or include the full path.",
-			"The ref defaults to the current branch - usually what you want after pushing a PR.",
-		],
+		description: triggerWorkflowPrompt.description,
+		promptSnippet: triggerWorkflowPrompt.promptSnippet,
+		promptGuidelines: triggerWorkflowPrompt.promptGuidelines,
 		parameters: triggerWorkflowSchema,
 		async execute(
 			_toolCallId: string,
@@ -112,10 +111,12 @@ export function triggerWorkflowDispatchTool(options: TriggerWorkflowToolOptions)
 				ref = params.ref ?? (await client.getCurrentBranch());
 			} catch (error) {
 				return {
-					content: [{
-						type: "text" as const,
-						text: `Error: Failed to determine current git branch: ${error instanceof Error ? error.message : String(error)}. You can specify the 'ref' parameter explicitly.`
-					}],
+					content: [
+						{
+							type: "text" as const,
+							text: `Error: Failed to determine current git branch: ${error instanceof Error ? error.message : String(error)}. You can specify the 'ref' parameter explicitly.`,
+						},
+					],
 					details: {
 						workflowFile: params.workflowFile,
 						ref: params.ref ?? "",
@@ -142,10 +143,12 @@ export function triggerWorkflowDispatchTool(options: TriggerWorkflowToolOptions)
 			} catch (error) {
 				const msg = error instanceof Error ? error.message : String(error);
 				return {
-					content: [{
-						type: "text" as const,
-						text: `Error: Failed to trigger workflow dispatch: ${msg}\n\nWorkflow: ${workflowId}\nRef: ${ref}\nInputs: ${params.inputs ? JSON.stringify(params.inputs) : "none"}`
-					}],
+					content: [
+						{
+							type: "text" as const,
+							text: `Error: Failed to trigger workflow dispatch: ${msg}\n\nWorkflow: ${workflowId}\nRef: ${ref}\nInputs: ${params.inputs ? JSON.stringify(params.inputs) : "none"}`,
+						},
+					],
 					details: {
 						workflowFile: params.workflowFile,
 						ref,
@@ -164,10 +167,13 @@ export function triggerWorkflowDispatchTool(options: TriggerWorkflowToolOptions)
 			}
 
 			const dispatchUrl = `https://github.com/${owner}/${repo}/actions/workflows/${workflowId.replace(".github/workflows/", "")}`;
-			const successMsg = `Workflow dispatch triggered successfully!\n\n` +
+			const successMsg =
+				`Workflow dispatch triggered successfully!\n\n` +
 				`Workflow: ${workflowId}\n` +
 				`Ref: ${ref}\n` +
-				(params.inputs ? `Inputs: ${JSON.stringify(params.inputs, null, 2)}\n` : "") +
+				(params.inputs
+					? `Inputs: ${JSON.stringify(params.inputs, null, 2)}\n`
+					: "") +
 				`\nView workflows: ${dispatchUrl}`;
 
 			return {

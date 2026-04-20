@@ -16,8 +16,14 @@
  * - Scrubbing all LLM API key env vars so the SDK only uses .env.e2e config
  * - Restoring everything in afterAll
  */
-import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
-import { mkdtempSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runAgent } from "./agent.js";
@@ -40,13 +46,19 @@ interface E2EConfig {
  */
 function parseEnvFile(filePath: string): Record<string, string> {
 	const env: Record<string, string> = {};
-	if (!existsSync(filePath)) return env;
+	if (!existsSync(filePath)) {
+		return env;
+	}
 	const content = readFileSync(filePath, "utf-8");
 	for (const line of content.split("\n")) {
 		const trimmed = line.trim();
-		if (!trimmed || trimmed.startsWith("#")) continue;
+		if (!trimmed || trimmed.startsWith("#")) {
+			continue;
+		}
 		const eqIdx = trimmed.indexOf("=");
-		if (eqIdx === -1) continue;
+		if (eqIdx === -1) {
+			continue;
+		}
 		const key = trimmed.slice(0, eqIdx).trim();
 		const value = trimmed.slice(eqIdx + 1).trim();
 		env[key] = value;
@@ -56,11 +68,15 @@ function parseEnvFile(filePath: string): Record<string, string> {
 
 function loadE2EConfig(): E2EConfig | null {
 	const envPath = join(import.meta.dirname, "..", ".env.e2e");
-	if (!existsSync(envPath)) return null;
+	if (!existsSync(envPath)) {
+		return null;
+	}
 	const env = parseEnvFile(envPath);
 
 	// Need at least one of PI_AUTH_JSON or PI_MODELS_JSON to run
-	if (!env.PI_AUTH_JSON && !env.PI_MODELS_JSON) return null;
+	if (!(env.PI_AUTH_JSON || env.PI_MODELS_JSON)) {
+		return null;
+	}
 
 	return {
 		piAuthJson: env.PI_AUTH_JSON ?? "",
@@ -133,10 +149,10 @@ function scrubSdkEnvVars(): Record<string, string | undefined> {
 
 function restoreSdkEnvVars(saved: Record<string, string | undefined>): void {
 	for (const key of SDK_ENV_VARS) {
-		if (saved[key] !== undefined) {
-			process.env[key] = saved[key];
-		} else {
+		if (saved[key] === undefined) {
 			delete process.env[key];
+		} else {
+			process.env[key] = saved[key];
 		}
 	}
 }
@@ -215,19 +231,25 @@ describe.skipIf(skipE2E)("e2e: runAgent", () => {
 			console.log(`    ${msg}`);
 		}
 
-		if (!result.success) {
-			console.log(`  Error: ${result.error}`);
-		} else {
+		if (result.success) {
 			console.log(`  Response length: ${result.response.length}`);
-			console.log(`  Response (first 300 chars): ${result.response.slice(0, 300)}`);
-			console.log(`  Response (last 100 chars): ...${result.response.slice(-100)}`);
+			console.log(
+				`  Response (first 300 chars): ${result.response.slice(0, 300)}`,
+			);
+			console.log(
+				`  Response (last 100 chars): ...${result.response.slice(-100)}`,
+			);
+		} else {
+			console.log(`  Error: ${result.error}`);
 		}
 
 		expect(result.success).toBe(true);
 		if (result.success) {
 			// A 3-4 paragraph essay must be at least 200 characters
 			expect(result.response.length).toBeGreaterThan(200);
-			const wordCount = result.response.split(/\s+/).filter((w: string) => w.length > 0).length;
+			const wordCount = result.response
+				.split(/\s+/)
+				.filter((w: string) => w.length > 0).length;
 			expect(wordCount).toBeGreaterThan(50);
 		}
 	}, 180_000);
@@ -281,19 +303,25 @@ Environment:
 			console.log(`    ${msg}`);
 		}
 
-		if (!result.success) {
-			console.log(`  Error: ${result.error}`);
-		} else {
+		if (result.success) {
 			console.log(`  Response length: ${result.response.length}`);
-			console.log(`  Response (first 300 chars): ${result.response.slice(0, 300)}`);
-			console.log(`  Response (last 100 chars): ...${result.response.slice(-100)}`);
+			console.log(
+				`  Response (first 300 chars): ${result.response.slice(0, 300)}`,
+			);
+			console.log(
+				`  Response (last 100 chars): ...${result.response.slice(-100)}`,
+			);
+		} else {
+			console.log(`  Error: ${result.error}`);
 		}
 
 		expect(result.success).toBe(true);
 		if (result.success) {
 			// A detailed investigation plan with 5+ steps must be at least 300 characters
 			expect(result.response.length).toBeGreaterThan(300);
-			const wordCount = result.response.split(/\s+/).filter((w: string) => w.length > 0).length;
+			const wordCount = result.response
+				.split(/\s+/)
+				.filter((w: string) => w.length > 0).length;
 			expect(wordCount).toBeGreaterThan(75);
 		}
 	}, 180_000);
@@ -327,7 +355,7 @@ describe("e2e: config detection", () => {
 		if (skipE2E) {
 			expect(skipE2E).toBe(true);
 		} else {
-			expect(config!.piAuthJson || config!.piModelsJson).toBeTruthy();
+			expect(config?.piAuthJson || config?.piModelsJson).toBeTruthy();
 		}
 	});
 });

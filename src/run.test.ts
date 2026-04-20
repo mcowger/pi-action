@@ -25,6 +25,9 @@ import { shareSession } from "./share.js";
 vi.mock("node:fs", () => ({
 	mkdirSync: vi.fn(),
 	writeFileSync: vi.fn(),
+	existsSync: vi.fn(() => true),
+	readdirSync: vi.fn(() => []),
+	readFileSync: vi.fn(() => ""),
 }));
 
 vi.mock("node:os", () => ({
@@ -811,7 +814,10 @@ describe("run", () => {
 
 		// Should set outputs
 		expect(deps.log.setOutput).toHaveBeenCalledWith("success", "true");
-		expect(deps.log.setOutput).toHaveBeenCalledWith("response", "Here is your help!");
+		expect(deps.log.setOutput).toHaveBeenCalledWith(
+			"response",
+			"Here is your help!",
+		);
 	});
 
 	it("in output mode, sets outputs on failure", async () => {
@@ -848,7 +854,10 @@ describe("run", () => {
 
 		// Should set outputs
 		expect(deps.log.setOutput).toHaveBeenCalledWith("success", "false");
-		expect(deps.log.setOutput).toHaveBeenCalledWith("response", "Model not found");
+		expect(deps.log.setOutput).toHaveBeenCalledWith(
+			"response",
+			"Model not found",
+		);
 	});
 
 	it("in output mode, sets share_url output when session is shared", async () => {
@@ -986,14 +995,17 @@ describe("run", () => {
 		await run(deps);
 
 		expect(deps.log.setOutput).toHaveBeenCalledWith("success", "false");
-		expect(deps.log.setOutput).toHaveBeenCalledWith("response", "Agent timeout");
+		expect(deps.log.setOutput).toHaveBeenCalledWith(
+			"response",
+			"Agent timeout",
+		);
 		expect(deps.log.error).toHaveBeenCalledWith(
 			"pi execution failed: Agent timeout",
 		);
 	});
 
 	it("direct prompt mode requires output_mode: output", async () => {
-		const mockClient = createMockGitHubClient();
+		const _mockClient = createMockGitHubClient();
 		const deps = createMockDeps({
 			context: {
 				payload: {},

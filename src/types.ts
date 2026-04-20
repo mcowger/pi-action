@@ -164,7 +164,12 @@ export interface OctokitClient {
 				public?: boolean;
 				description?: string;
 			}) => Promise<{ data: { html_url?: string; id?: string } }>;
-			get: (params: { gist_id: string }) => Promise<{ data: { files?: Record<string, unknown> | null; description?: string | null } }>;
+			get: (params: { gist_id: string }) => Promise<{
+				data: {
+					files?: Record<string, unknown> | null;
+					description?: string | null;
+				};
+			}>;
 			update: (params: {
 				gist_id: string;
 				files: Record<string, { content: string }>;
@@ -173,7 +178,13 @@ export interface OctokitClient {
 			listForUser: (params: {
 				username: string;
 				per_page?: number;
-			}) => Promise<{ data: Array<{ id: string; description?: string | null; files: Record<string, unknown> }> }>;
+			}) => Promise<{
+				data: Array<{
+					id: string;
+					description?: string | null;
+					files: Record<string, unknown>;
+				}>;
+			}>;
 		};
 		actions: {
 			createWorkflowDispatch: (params: {

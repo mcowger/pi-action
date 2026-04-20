@@ -99,7 +99,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
-		messages: [],
+			messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -142,7 +142,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
-		messages: [],
+			messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -177,7 +177,7 @@ describe("runAgent", () => {
 		const mockSession = {
 			subscribe: vi.fn(),
 			prompt: vi.fn().mockRejectedValue(new Error("API error")),
-		messages: [],
+			messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -198,7 +198,7 @@ describe("runAgent", () => {
 			subscribe: vi.fn(),
 			// biome-ignore lint/suspicious/noEmptyBlockStatements: intentionally never resolves for timeout test
 			prompt: vi.fn(() => new Promise(() => {})),
-		messages: [],
+			messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -384,7 +384,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
-		messages: [],
+			messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -438,7 +438,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
-		messages: [],
+			messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -483,7 +483,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
-		messages: [],
+			messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -506,7 +506,7 @@ describe("runAgent", () => {
 			// biome-ignore lint/suspicious/noEmptyBlockStatements: mock implementation
 			prompt: vi.fn(async () => {}),
 			getLastAssistantText: vi.fn(() => undefined),
-		messages: [],
+			messages: [],
 		};
 
 		mockModelRegistry.create.mockReturnValue({
@@ -548,7 +548,7 @@ describe("runAgent", () => {
 				}
 			}),
 			getLastAssistantText: vi.fn(() => "Full response from session"),
-		messages: [],
+			messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
@@ -574,12 +574,15 @@ describe("runAgent", () => {
 				if (subscribeCallback) {
 					subscribeCallback({
 						type: "message_update",
-						assistantMessageEvent: { type: "text_delta", delta: "Streamed response" },
+						assistantMessageEvent: {
+							type: "text_delta",
+							delta: "Streamed response",
+						},
 					});
 				}
 			}),
 			getLastAssistantText: vi.fn(() => undefined),
-		messages: [],
+			messages: [],
 		};
 		mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 

@@ -8,9 +8,7 @@
 		"test": "vitest run",
 		"test:e2e": "vitest run --config vitest.e2e.config.ts",
 		"test:watch": "vitest",
-		"check": "biome check --write .",
-		"typecheck": "tsc --noEmit",
-		"prepare": "husky"
+		"typecheck": "tsc --noEmit"
 	},
 	"keywords": [
 		"github-action",
@@ -36,15 +34,13 @@
 		"@actions/core": "^3.0.0",
 		"@actions/github": "^9.1.0",
 		"@mariozechner/pi-coding-agent": "^0.67.68",
+		"handlebars": "^4.7.9",
 		"tsx": "^4.21.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.12",
-		"@commitlint/cli": "^20.5.0",
-		"@commitlint/config-conventional": "^20.5.0",
+		"@types/handlebars": "^4.0.40",
 		"@types/node": "^25.6.0",
 		"@vitest/coverage-v8": "^4.1.4",
-		"husky": "^9.1.7",
 		"typescript": "^6.0.3",
 		"vitest": "^4.1.4"
 	}

@@ -5,9 +5,9 @@ import {
 	createCodingTools,
 	type ModelRegistry,
 	ModelRegistry as ModelRegistryClass,
-	type ToolDefinition,
 	SessionManager,
 	SettingsManager,
+	type ToolDefinition,
 } from "@mariozechner/pi-coding-agent";
 import type { PIContext } from "./context.js";
 import { buildPrompt } from "./context.js";
@@ -82,11 +82,15 @@ function createSessionEventHandler(
 					onTextDelta(delta);
 					debug(`📝 text_delta (${delta.length} chars)`);
 				} else {
-					debug(`message_update: assistantMessageEvent.type=${event.assistantMessageEvent?.type}`);
+					debug(
+						`message_update: assistantMessageEvent.type=${event.assistantMessageEvent?.type}`,
+					);
 				}
 				break;
 			case "message_start":
-				debug(`message_start: role=${((event as unknown) as Record<string, unknown>).message}`);
+				debug(
+					`message_start: role=${(event as unknown as Record<string, unknown>).message}`,
+				);
 				break;
 			case "message_end":
 				debug("message_end");
@@ -118,11 +122,15 @@ async function resolveResponse(
 	// Try immediately first (common case in non-CI environments)
 	const immediate = session.getLastAssistantText();
 	if (immediate) {
-		debug(`resolveResponse: got ${immediate.length} chars from getLastAssistantText() immediately`);
+		debug(
+			`resolveResponse: got ${immediate.length} chars from getLastAssistantText() immediately`,
+		);
 		return immediate;
 	}
 
-	debug(`resolveResponse: getLastAssistantText() returned undefined, messages count=${session.messages.length}, streamedText length=${streamedText.length}`);
+	debug(
+		`resolveResponse: getLastAssistantText() returned undefined, messages count=${session.messages.length}, streamedText length=${streamedText.length}`,
+	);
 	debug(`resolveResponse: polling for up to 2s...`);
 
 	// Poll for up to 2 seconds (CI environments may need this)
@@ -130,12 +138,16 @@ async function resolveResponse(
 		await new Promise((resolve) => setTimeout(resolve, 100));
 		const text = session.getLastAssistantText();
 		if (text) {
-			debug(`resolveResponse: got ${text.length} chars from getLastAssistantText() after ${(i + 1) * 100}ms`);
+			debug(
+				`resolveResponse: got ${text.length} chars from getLastAssistantText() after ${(i + 1) * 100}ms`,
+			);
 			return text;
 		}
 	}
 
-	debug(`resolveResponse: polling timed out, falling back to streamedText (${streamedText.length} chars)`);
+	debug(
+		`resolveResponse: polling timed out, falling back to streamedText (${streamedText.length} chars)`,
+	);
 	// Final fallback: streaming text_delta accumulator
 	return streamedText;
 }
@@ -146,8 +158,12 @@ export async function runAgent(
 	authStorage?: AuthStorage,
 	modelRegistry?: ModelRegistry,
 ): Promise<AgentResult> {
-	console.error(`DEBUG runAgent: config.branchMode=${config.branchMode || "undefined"}`);
-	const prompt = buildPrompt(piContext, config.promptTemplate, config.branchMode, config.cwd);
+	const prompt = buildPrompt(
+		piContext,
+		config.promptTemplate,
+		config.branchMode,
+		config.cwd,
+	);
 
 	// Use provided or create auth/models
 	const auth = authStorage ?? AuthStorageClass.create();
@@ -174,7 +190,9 @@ export async function runAgent(
 		? (log.debug?.bind(log.debug) ?? log.info.bind(log))
 		: () => {};
 
-	debug(`runAgent: provider=${config.provider}, model=${config.model}, timeout=${config.timeout}s`);
+	debug(
+		`runAgent: provider=${config.provider}, model=${config.model}, timeout=${config.timeout}s`,
+	);
 	debug(`runAgent: prompt length=${prompt.length} chars`);
 	debug(`runAgent: cwd=${config.cwd}`);
 
@@ -212,32 +230,46 @@ export async function runAgent(
 			`Timeout after ${config.timeout} seconds`,
 		);
 
-		debug(`runAgent: session.prompt() resolved, messages=${createdSession.messages.length}, streamedDeltas=${streamedDeltaCount}, streamedText=${streamedText.length} chars`);
+		debug(
+			`runAgent: session.prompt() resolved, messages=${createdSession.messages.length}, streamedDeltas=${streamedDeltaCount}, streamedText=${streamedText.length} chars`,
+		);
 
 		// Log message details in debug mode
 		if (config.debug) {
 			for (let i = 0; i < createdSession.messages.length; i++) {
-				const msg = createdSession.messages[i] as { role?: string; content?: unknown };
-				const contentPreview = typeof msg.content === "string"
-					? msg.content.slice(0, 80)
-					: Array.isArray(msg.content)
-						? `[${msg.content.length} blocks, first: ${(msg.content[0] as { type?: string })?.type ?? "unknown"}]`
-						: String(msg.content).slice(0, 80);
-				debug(`  message[${i}]: role=${msg.role ?? "unknown"}, content=${contentPreview}`);
+				const msg = createdSession.messages[i] as {
+					role?: string;
+					content?: unknown;
+				};
+				const contentPreview =
+					typeof msg.content === "string"
+						? msg.content.slice(0, 80)
+						: Array.isArray(msg.content)
+							? `[${msg.content.length} blocks, first: ${(msg.content[0] as { type?: string })?.type ?? "unknown"}]`
+							: String(msg.content).slice(0, 80);
+				debug(
+					`  message[${i}]: role=${msg.role ?? "unknown"}, content=${contentPreview}`,
+				);
 			}
 		}
 
-		debug(`runAgent: getLastAssistantText() = ${JSON.stringify(createdSession.getLastAssistantText()?.slice(0, 100) ?? undefined)}`);
+		debug(
+			`runAgent: getLastAssistantText() = ${JSON.stringify(createdSession.getLastAssistantText()?.slice(0, 100) ?? undefined)}`,
+		);
 
 		// Wait for the SDK's internal event queue to finalize messages,
 		// then read the response. Falls back to streaming accumulator.
 		const response = await resolveResponse(createdSession, streamedText, debug);
 		const trimmedResponse = response.trim();
 
-		debug(`runAgent: final response length=${trimmedResponse.length} chars, source=${createdSession.getLastAssistantText() ? "session" : streamedText ? "streaming" : "none"}`);
+		debug(
+			`runAgent: final response length=${trimmedResponse.length} chars, source=${createdSession.getLastAssistantText() ? "session" : streamedText ? "streaming" : "none"}`,
+		);
 
 		if (!trimmedResponse) {
-			log.info(`⚠️ Empty response (sessionText=${JSON.stringify(createdSession.getLastAssistantText()?.slice(0, 50))}, streamedDeltas=${streamedDeltaCount}, streamedText=${streamedText.length} chars, messages=${createdSession.messages.length})`);
+			log.info(
+				`⚠️ Empty response (sessionText=${JSON.stringify(createdSession.getLastAssistantText()?.slice(0, 50))}, streamedDeltas=${streamedDeltaCount}, streamedText=${streamedText.length} chars, messages=${createdSession.messages.length})`,
+			);
 			return {
 				success: false,
 				error: "Agent returned empty response",

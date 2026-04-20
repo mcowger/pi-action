@@ -15,7 +15,11 @@ function createMockPRClient() {
 describe("createPullRequestTool", () => {
 	it("creates a tool with the correct name and label", () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+		});
 
 		expect(tool.name).toBe("create_pull_request");
 		expect(tool.label).toBe("Create Pull Request");
@@ -23,7 +27,11 @@ describe("createPullRequestTool", () => {
 
 	it("has description and prompt guidance", () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+		});
 
 		expect(tool.description).toContain("Create a pull request");
 		expect(tool.description).toContain("do NOT use `gh pr create`");
@@ -34,7 +42,11 @@ describe("createPullRequestTool", () => {
 
 	it("creates a PR successfully", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+		});
 
 		const result = await tool.execute(
 			"call-1",
@@ -64,11 +76,18 @@ describe("createPullRequestTool", () => {
 
 	it("uses default branch when base not specified", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+		});
 
 		await tool.execute("call-1", { title: "Fix bug" }, undefined);
 
-		expect(client.getDefaultBranch).toHaveBeenCalledWith("testowner", "testrepo");
+		expect(client.getDefaultBranch).toHaveBeenCalledWith(
+			"testowner",
+			"testrepo",
+		);
 		expect(client.createPullRequest).toHaveBeenCalledWith(
 			expect.objectContaining({ base: "main" }),
 		);
@@ -76,9 +95,17 @@ describe("createPullRequestTool", () => {
 
 	it("uses provided base branch", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+		});
 
-		await tool.execute("call-1", { title: "Fix bug", base: "develop" }, undefined);
+		await tool.execute(
+			"call-1",
+			{ title: "Fix bug", base: "develop" },
+			undefined,
+		);
 
 		expect(client.getDefaultBranch).not.toHaveBeenCalled();
 		expect(client.createPullRequest).toHaveBeenCalledWith(
@@ -88,9 +115,17 @@ describe("createPullRequestTool", () => {
 
 	it("auto-appends attribution to PR body", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+		});
 
-		await tool.execute("call-1", { title: "Fix", body: "My changes" }, undefined);
+		await tool.execute(
+			"call-1",
+			{ title: "Fix", body: "My changes" },
+			undefined,
+		);
 
 		expect(client.createPullRequest).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -101,7 +136,11 @@ describe("createPullRequestTool", () => {
 
 	it("does not append attribution if already present", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+		});
 
 		await tool.execute(
 			"call-1",
@@ -119,7 +158,11 @@ describe("createPullRequestTool", () => {
 	it("errors when head branch equals base branch", async () => {
 		const client = createMockPRClient();
 		client.getCurrentBranch = vi.fn().mockResolvedValue("main");
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+		});
 
 		const result = await tool.execute(
 			"call-1",
@@ -136,7 +179,11 @@ describe("createPullRequestTool", () => {
 
 	it("uses empty body when not provided", async () => {
 		const client = createMockPRClient();
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo" });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+		});
 
 		await tool.execute("call-1", { title: "Fix" }, undefined);
 
@@ -150,7 +197,12 @@ describe("createPullRequestTool", () => {
 	it("invokes onPRCreated callback when PR is created", async () => {
 		const client = createMockPRClient();
 		const onPRCreated = vi.fn();
-		const tool = createPullRequestTool({ client, owner: "testowner", repo: "testrepo", onPRCreated });
+		const tool = createPullRequestTool({
+			client,
+			owner: "testowner",
+			repo: "testrepo",
+			onPRCreated,
+		});
 
 		await tool.execute("call-1", { title: "Fix bug" }, undefined);
 

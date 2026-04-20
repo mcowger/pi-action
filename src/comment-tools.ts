@@ -1,11 +1,17 @@
+import {
+	type AgentToolResult,
+	defineTool,
+} from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { defineTool, type AgentToolResult } from "@mariozechner/pi-coding-agent";
 import type { GitHubClient } from "./github.js";
+import { loadToolPrompt } from "./templates.js";
 
 export interface CommentState {
 	commentId: number;
 	htmlUrl: string;
 }
+
+const createCommentPrompt = loadToolPrompt("create-progress-comment");
 
 const createCommentSchema = Type.Object({
 	body: Type.String({
@@ -15,12 +21,16 @@ const createCommentSchema = Type.Object({
 	}),
 });
 
+const updateCommentPrompt = loadToolPrompt("update-progress-comment");
+
 const updateCommentSchema = Type.Object({
 	comment_id: Type.Number({
-		description: "The numeric ID of the comment to update (returned by create_progress_comment).",
+		description:
+			"The numeric ID of the comment to update (returned by create_progress_comment).",
 	}),
 	body: Type.String({
-		description: "The new content for the comment (Markdown supported). This will completely replace the existing content.",
+		description:
+			"The new content for the comment (Markdown supported). This will completely replace the existing content.",
 	}),
 });
 
@@ -39,16 +49,9 @@ export function createProgressCommentTool(
 	return defineTool({
 		name: "create_progress_comment",
 		label: "Create Progress Comment",
-		description:
-			"Create a progress comment on the issue/PR that can be updated throughout the session. " +
-			"Use this at the start of your work to post status updates. Returns the comment ID needed for updates.",
-		promptSnippet:
-			"create_progress_comment: Create a progress comment that can be updated later",
-		promptGuidelines: [
-			"Use create_progress_comment to post a status comment at the start of your work.",
-			"Store the returned comment_id to update the comment later with update_progress_comment.",
-			"Use this to report progress, intermediate results, or keep users informed.",
-		],
+		description: createCommentPrompt.description,
+		promptSnippet: createCommentPrompt.promptSnippet,
+		promptGuidelines: createCommentPrompt.promptGuidelines,
 		parameters: createCommentSchema,
 		async execute(
 			_toolCallId: string,
@@ -56,7 +59,10 @@ export function createProgressCommentTool(
 			_signal?: AbortSignal,
 		): Promise<AgentToolResult<CreateCommentToolDetails>> {
 			try {
-				const result = await client.createIssueComment(issueNumber, params.body);
+				const result = await client.createIssueComment(
+					issueNumber,
+					params.body,
+				);
 
 				const commentState: CommentState = {
 					commentId: result.id,
@@ -106,16 +112,9 @@ export function createUpdateCommentTool(
 	return defineTool({
 		name: "update_progress_comment",
 		label: "Update Progress Comment",
-		description:
-			"Update an existing progress comment by its ID. Use this to report progress, " +
-			"add results, or modify content in a comment you created earlier with create_progress_comment.",
-		promptSnippet:
-			"update_progress_comment: Update an existing progress comment by ID",
-		promptGuidelines: [
-			"Use update_progress_comment to modify an existing comment you created earlier.",
-			"The comment_id parameter must be the ID returned by create_progress_comment.",
-			"The body parameter will completely replace the existing comment content.",
-		],
+		description: updateCommentPrompt.description,
+		promptSnippet: updateCommentPrompt.promptSnippet,
+		promptGuidelines: updateCommentPrompt.promptGuidelines,
 		parameters: updateCommentSchema,
 		async execute(
 			_toolCallId: string,

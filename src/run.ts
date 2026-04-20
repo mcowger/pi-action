@@ -2,16 +2,19 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { runAgent } from "./agent.js";
-import { buildPrompt, extractTask, hasTrigger } from "./context.js";
-import type { PIContext } from "./context.js";
 import {
+	type CommentState,
 	createProgressCommentTool,
 	createUpdateCommentTool,
-	type CommentState,
 } from "./comment-tools.js";
+import type { PIContext } from "./context.js";
+import { extractTask, hasTrigger } from "./context.js";
 import { createPullRequestTool } from "./create-pr-tool.js";
-import { triggerWorkflowDispatchTool } from "./trigger-workflow-tool.js";
-import { formatErrorComment, formatSuccessComment, formatReviewComments } from "./formatting.js";
+import {
+	formatErrorComment,
+	formatReviewComments,
+	formatSuccessComment,
+} from "./formatting.js";
 import {
 	addReaction,
 	extractTriggerInfo,
@@ -21,6 +24,7 @@ import { parseInlineComments } from "./inline-comments.js";
 import type { SecurityContext } from "./security.js";
 import { sanitizeInput, validatePermissions } from "./security.js";
 import { shareSession } from "./share.js";
+import { triggerWorkflowDispatchTool } from "./trigger-workflow-tool.js";
 import type { ModelConfig, RepoRef, Session, TriggerInfo } from "./types.js";
 
 export interface ActionInputs {
@@ -97,7 +101,10 @@ function validateTrigger(
 
 	// Only require trigger phrase on comment events.
 	// For creation events (PR opened, issue opened), the event itself is the trigger.
-	if (triggerInfo.isCommentEvent && !hasTrigger(triggerInfo.triggerText, inputs.triggerPhrase)) {
+	if (
+		triggerInfo.isCommentEvent &&
+		!hasTrigger(triggerInfo.triggerText, inputs.triggerPhrase)
+	) {
 		log.info(`No trigger phrase "${inputs.triggerPhrase}" found, skipping`);
 		return null;
 	}
@@ -139,8 +146,6 @@ async function buildPIContext(
 	triggerPhrase: string,
 	logger: Logger,
 ): Promise<PIContext> {
-	console.error(`DEBUG buildPIContext: isPullRequest=${triggerInfo.isPullRequest}, issueNumber=${triggerInfo.issueNumber}`);
-	
 	const sanitizedBody = sanitizeInput(triggerInfo.triggerText);
 	const task = extractTask(sanitizedBody, triggerPhrase);
 
@@ -152,24 +157,18 @@ async function buildPIContext(
 		triggerComment: sanitizedBody,
 		task,
 	};
-	console.error(`DEBUG buildPIContext: context.type=${piContext.type}`);
 
 	// Get PR diff if applicable
 	if (triggerInfo.isPullRequest) {
-		console.error(`DEBUG buildPIContext: Fetching PR diff for #${triggerInfo.issueNumber}`);
 		piContext.diff = await ghClient.getPullRequestDiff(triggerInfo.issueNumber);
-		console.error(`DEBUG buildPIContext: PR diff length=${piContext.diff?.length || 0} chars`);
 
 		// Get PR review comments for context
 		try {
-			console.error(`DEBUG buildPIContext: Fetching PR review comments for #${triggerInfo.issueNumber}`);
 			const comments = await ghClient.getPullRequestReviewComments(
 				triggerInfo.issueNumber,
 			);
-			console.error(`DEBUG buildPIContext: Found ${comments.length} review comments`);
 			if (comments.length > 0) {
 				piContext.reviewComments = formatReviewComments(comments);
-				console.error(`DEBUG buildPIContext: Formatted review comments length=${piContext.reviewComments.length} chars`);
 			}
 		} catch (error) {
 			logger.warning(`Failed to fetch PR review comments: ${error}`);
@@ -233,13 +232,19 @@ async function postResult(
 		if (result.success) {
 			let responseText = result.response;
 			if (triggerInfo.isPullRequest) {
-				const { comments, cleanResponse } = parseInlineComments(result.response);
+				const { comments, cleanResponse } = parseInlineComments(
+					result.response,
+				);
 				responseText = cleanResponse;
 				if (comments.length > 0) {
-					log.info(`Parsed ${comments.length} inline comment(s) from response (not posted in output mode)`);
+					log.info(
+						`Parsed ${comments.length} inline comment(s) from response (not posted in output mode)`,
+					);
 				}
 			}
-			log.info(`  response: ${responseText.substring(0, 200)}${responseText.length > 200 ? "..." : ""}`);
+			log.info(
+				`  response: ${responseText.substring(0, 200)}${responseText.length > 200 ? "..." : ""}`,
+			);
 			log.setOutput("response", responseText);
 		} else {
 			log.error(`pi execution failed: ${result.error}`);
@@ -323,7 +328,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 			task: inputs.prompt,
 		};
 
-	const result = await runAgent(piContext, {
+		const result = await runAgent(piContext, {
 			...inputs.modelConfig,
 			cwd,
 			logger: log,
@@ -334,7 +339,9 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		log.info(`Setting outputs (direct prompt mode):`);
 		log.info(`  success: ${String(result.success)}`);
 		if (result.success) {
-			log.info(`  response: ${result.response.substring(0, 200)}${result.response.length > 200 ? "..." : ""}`);
+			log.info(
+				`  response: ${result.response.substring(0, 200)}${result.response.length > 200 ? "..." : ""}`,
+			);
 			log.setOutput("response", result.response);
 		} else {
 			log.error(`pi execution failed: ${result.error}`);
@@ -399,7 +406,8 @@ export async function run(deps: ActionDependencies): Promise<void> {
 
 			// Build PI context with PR data
 			const sanitizedBody = sanitizeInput(triggerInfo.triggerText);
-			const task = inputs.prompt || extractTask(sanitizedBody, inputs.triggerPhrase);
+			const task =
+				inputs.prompt || extractTask(sanitizedBody, inputs.triggerPhrase);
 
 			const piContext: PIContext = {
 				type: "pull_request",
@@ -499,17 +507,19 @@ export async function run(deps: ActionDependencies): Promise<void> {
 
 	// Add PR creation tool in branch mode
 	if (inputs.branchMode === "branch" && inputs.githubToken) {
-		customTools.push(createPullRequestTool({
-			client: ghClient,
-			owner: deps.context.repo.owner,
-			repo: deps.context.repo.name,
-			onPRCreated: (pr) => {
-				prCreated = true;
-				prNumber = pr.number.toString();
-				prUrl = pr.url;
-				log.info(`PR created: #${pr.number} - ${pr.url}`);
-			},
-		}));
+		customTools.push(
+			createPullRequestTool({
+				client: ghClient,
+				owner: deps.context.repo.owner,
+				repo: deps.context.repo.name,
+				onPRCreated: (pr) => {
+					prCreated = true;
+					prNumber = pr.number.toString();
+					prUrl = pr.url;
+					log.info(`PR created: #${pr.number} - ${pr.url}`);
+				},
+			}),
+		);
 	}
 
 	// Add comment tools for progress reporting
@@ -522,7 +532,9 @@ export async function run(deps: ActionDependencies): Promise<void> {
 				triggerInfo.issueNumber,
 				(comment) => {
 					agentComments.push(comment);
-					log.info(`Agent created comment: #${comment.commentId} - ${comment.htmlUrl}`);
+					log.info(
+						`Agent created comment: #${comment.commentId} - ${comment.htmlUrl}`,
+					);
 				},
 			),
 			createUpdateCommentTool(
@@ -539,15 +551,19 @@ export async function run(deps: ActionDependencies): Promise<void> {
 				owner: deps.context.repo.owner,
 				repo: deps.context.repo.name,
 				onWorkflowTriggered: (details) => {
-					log.info(`Workflow triggered: ${details.workflowFile} on ${details.ref}`);
+					log.info(
+						`Workflow triggered: ${details.workflowFile} on ${details.ref}`,
+					);
 				},
 			}),
 		);
 	}
 
 	// Run the agent (with retry for empty responses)
-	log.info(`DEBUG: About to runAgent with branchMode=${inputs.branchMode || "undefined"}`);
-	
+	log.info(
+		`DEBUG: About to runAgent with branchMode=${inputs.branchMode || "undefined"}`,
+	);
+
 	let result = await runAgent(piContext, {
 		...inputs.modelConfig,
 		cwd,
@@ -559,10 +575,14 @@ export async function run(deps: ActionDependencies): Promise<void> {
 
 	// Check for empty response - re-prompt the agent if needed
 	// Note: runAgent returns success:false on empty response, so we check for that case
-	if ((result.success && (!result.response || result.response.trim() === "")) || 
-	    (!result.success && result.error === "Agent returned empty response")) {
-		log.warning(`Agent returned empty response from first attempt. Re-prompting with reminder...`);
-		
+	if (
+		(result.success && (!result.response || result.response.trim() === "")) ||
+		(!result.success && result.error === "Agent returned empty response")
+	) {
+		log.warning(
+			`Agent returned empty response from first attempt. Re-prompting with reminder...`,
+		);
+
 		// Add a follow-up task reminding the agent to provide a summary
 		const reprimandContext: PIContext = {
 			...piContext,
@@ -574,7 +594,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 
 Do NOT call any tools - just provide the text summary.`,
 		};
-		
+
 		// Re-run the agent with the reprimand (no tools - just text)
 		const retryResult = await runAgent(reprimandContext, {
 			...inputs.modelConfig,
@@ -584,25 +604,39 @@ Do NOT call any tools - just provide the text summary.`,
 			branchMode: inputs.branchMode,
 			customTools: undefined,
 		});
-		
-		log.info(`Retry result: success=${retryResult.success}, hasResponse=${!!retryResult.response?.trim()}, error=${retryResult.error || 'none'}`);
-		
+
+		const retryHasResponse = retryResult.success
+			? !!retryResult.response?.trim()
+			: false;
+		const retryError = retryResult.success ? undefined : retryResult.error;
+		log.info(
+			`Retry result: success=${retryResult.success}, hasResponse=${retryHasResponse}, error=${retryError || "none"}`,
+		);
+
 		if (retryResult.success && retryResult.response?.trim()) {
-			log.info(`Re-prompt succeeded with response: ${retryResult.response.substring(0, 100)}...`);
+			log.info(
+				`Re-prompt succeeded with response: ${retryResult.response.substring(0, 100)}...`,
+			);
 			result = retryResult;
 		} else {
 			// Construct proper error message with details from both attempts
-			const firstRunStatus = "executed tools but returned empty response (no summary)";
-			const retryStatus = retryResult.success 
-				? (retryResult.response?.trim() ? "succeeded" : "succeeded but also returned empty response")
+			const firstRunStatus =
+				"executed tools but returned empty response (no summary)";
+			const retryStatus = retryResult.success
+				? retryResult.response?.trim()
+					? "succeeded"
+					: "succeeded but also returned empty response"
 				: `failed with error: ${retryResult.error}`;
-			
+
+			// Get first attempt response if available (for error result, use empty string)
+			const _firstResponse = result.success ? result.response : "";
+
+			const errorMessage = `Agent failed to provide a summary after two attempts. First attempt: ${firstRunStatus}. Retry attempt: ${retryStatus}.`;
 			result = {
 				success: false,
-				error: `Agent failed to provide a summary after two attempts. First attempt: ${firstRunStatus}. Retry attempt: ${retryStatus}.`,
-				response: result.response,
+				error: errorMessage,
 			};
-			log.error(result.error);
+			log.error(errorMessage);
 		}
 	}
 
@@ -617,7 +651,10 @@ Do NOT call any tools - just provide the text summary.`,
 		log,
 		inputs.suppressFinalComment,
 		deps.context.repo,
-		{ number: triggerInfo.isPullRequest ? triggerInfo.issueNumber : undefined, url: undefined },
+		{
+			number: triggerInfo.isPullRequest ? triggerInfo.issueNumber : undefined,
+			url: undefined,
+		},
 	);
 
 	// Set PR creation outputs for downstream workflow steps

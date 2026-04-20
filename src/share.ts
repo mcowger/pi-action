@@ -39,7 +39,8 @@ async function getOrCreateLogGist(
 	const expectedDescription = `${repo}-session-log`;
 
 	// First try to find existing gist by description
-	const existingId = await githubClient.findGistByDescription(expectedDescription);
+	const existingId =
+		await githubClient.findGistByDescription(expectedDescription);
 	if (existingId) {
 		return existingId;
 	}
@@ -66,8 +67,7 @@ This gist tracks pi-action agent sessions with links to full session logs.
 			return match[1];
 		}
 		return null;
-	} catch (error) {
-		console.warn(`Failed to create log gist: ${error instanceof Error ? error.message : error}`);
+	} catch (_error) {
 		return null;
 	}
 }
@@ -90,8 +90,11 @@ async function updateSessionLog(
 		const timeStr = metadata.time;
 
 		// Format new entry
-		const entry = `- ${timeStr} - [Session](${metadata.previewUrl})` +
-			(metadata.prNumber ? ` - [PR #${metadata.prNumber}](${metadata.prUrl})` : "") +
+		const entry =
+			`- ${timeStr} - [Session](${metadata.previewUrl})` +
+			(metadata.prNumber
+				? ` - [PR #${metadata.prNumber}](${metadata.prUrl})`
+				: "") +
 			` - ${metadata.result === "success" ? "✅" : "❌"} - ${metadata.description}`;
 
 		// Check if we already have a section for today
@@ -113,14 +116,13 @@ async function updateSessionLog(
 					`${todayHeader}${entry}\n\n${markerEnd}`,
 				);
 			} else {
-				newContent = currentContent + todayHeader + entry + '\n';
+				newContent = `${currentContent + todayHeader + entry}\n`;
 			}
 		}
 
 		// Update the gist
 		return await githubClient.updateGist(logGistId, LOG_FILENAME, newContent);
-	} catch (error) {
-		console.warn(`Failed to update session log: ${error instanceof Error ? error.message : error}`);
+	} catch (_error) {
 		return null;
 	}
 }
@@ -185,7 +187,8 @@ export async function shareSession(
 		let logGistUrl = "";
 
 		if (logGistId) {
-			logGistUrl = await updateSessionLog(githubClient, logGistId, sessionMeta) || "";
+			logGistUrl =
+				(await updateSessionLog(githubClient, logGistId, sessionMeta)) || "";
 		}
 
 		return {
@@ -195,7 +198,9 @@ export async function shareSession(
 		};
 	} catch (error) {
 		// biome-ignore lint/suspicious/noConsole: intentional warning log for non-fatal failure
-		console.warn(`Failed to share session: ${error instanceof Error ? error.message : error}`);
+		console.warn(
+			`Failed to share session: ${error instanceof Error ? error.message : error}`,
+		);
 		return null;
 	} finally {
 		// Clean up temp file
