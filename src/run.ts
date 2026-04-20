@@ -532,6 +532,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 	}
 
 	// Run the agent
+	log.info(`DEBUG: About to runAgent with branchMode=${inputs.branchMode || "undefined"}`);
 	const result = await runAgent(piContext, {
 		...inputs.modelConfig,
 		cwd,

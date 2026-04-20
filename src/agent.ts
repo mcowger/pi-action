@@ -146,6 +146,7 @@ export async function runAgent(
 	authStorage?: AuthStorage,
 	modelRegistry?: ModelRegistry,
 ): Promise<AgentResult> {
+	console.error(`DEBUG runAgent: config.branchMode=${config.branchMode || "undefined"}`);
 	const prompt = buildPrompt(piContext, config.promptTemplate, config.branchMode, config.cwd);
 
 	// Use provided or create auth/models

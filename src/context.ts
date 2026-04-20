@@ -160,20 +160,26 @@ export function buildPrompt(
 	branchMode?: "branch" | "direct",
 	cwd?: string,
 ): string {
+	// Debug logging
+	console.error(`DEBUG buildPrompt: branchMode=${branchMode || "undefined (default: branch)"}, type=${context.type}`);
+	
 	// Load template (from file, inline, or default)
 	const template = loadTemplate(customTemplate, cwd);
 
 	// For direct mode without a custom template, the task IS the prompt
 	if (context.type === "direct" && !customTemplate?.trim()) {
+		console.error(`DEBUG buildPrompt: direct mode without template, returning task`);
 		return context.task;
 	}
 
 	// For direct mode WITH a custom template, render it like normal
 	if (context.type === "direct") {
+		console.error(`DEBUG buildPrompt: direct mode with template`);
 		return renderTemplate(template, context, branchMode);
 	}
 
 	// Issue/PR mode: render template as normal
+	console.error(`DEBUG buildPrompt: ${context.type} mode with branchMode=${branchMode}`);
 	let prompt = renderTemplate(template, context, branchMode);
 
 	// Add PR diff section if available
