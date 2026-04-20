@@ -12,7 +12,7 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 - **PR assistance**: Prefix any PR comment/review comment/review message with `/pi` to have the agent review and improve the pull request
 - **Automated code reviews**: Have Pi review every new pull request automatically
 - **Add Pi to your own pipelines**: (Optionally) generate prompt from upstream actions/workflows and have Pi do the work in background for you anywhere you like in your workflows
-- **Minimal batteries included**: Tries to follow Pi minimalistic phylosophy while providing a comfortable UX out of the box, e.g. pretty print of logs and informations, auto replies to comments, and tools to interact programmatically and efficiently with git and GitHub-compatible APIs.
+- **Minimal batteries included**: Tries to follow Pi minimalistic phylosophy while providing a comfortable UX out of the box, e.g. pretty print of logs, auto replies to comments, and tools to interact efficiently with git and GitHub-compatible APIs.
 
 ## Goal
 
