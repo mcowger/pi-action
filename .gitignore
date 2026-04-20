@@ -2,5 +2,6 @@ node_modules/
 *.log
 .DS_Store
 coverage/
+dist/
 .env.e2e
 .e2e-tmp-*

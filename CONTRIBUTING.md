@@ -22,9 +22,6 @@ npm install
 # Run tests
 npm test
 
-# Build
-npm run build
-
 # Type check
 npm run typecheck
 ```
@@ -96,7 +93,7 @@ The [`action.yml`](action.yml) file defines:
 - Input parameters
 - A composite action that:
   1. Installs npm dependencies
-  2. Runs the compiled TypeScript via Node.js
+  2. Runs the TypeScript source directly via `tsx`
 
 ### Testing
 
@@ -115,21 +112,11 @@ npm test -- --coverage      # With coverage report
 - Mock the pi SDK to test agent integration without real API calls
 - Use [`test-helpers.ts`](src/test-helpers.ts) for common mock factories
 
-### Building
-
-```bash
-npm run build
-```
-
-This compiles TypeScript to `dist/`. The `dist/` directory is committed to the repository (required for GitHub Actions).
-
-**Important:** You must rebuild and commit changes to `dist/` after modifying source files.
-
 ## CI/CD
 
 ### GitHub Actions Workflows
 
-- [**CI (`ci.yml`)**](.github/workflows/ci.yml): Runs on push/PR to main - type checking, tests, build verification
+- [**CI (`ci.yml`)**](.github/workflows/ci.yml): Runs on push/PR to main - type checking and tests
 - [**pi Assistant (`pi-assistant.yml`)**](.github/workflows/pi-assistant.yml): Dogfooding - uses the action from this repo to respond to `@pi` triggers
 
 ### Release Process
