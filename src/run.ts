@@ -539,9 +539,10 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		);
 	}
 
-	// Run the agent
+	// Run the agent (with retry for empty responses)
 	log.info(`DEBUG: About to runAgent with branchMode=${inputs.branchMode || "undefined"}`);
-	const result = await runAgent(piContext, {
+	
+	let result = await runAgent(piContext, {
 		...inputs.modelConfig,
 		cwd,
 		logger: log,
@@ -550,15 +551,42 @@ export async function run(deps: ActionDependencies): Promise<void> {
 		customTools: customTools.length > 0 ? customTools : undefined,
 	});
 
-	// Check for empty response with fallback (agent ended with tool call but no summary)
+	// Check for empty response - re-prompt the agent if needed
 	if (result.success && (!result.response || result.response.trim() === "")) {
-		const branch = process.env.PI_ACTION_BRANCH;
-		if (inputs.branchMode === "branch" && branch) {
-			result.response = `Changes were committed and pushed to branch \`${branch}\`. If a pull request was created successfully, it should appear above with a link.`;
+		log.warning(`Agent returned empty response. Re-prompting with reminder...`);
+		
+		// Add a follow-up task reminding the agent to provide a summary
+		const reprimandContext: PIContext = {
+			...piContext,
+			task: `IMPORTANT: You completed your work but did not provide a final text summary. This summary is REQUIRED and will be posted as a comment. Please now write a plain-text summary of what you accomplished, including:
+- What changes were made and why
+- Which files were modified
+- Any errors encountered or remaining issues
+- Confirmation that your work is complete
+
+Do NOT call any tools - just provide the text summary.`,
+		};
+		
+		// Re-run the agent with the reprimand
+		const retryResult = await runAgent(reprimandContext, {
+			...inputs.modelConfig,
+			cwd,
+			logger: log,
+			promptTemplate: inputs.promptTemplate,
+			branchMode: inputs.branchMode,
+			// Don't pass custom tools on retry - we just want text
+			customTools: undefined,
+		});
+		
+		if (retryResult.success && retryResult.response?.trim()) {
+			log.info(`Re-prompt succeeded with response: ${retryResult.response.substring(0, 100)}...`);
+			// Combine any work from first run with the summary from retry
+			result = retryResult;
 		} else {
-			result.response = "The agent completed its work but did not provide a summary. Changes may have been committed.";
+			log.error(`Re-prompt also failed. First run had no response, retry also had no response.`);
+			result.success = false;
+			result.error = `Agent failed to provide a response after two attempts. First run: ${result.response ? 'had response' : 'empty'}. Retry: ${retryResult.response ? 'had response' : 'empty'}. Error: ${retryResult.error || 'none'}`;
 		}
-		log.warning(`Agent returned empty response, using fallback message: ${result.response}`);
 	}
 
 	// Post result (use gistClient for session sharing if available)
