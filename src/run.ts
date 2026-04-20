@@ -555,7 +555,7 @@ export async function run(deps: ActionDependencies): Promise<void> {
 	// Note: runAgent returns success:false on empty response, so we check for that case
 	if ((result.success && (!result.response || result.response.trim() === "")) || 
 	    (!result.success && result.error === "Agent returned empty response")) {
-		log.warning(`Agent returned empty response. Re-prompting with reminder...`);
+		log.warning(`Agent returned empty response from first attempt. Re-prompting with reminder...`);
 		
 		// Add a follow-up task reminding the agent to provide a summary
 		const reprimandContext: PIContext = {
@@ -569,25 +569,34 @@ export async function run(deps: ActionDependencies): Promise<void> {
 Do NOT call any tools - just provide the text summary.`,
 		};
 		
-		// Re-run the agent with the reprimand
+		// Re-run the agent with the reprimand (no tools - just text)
 		const retryResult = await runAgent(reprimandContext, {
 			...inputs.modelConfig,
 			cwd,
 			logger: log,
 			promptTemplate: inputs.promptTemplate,
 			branchMode: inputs.branchMode,
-			// Don't pass custom tools on retry - we just want text
 			customTools: undefined,
 		});
 		
+		log.info(`Retry result: success=${retryResult.success}, hasResponse=${!!retryResult.response?.trim()}, error=${retryResult.error || 'none'}`);
+		
 		if (retryResult.success && retryResult.response?.trim()) {
 			log.info(`Re-prompt succeeded with response: ${retryResult.response.substring(0, 100)}...`);
-			// Combine any work from first run with the summary from retry
 			result = retryResult;
 		} else {
-			log.error(`Re-prompt also failed. First run had no response, retry also had no response.`);
-			result.success = false;
-			result.error = `Agent failed to provide a response after two attempts. First run: ${result.response ? 'had response' : 'empty'}. Retry: ${retryResult.response ? 'had response' : 'empty'}. Error: ${retryResult.error || 'none'}`;
+			// Construct proper error message with details from both attempts
+			const firstRunStatus = "executed tools but returned empty response (no summary)";
+			const retryStatus = retryResult.success 
+				? (retryResult.response?.trim() ? "succeeded" : "succeeded but also returned empty response")
+				: `failed with error: ${retryResult.error}`;
+			
+			result = {
+				success: false,
+				error: `Agent failed to provide a summary after two attempts. First attempt: ${firstRunStatus}. Retry attempt: ${retryStatus}.`,
+				response: result.response,
+			};
+			log.error(result.error);
 		}
 	}
 
