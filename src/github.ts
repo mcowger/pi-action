@@ -49,7 +49,8 @@ export function extractTriggerInfo(
 		issueTitle: issue.title as string,
 		issueBody: (issue.body as string) || "",
 		commentId: comment?.id as number | undefined,
-		isPullRequest: !!payload.pull_request,
+		// Check for pull_request in payload (PR events) OR issue.pull_request (PR issue comments)
+		isPullRequest: !!(payload.pull_request || (payload.issue as Record<string, unknown>)?.pull_request),
 	};
 }
 
