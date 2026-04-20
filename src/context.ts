@@ -108,6 +108,8 @@ export function renderTemplate(template: string, context: PIContext, branchMode?
 		? `**NEVER create a pull request.** You are in "direct" mode - commit and push directly to the current branch which is already an existing PR branch.`
 		: `**NEVER push directly to the main/default branch.** You are working on a dedicated feature branch (already checked out). After committing and pushing your changes, use the \`create_pull_request\` tool to open a pull request. Do NOT use \`gh pr create\` or any other shell command.\n\nIf this task is related to an issue, reference it in the PR body (e.g., "Fixes #123").\n\nDo NOT merge the PR yourself — let the reviewer handle that.`;
 
+	console.error(`DEBUG renderTemplate: branchMode=${branchMode}, instructions=${branchMode === "direct" ? "DIRECT (no PR)" : "BRANCH (create PR)"}`);
+
 	const variables: Record<string, string> = {
 		type: context.type,
 		type_display: context.type === "pull_request" ? "Pull Request" : "Issue",
