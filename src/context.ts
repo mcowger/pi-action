@@ -34,6 +34,8 @@ const DEFAULT_MAIN_PROMPT_TEMPLATE = `# GitHub {{type_display}} #{{number}}
 
 {{reviewComments}}
 
+**IMPORTANT: The PR review comments above are provided for your reference. You do NOT need to fetch them again - they are already included in this prompt. Address these comments by making the requested code changes.**
+
 ## Task
 {{task}}
 

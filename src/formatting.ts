@@ -29,10 +29,10 @@ interface ReviewComment {
  */
 export function formatReviewComments(comments: ReviewComment[]): string {
 	if (comments.length === 0) {
-		return "";
+		return "## PR Review Comments\n\nNo review comments on this PR.\n";
 	}
 
-	const sections: string[] = ["## Existing PR Review Comments\n"];
+	const sections: string[] = ["## PR Review Comments (Address These)\n"];
 
 	for (const comment of comments) {
 		const author = comment.user.login;
