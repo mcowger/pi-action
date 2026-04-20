@@ -485,6 +485,12 @@ export async function run(deps: ActionDependencies): Promise<void> {
 	let prNumber = "";
 	let prUrl = "";
 
+	// In direct mode on a PR, the PR number is the issue number
+	if (inputs.branchMode === "direct" && triggerInfo.isPullRequest) {
+		prNumber = triggerInfo.issueNumber.toString();
+		log.info(`Direct mode on PR #${prNumber} - will push to existing branch`);
+	}
+
 	// Track agent-created resources
 	const agentComments: CommentState[] = [];
 
