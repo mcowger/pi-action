@@ -25,7 +25,7 @@ vi.mock("@mariozechner/pi-coding-agent", () => {
 		SettingsManager: {
 			inMemory: vi.fn(() => ({})),
 		},
-		createCodingTools: vi.fn(() => []),
+
 		AuthStorage: {
 			create: vi.fn(() => ({
 				get: vi.fn(),
@@ -281,6 +281,7 @@ describe("runAgent", () => {
 				cwd: "/test/dir",
 				model: mockModel,
 				thinkingLevel: "off",
+				tools: ["read", "bash", "edit", "write"],
 			}),
 		);
 	});

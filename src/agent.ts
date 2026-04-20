@@ -2,7 +2,6 @@ import {
 	type AuthStorage,
 	AuthStorage as AuthStorageClass,
 	createAgentSession,
-	createCodingTools,
 	type ModelRegistry,
 	ModelRegistry as ModelRegistryClass,
 	SessionManager,
@@ -206,7 +205,7 @@ export async function runAgent(
 			thinkingLevel: "off",
 			authStorage: auth,
 			modelRegistry: models,
-			tools: createCodingTools(config.cwd),
+			tools: ["read", "bash", "edit", "write"],
 			customTools: config.customTools,
 			sessionManager: SessionManager.create(config.cwd),
 			settingsManager: SettingsManager.inMemory({

@@ -1,6 +1,6 @@
 {
 	"name": "pi-action",
-	"version": "1.4.4",
+	"version": "1.5.0",
 	"description": "GitHub Action to invoke the pi coding agent on issues and PRs",
 	"type": "module",
 	"scripts": {
@@ -32,7 +32,7 @@
 	"dependencies": {
 		"@actions/core": "^3.0.0",
 		"@actions/github": "^9.1.0",
-		"@mariozechner/pi-coding-agent": "^0.67.68",
+		"@mariozechner/pi-coding-agent": "^0.68.0",
 		"handlebars": "^4.7.9",
 		"tsx": "^4.21.0"
 	},
