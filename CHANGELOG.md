@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.1] - 2026-04-20
+
+### Changed
+
+- add Goals to README, remove redundant test info
+- extract platform-agnostic git utilities into shared module (#111)
+- udpate readme about env vars
+- **deps-dev**: update dependencies
+
+### Fixed
+
+- catch finalization errors to ensure action always signals failure (#116)
+
 ## [2.9.0] - 2026-04-19
 
 ### Added
@@ -155,7 +168,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.9.0...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.9.1...HEAD
+[2.9.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.2...v2.9.0
 [2.8.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.1...v2.8.2
 [2.8.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.8.0...v2.8.1
