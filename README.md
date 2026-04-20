@@ -100,6 +100,24 @@ Alternatively, set provider-specific environment variables (e.g., `ANTHROPIC_API
 
 ### Custom Prompt Templates
 
+**Built-in templates:** pi-action ships with three built-in prompt templates:
+
+| Name | Description |
+|------|-------------|
+| `main` | Default template for issue/PR tasks (progress comments, efficiency guidelines, branch/direct mode) |
+| `pr-review` | Structured code review template (inline comments, output format, review focus areas) |
+| `release-notes` | Release notes generation template (version headings, categorized changes, auto-excludes CI) |
+
+```yaml
+# Use a built-in template by name
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    prompt_template: pr-review
+```
+
+The `pr-review` template is automatically used when the `pr_number` input is set (unless you override with `prompt_template` or `prompt_template_file`).
+
 **Inline template:**
 
 ```yaml

@@ -76,15 +76,19 @@ function registerPartials(promptsDir: string): void {
 	} catch (_error) {}
 }
 
+/** Built-in template names that ship with pi-action. */
+export type BuiltinTemplate = "main" | "pr-review" | "release-notes";
+
 /**
- * Build the main prompt template string (registers partials and returns template content).
+ * Build a prompt template string by name (registers partials and returns template content).
  */
 export function buildPromptTemplate(
 	_branchMode: "branch" | "direct" = "branch",
+	templateName: BuiltinTemplate = "main",
 ): string {
 	const promptsDir = getPromptsDir();
 	registerPartials(promptsDir);
-	return readFileSync(join(promptsDir, "main.hbs"), "utf-8");
+	return readFileSync(join(promptsDir, `${templateName}.hbs`), "utf-8");
 }
 
 /**

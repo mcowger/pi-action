@@ -34,7 +34,7 @@ inputs:
     description: 'Model ID'
     default: 'claude-sonnet-4-20250514'
   prompt_template:
-    description: 'Custom prompt template with placeholder variables ({{type}}, {{number}}, {{title}}, {{body}}, {{task}}, {{diff}})'
+    description: 'Custom prompt template with placeholder variables ({{type}}, {{number}}, {{title}}, {{body}}, {{task}}, {{diff}}), or a built-in template name (main, pr-review, release-notes)'
     required: false
   prompt_template_file:
     description: 'Path to a file containing the custom prompt template (relative to workspace root)'

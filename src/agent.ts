@@ -11,6 +11,7 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import type { PIContext } from "./context.js";
 import { buildPrompt } from "./context.js";
+import type { BuiltinTemplate } from "./templates.js";
 import type { AgentResult, ModelConfig, Session } from "./types.js";
 import { getErrorMessage, withTimeout } from "./utils.js";
 
@@ -25,6 +26,7 @@ export interface AgentConfig extends ModelConfig {
 	promptTemplate?: string;
 	customTools?: ToolDefinition[];
 	branchMode?: "branch" | "direct";
+	templateName?: BuiltinTemplate;
 }
 
 /**
@@ -163,6 +165,7 @@ export async function runAgent(
 		config.promptTemplate,
 		config.branchMode,
 		config.cwd,
+		config.templateName,
 	);
 
 	// Use provided or create auth/models

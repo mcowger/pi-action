@@ -3,8 +3,9 @@
 {{diff}}
 ```
 
-## PR Review Guidelines
-When reviewing this PR, you can provide inline comments on specific lines by including a ```pr-review code block in your response:
+## Inline Comments
+
+To leave comments on specific lines, include a ```pr-review code block in your response:
 
 ```pr-review
 [
@@ -12,6 +13,23 @@ When reviewing this PR, you can provide inline comments on specific lines by inc
   { "path": "src/other.ts", "line": 25, "start_line": 20, "body": "This block could be simplified" }
 ]
 ```
+
+### When to use inline comments
+
+**ONLY** use inline comments for:
+- ❌ Issues or bugs that need fixing
+- ⚠️ Concerns or potential problems
+- 💡 Suggestions for improvement
+- ❓ Questions about the implementation
+
+**DO NOT** use inline comments for:
+- ✅ Simple praise or LGTM remarks ("LGTM", "Nice cleanup", "Good fix")
+- General approval without specific concerns
+- Acknowledging the change is correct or reasonable
+
+Reserve line-item comments for actionable feedback. Generic praise belongs in the summary.
+
+### Comment format
 
 Each comment requires:
 - `path`: File path relative to repository root

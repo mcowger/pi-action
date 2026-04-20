@@ -421,13 +421,14 @@ export async function run(deps: ActionDependencies): Promise<void> {
 
 			log.info(`Running pi agent for: ${piContext.task}`);
 
-			// Run agent
+			// Run agent with PR review template
 			const result = await runAgent(piContext, {
 				...inputs.modelConfig,
 				cwd,
 				logger: log,
 				promptTemplate: inputs.promptTemplate,
 				branchMode: inputs.branchMode,
+				templateName: inputs.promptTemplate ? undefined : "pr-review",
 			});
 
 			// Post result to PR

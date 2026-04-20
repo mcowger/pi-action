@@ -1,12 +1,18 @@
 import { readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import Handlebars from "handlebars";
-import type { PromptContext } from "./templates.js";
+import type { PromptContext, BuiltinTemplate } from "./templates.js";
 import {
 	buildPrDiffTemplate,
 	buildPromptTemplate,
 	loadToolPrompt,
 } from "./templates.js";
+
+const BUILTIN_TEMPLATE_NAMES: readonly string[] = [
+	"main",
+	"pr-review",
+	"release-notes",
+];
 
 export function hasTrigger(text: string, trigger: string): boolean {
 	return text.toLowerCase().includes(trigger.toLowerCase());
@@ -52,12 +58,23 @@ function toPromptContext(
 	};
 }
 
+/** Result of loading a custom or builtin template. */
+export interface ResolvedTemplate {
+	content: string;
+	name: BuiltinTemplate;
+}
+
 function loadCustomTemplate(
 	customTemplate?: string,
 	cwd?: string,
-): string | null {
+): ResolvedTemplate | null {
 	if (customTemplate?.trim()) {
-		return customTemplate;
+		// Check if it's a builtin template name
+		if (BUILTIN_TEMPLATE_NAMES.includes(customTemplate.trim())) {
+			const name = customTemplate.trim() as BuiltinTemplate;
+			return { content: buildPromptTemplate("branch", name), name };
+		}
+		return { content: customTemplate, name: "main" };
 	}
 
 	const templateFile = process.env.INPUT_PROMPT_TEMPLATE_FILE;
@@ -65,7 +82,7 @@ function loadCustomTemplate(
 		const fullPath = isAbsolute(templateFile)
 			? templateFile
 			: join(cwd || process.cwd(), templateFile);
-		return readFileSync(fullPath, "utf-8");
+		return { content: readFileSync(fullPath, "utf-8"), name: "main" };
 	}
 
 	return null;
@@ -76,6 +93,7 @@ export function buildPrompt(
 	customTemplate?: string,
 	branchMode?: "branch" | "direct",
 	cwd?: string,
+	templateName?: BuiltinTemplate,
 ): string {
 	// Direct mode without custom template: just return the task
 	if (
@@ -89,9 +107,10 @@ export function buildPrompt(
 	// Try to load custom template first
 	const userTemplate = loadCustomTemplate(customTemplate, cwd);
 
-	// Get the template content
+	// Determine which template to use
+	const resolvedName = userTemplate?.name ?? templateName ?? "main";
 	const templateContent =
-		userTemplate ?? buildPromptTemplate(branchMode ?? "branch");
+		userTemplate?.content ?? buildPromptTemplate(branchMode ?? "branch", resolvedName);
 
 	// Compile with Handlebars
 	const template = Handlebars.compile(templateContent, { noEscape: true });
@@ -100,8 +119,9 @@ export function buildPrompt(
 	const promptContext = toPromptContext(context, branchMode);
 	let prompt = template(promptContext);
 
-	// Add PR diff if available
-	if (context.diff) {
+	// Add PR diff section if available AND the template doesn't handle diff inline
+	// (pr-review and release-notes templates have {{diff}} built-in; main.hbs does not)
+	if (context.diff && resolvedName === "main") {
 		const prDiffTemplate = Handlebars.compile(buildPrDiffTemplate(), {
 			noEscape: true,
 		});
