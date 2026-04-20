@@ -12,6 +12,28 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 - **PR assistance**: Prefix any PR comment/review comment/review message with `/pi` to have the agent review and improve the pull request
 - **Automated code reviews**: Have Pi review every new pull request automatically
 - **Add Pi to your own pipelines**: (Optionally) generate prompt from upstream actions/workflows and have Pi do the work in background for you anywhere you like in your workflows
+- **Minimal batteries included**: Tries to follow Pi minimalistic phylosophy while providing a comfortable UX out of the box, e.g. pretty print of logs and informations, auto replies to comments, and tools to interact programmatically and efficiently with git and GitHub-compatible APIs.
+
+## Goal
+
+If all you want is running Pi inside a CI/CD environment technically you don't need any custom action, something like
+
+```yaml
+  - uses: actions/checkout@v6
+  - uses: actions/setup-node@v6
+  - run: npm -g install @mariozechner/pi-coding-agent
+  - run: pi -p "do something useful for me"
+```
+
+might be just good enough and probably will always be the best fit for a pure "as minimalist as Pi" approach.
+
+On the other hand that's true for almost everything which is offered by the Actions ecosystem, useful and popular Actions are mostly focused on providing a pleasant UX around the raw core functionality they provide.
+
+This project goal is exactly that: to provide a short list of (opt-out) opinionated default features for interacting with and executing Pi agent sessions inside CI/CD environments compatible with GitHub API.
+
+For all the rest you're free and encouraged to just configure the action environment as you would your local Pi instance, e.g. adding files to `~/.pi/agent/`, environment variables, etc., and more generally to compose workflow pipelines around this action's inputs and outputs to fullfill your specific needs.
+
+Refer to [the official Pi documentation](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent#customization) to learn how to tweak Pi to best fit your needs.
 
 ## Disclaimer
 
@@ -175,6 +197,9 @@ The action extends Pi with three custom tools:
 | `update_pull_request` | Updates an existing pull request by pushing new commits to the PR branch and optionally updating the title and/or description. Supports `dry_run` mode for testing without actual modifications. |
 | `get_issue_or_pr_thread` | Retrieves the full thread of an issue or pull request including title, body, state, labels, branch info (for PRs), and all comments. Useful for understanding the full context before making changes. |
 
+> [!TIP]
+> Set `load_builtin_extensions` input to `false` to disable custom tool auto loading.
+
 ## Development
 
 ### Prerequisites
@@ -210,66 +235,9 @@ bun run test:coverage
 # Watch mode for development
 bun run test:watch
 
-# Run end to end tests (requires env vars properly set, see below)
+# Run end to end tests (requires LLM to be setup)
 bun run test:e2e
 ```
-
-#### Test Architecture
-
-The test suite emphasizes **behavior verification** over implementation details:
-
-- **Orchestrator tests** (`tests/orchestrator.spec.ts`) - Tests business logic flow:
-  - Configuration gathering from inputs
-  - Prompt retrieval and validation
-  - Reaction lifecycle management
-  - Pi agent execution
-  - Error handling and finalization
-  - Early exit scenarios
-
-- **GitHub module tests**:
-  - `tests/github.spec.ts` - GitHub module integration tests
-  - `tests/github/comments.spec.ts` - Comment creation and formatting
-  - `tests/github/git.spec.ts` - Git operations via GitHub API
-  - `tests/github/pull-request-logic.spec.ts` - PR creation logic
-  - `tests/github/pull-request-update-logic.spec.ts` - PR update logic
-
-- **Pi module tests**:
-  - `tests/pi/agent-logic.spec.ts` - Pi agent behavior tests
-  - `tests/pi/logging.spec.ts` - Centralized logging tests
-  - `tests/pi/tools.spec.ts` - Tool interface tests
-  - `tests/pi/tools/*.spec.ts` - Tool execution tests for each tool
-
-- **E2E tests** (`tests/e2e/pi-agent.spec.ts`) - Real Pi SDK integration with actual API calls
-
-**Key principle**: Tests verify the orchestration flow and business logic, not the behavior of mocks. The adapter pattern enables testing the actual behavior of the action without requiring external services.
-
-#### E2E Tests
-
-E2E (end-to-end) tests validate that our Pi SDK integration works correctly with real API calls:
-
-```bash
-# Set up E2E tests (example using OpenRouter with free model)
-export E2E_PROVIDER=openrouter
-export E2E_MODEL=google/gemma-3-4b-it:free
-export E2E_TOKEN=sk-or-xxx
-export RUN_E2E_TESTS=1
-bun test tests/e2e/pi-agent.spec.ts
-```
-
-**Required environment variables:**
-- `RUN_E2E_TESTS=1` - Enables E2E tests (they are skipped by default)
-- `E2E_PROVIDER` - LLM provider (e.g., `openrouter`, `zai`, `anthropic`)
-- `E2E_MODEL` - Model to use (e.g., `google/gemma-3-4b-it:free`, `glm-4.5-air:free`)
-- `E2E_TOKEN` - Your API key for the provider
-
-**What E2E tests cover:**
-- Real Pi SDK initialization with actual model/provider/token
-- Complete agent session lifecycle (ready → run → result)
-- Session stats extraction (tokens, cost, version)
-- Error handling for invalid models, empty prompts, etc.
-- Multiple sequential calls to the same agent
-
-**Note:** E2E tests make real API calls to the LLM provider and may incur costs. You must explicitly set the provider, model, and API key - there are no defaults. Tests are opt-in only and skipped by default.
 
 ### Project Guidelines
 
