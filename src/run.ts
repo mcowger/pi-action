@@ -552,7 +552,9 @@ export async function run(deps: ActionDependencies): Promise<void> {
 	});
 
 	// Check for empty response - re-prompt the agent if needed
-	if (result.success && (!result.response || result.response.trim() === "")) {
+	// Note: runAgent returns success:false on empty response, so we check for that case
+	if ((result.success && (!result.response || result.response.trim() === "")) || 
+	    (!result.success && result.error === "Agent returned empty response")) {
 		log.warning(`Agent returned empty response. Re-prompting with reminder...`);
 		
 		// Add a follow-up task reminding the agent to provide a summary
