@@ -98,30 +98,55 @@ Alternatively, set provider-specific environment variables (e.g., `ANTHROPIC_API
 | `pr_number` | PR number |
 | `pr_url` | PR URL |
 
-### Custom Prompt Templates
+### Prompt Templates
 
-**Built-in templates:** pi-action ships with three built-in prompt templates:
+pi-action uses [Handlebars](https://handlebarsjs.com/) templates to build the prompt sent to the LLM. Templates are composed from a main layout plus reusable partials.
 
-| Name | Description |
-|------|-------------|
-| `main` | Default template for issue/PR tasks (progress comments, efficiency guidelines, branch/direct mode) |
-| `pr-review` | Structured code review template (inline comments, output format, review focus areas) |
-| `release-notes` | Release notes generation template (version headings, categorized changes, auto-excludes CI) |
+#### Built-in Templates
+
+Three templates ship with pi-action:
+
+| Name | File | Description |
+|------|------|-------------|
+| `main` | [`prompts/main.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/main.hbs) | Default for issue/PR tasks — progress comments, efficiency guidelines, reading files, action guidance, branch/direct mode |
+| `pr-review` | [`prompts/pr-review.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/pr-review.hbs) | Structured code review — inline comments, review focus areas, output format |
+| `release-notes` | [`prompts/release-notes.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/release-notes.hbs) | Release notes generation — version headings, categorized changes, auto-excludes CI |
+
+The `main` template is composed from these partials:
+
+| Partial | File | Purpose |
+|---------|------|---------|
+| `efficiency-guidelines` | [`prompts/partials/efficiency-guidelines.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/efficiency-guidelines.hbs) | Batch reads/edits/tool calls, plan before acting |
+| `progress-comments` | [`prompts/partials/progress-comments.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/progress-comments.hbs) | Mandatory progress comment workflow and task tracking pattern |
+| `reading-files` | [`prompts/partials/reading-files.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/reading-files.hbs) | Only read relevant files, prefer source code over docs |
+| `action-guidance` | [`prompts/partials/action-guidance.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/action-guidance.hbs) | When to respond with text vs make code changes; PR comments = code change |
+| `environment-setup` | [`prompts/partials/environment-setup.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/environment-setup.hbs) | Git repo already configured, don't re-init |
+| `artifact-requirements` | [`prompts/partials/artifact-requirements.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/artifact-requirements.hbs) | Commit and push all work, run throw-away scripts immediately |
+| `branch-mode-branch` | [`prompts/partials/branch-mode-branch.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/branch-mode-branch.hbs) | Create a PR, never push to main |
+| `branch-mode-direct` | [`prompts/partials/branch-mode-direct.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/branch-mode-direct.hbs) | Push directly to current PR branch |
+| `trigger-downstream` | [`prompts/partials/trigger-downstream.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/trigger-downstream.hbs) | Trigger pi-pr-review.yml after PR creation |
+| `final-response-requirement` | [`prompts/partials/final-response-requirement.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/final-response-requirement.hbs) | Must end with plain-text summary |
+| `pr-diff` | [`prompts/partials/pr-diff.hbs`](https://github.com/mcowger/pi-action/blob/main/prompts/partials/pr-diff.hbs) | PR diff display and inline comment format (appended to `main` for PRs) |
+
+The `pr-review` template uses `{{> efficiency-guidelines}}` and handles `{{diff}}` inline. The `release-notes` template uses `{{> efficiency-guidelines}}` and instructs the LLM not to use tools.
+
+#### Selecting a Template
+
+**Use a built-in template by name:**
 
 ```yaml
-# Use a built-in template by name
-- uses: mcowger/pi-action@main
+- uses: mcowger/pi-action@v1
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     prompt_template: pr-review
 ```
 
-The `pr-review` template is automatically used when the `pr_number` input is set (unless you override with `prompt_template` or `prompt_template_file`).
+Valid names: `main`, `pr-review`, `release-notes`. When `pr_number` is set, `pr-review` is used automatically unless you override with `prompt_template` or `prompt_template_file`.
 
-**Inline template:**
+**Inline custom template:**
 
 ```yaml
-- uses: mcowger/pi-action@main
+- uses: mcowger/pi-action@v1
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     prompt_template: |
@@ -132,17 +157,125 @@ The `pr-review` template is automatically used when the `pr_number` input is set
       Please analyze and provide recommendations.
 ```
 
-**File-based template:**
+**File-based custom template:**
 
 ```yaml
-- uses: mcowger/pi-action@main
+- uses: mcowger/pi-action@v1
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     prompt_template_file: '.github/pi-prompt.md'
 ```
 
-**Template Variables:**
-- `{{type}}`, `{{type_display}}`, `{{number}}`, `{{title}}`, `{{body}}`, `{{task}}`, `{{diff}}`, `{{trigger_comment}}`, `{{reviewComments}}`
+#### Overriding and Supplementing the Defaults
+
+Since templates are Handlebars, you can use the built-in partials in your own custom templates. This lets you keep the default guidance while adding project-specific instructions.
+
+**Add project-specific review conventions** (keeps all default review behavior from `pr-review`):
+
+```yaml
+- uses: mcowger/pi-action@v1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    pr_number: ${{ github.event.inputs.pr_number }}
+    prompt_template: |
+      {{> efficiency-guidelines }}
+
+      ## Review Guidelines
+
+      Perform a thorough code review. Focus on the areas above, plus:
+
+      - **Project conventions:**
+        - Use Bun runtime (not Node.js-specific APIs)
+        - Zod for validation, Drizzle ORM for DB
+        - Never commit migration files — only schema `.ts` changes
+
+      {{#if diff}}
+      ## Changes
+      ```diff
+      {{diff}}
+      ```
+      {{/if}}
+
+      ## Inline Comments
+      To leave comments on specific lines, include a ```pr-review code block in your response:
+
+      ```pr-review
+      [
+        { "path": "src/file.ts", "line": 10, "body": "Consider using const here" }
+      ]
+      ```
+
+      Each comment requires `path`, `line`, and `body`. Optional: `side`, `start_line`, `start_side`.
+
+      ## Output Format
+      Start with an overall summary paragraph, then organize findings by category:
+      - [❌] Issues that must be addressed
+      - [⚠️] Concerns or suggestions worth considering
+      - [❓] Questions about the implementation
+      
+      If everything looks good, a brief "LGTM" is sufficient.
+```
+
+**Add project-specific context to the main template:**
+
+```yaml
+- uses: mcowger/pi-action@v1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    prompt_template: |
+      # GitHub {{type_display}} #{{number}}
+
+      ## Title
+      {{title}}
+
+      ## Description
+      {{body}}
+
+      ## Task
+      {{task}}
+
+      {{> efficiency-guidelines }}
+      {{> progress-comments }}
+      {{> reading-files }}
+      {{> action-guidance }}
+
+      ## Project Conventions
+
+      - Always run `npm test` before committing
+      - Use conventional commits (feat:, fix:, chore:)
+      - Never modify files in `generated/`
+
+      {{> environment-setup }}
+      {{> artifact-requirements }}
+
+      {{#if isBranchMode}}
+      {{> branch-mode-branch }}
+      {{else}}
+      {{> branch-mode-direct }}
+      {{/if}}
+
+      {{> trigger-downstream }}
+      {{> final-response-requirement }}
+```
+
+This approach lets you pick and choose which built-in partials to include and where to insert your own sections.
+
+#### Template Variables
+
+All templates have access to these Handlebars variables:
+
+| Variable | Description |
+|----------|-------------|
+| `{{type}}` | `issue`, `pull_request`, or `direct` |
+| `{{type_display}}` | `Issue` or `Pull Request` |
+| `{{number}}` | Issue/PR number |
+| `{{title}}` | Issue/PR title |
+| `{{body}}` | Issue/PR body |
+| `{{task}}` | Extracted task text (comment after the trigger phrase) |
+| `{{trigger_comment}}` | Full trigger comment text |
+| `{{diff}}` | PR diff (PRs only) |
+| `{{reviewComments}}` | PR review comments (PRs only) |
+| `{{isBranchMode}}` | `true` if branch mode, `false` if direct mode |
 
 ### Session Log Gist
 
