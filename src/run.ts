@@ -139,6 +139,8 @@ async function buildPIContext(
 	triggerPhrase: string,
 	logger: Logger,
 ): Promise<PIContext> {
+	console.error(`DEBUG buildPIContext: isPullRequest=${triggerInfo.isPullRequest}, issueNumber=${triggerInfo.issueNumber}`);
+	
 	const sanitizedBody = sanitizeInput(triggerInfo.triggerText);
 	const task = extractTask(sanitizedBody, triggerPhrase);
 
@@ -150,18 +152,24 @@ async function buildPIContext(
 		triggerComment: sanitizedBody,
 		task,
 	};
+	console.error(`DEBUG buildPIContext: context.type=${piContext.type}`);
 
 	// Get PR diff if applicable
 	if (triggerInfo.isPullRequest) {
+		console.error(`DEBUG buildPIContext: Fetching PR diff for #${triggerInfo.issueNumber}`);
 		piContext.diff = await ghClient.getPullRequestDiff(triggerInfo.issueNumber);
+		console.error(`DEBUG buildPIContext: PR diff length=${piContext.diff?.length || 0} chars`);
 
 		// Get PR review comments for context
 		try {
+			console.error(`DEBUG buildPIContext: Fetching PR review comments for #${triggerInfo.issueNumber}`);
 			const comments = await ghClient.getPullRequestReviewComments(
 				triggerInfo.issueNumber,
 			);
+			console.error(`DEBUG buildPIContext: Found ${comments.length} review comments`);
 			if (comments.length > 0) {
 				piContext.reviewComments = formatReviewComments(comments);
+				console.error(`DEBUG buildPIContext: Formatted review comments length=${piContext.reviewComments.length} chars`);
 			}
 		} catch (error) {
 			logger.warning(`Failed to fetch PR review comments: ${error}`);

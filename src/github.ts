@@ -16,12 +16,22 @@ export interface GitHubContext {
 export function extractTriggerInfo(
 	payload: Record<string, unknown>,
 ): TriggerInfo | null {
+	console.error(`DEBUG extractTriggerInfo: event payload keys=${Object.keys(payload).join(',')}`);
+	console.error(`DEBUG extractTriggerInfo: payload.pull_request exists=${!!payload.pull_request}`);
+	console.error(`DEBUG extractTriggerInfo: payload.issue exists=${!!payload.issue}`);
+	if (payload.issue) {
+		const issue = payload.issue as Record<string, unknown>;
+		console.error(`DEBUG extractTriggerInfo: issue.pull_request exists=${!!issue.pull_request}`);
+		console.error(`DEBUG extractTriggerInfo: issue.number=${issue.number}`);
+	}
+
 	const comment = payload.comment as Record<string, unknown> | undefined;
 	const issue = (payload.issue || payload.pull_request) as
 		| Record<string, unknown>
 		| undefined;
 
 	if (!issue) {
+		console.error(`DEBUG extractTriggerInfo: No issue found, returning null`);
 		return null;
 	}
 
@@ -37,8 +47,12 @@ export function extractTriggerInfo(
 		: (issue.author_association as string);
 
 	if (!(triggerText && author)) {
+		console.error(`DEBUG extractTriggerInfo: No triggerText or author, returning null`);
 		return null;
 	}
+
+	const isPullRequest = !!(payload.pull_request || (payload.issue as Record<string, unknown>)?.pull_request);
+	console.error(`DEBUG extractTriggerInfo: isPullRequest=${isPullRequest}, isCommentEvent=${isCommentEvent}, issueNumber=${issue.number}`);
 
 	return {
 		isCommentEvent,
@@ -49,8 +63,7 @@ export function extractTriggerInfo(
 		issueTitle: issue.title as string,
 		issueBody: (issue.body as string) || "",
 		commentId: comment?.id as number | undefined,
-		// Check for pull_request in payload (PR events) OR issue.pull_request (PR issue comments)
-		isPullRequest: !!(payload.pull_request || (payload.issue as Record<string, unknown>)?.pull_request),
+		isPullRequest,
 	};
 }
 
