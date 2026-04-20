@@ -16,60 +16,18 @@ This document covers development setup, architecture details, and contribution g
 git clone https://github.com/cv/pi-action.git
 cd pi-action
 
-# Install dependencies (also sets up git hooks)
+# Install dependencies
 npm install
 
 # Run tests
 npm test
-
-# Run tests with coverage
-npm test -- --coverage
 
 # Build
 npm run build
 
 # Type check
 npm run typecheck
-
-# Lint and format
-npm run check
 ```
-
-## Git Hooks
-
-This project uses [Husky](https://typicode.github.io/husky/) to enforce quality checks via git hooks. Hooks are automatically installed when you run `npm install`. See the [`.husky/`](.husky/) directory for hook scripts.
-
-| Hook | What it does |
-|------|--------------|
-| [**pre-commit**](.husky/pre-commit) | Runs tests, type checking, linting, builds, and verifies `dist/` is up to date |
-| [**commit-msg**](.husky/commit-msg) | Enforces [Conventional Commits](https://www.conventionalcommits.org/) format via commitlint |
-| [**prepare-commit-msg**](.husky/prepare-commit-msg) | Auto-appends issue number from branch name (e.g., `feat/123-description` → `Refs #123`) |
-| [**pre-push**](.husky/pre-push) | Runs full test suite with coverage thresholds (80% lines/functions, 70% branches) |
-
-### Commit Message Format
-
-Commits must follow the conventional commits format:
-
-```
-type(scope?): subject
-
-body?
-
-footer?
-```
-
-**Allowed types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-
-**Examples:**
-```bash
-git commit -m "feat: add webhook support"
-git commit -m "fix(agent): handle empty response from API"
-git commit -m "docs: update installation instructions"
-```
-
-### Branch Naming
-
-Use branch names like `feat/123-description` or `fix/456-bug-name` to automatically link commits to issues via the `prepare-commit-msg` hook.
 
 ## Architecture
 
@@ -89,6 +47,7 @@ The action is built with TypeScript and uses the [pi-coding-agent SDK](https://g
 | [`src/types.ts`](src/types.ts) | TypeScript type definitions |
 | [`src/defaults.ts`](src/defaults.ts) | Centralized default values |
 | [`src/utils.ts`](src/utils.ts) | General utility functions |
+| [`src/templates.ts`](src/templates.ts) | Template loading for prompts |
 | [`src/test-helpers.ts`](src/test-helpers.ts) | Shared test utilities |
 
 ### Key Components
@@ -125,7 +84,6 @@ Handles prompt construction:
 - `hasTrigger()`: Checks if text contains the trigger phrase
 - `extractTask()`: Extracts the task from trigger text
 - `buildPrompt()`: Constructs the full prompt with context
-- `renderTemplate()`: Renders custom prompt templates
 
 #### [`security.ts`](src/security.ts)
 Permission and input validation:
@@ -138,8 +96,7 @@ The [`action.yml`](action.yml) file defines:
 - Input parameters
 - A composite action that:
   1. Installs npm dependencies
-  2. Installs standalone git hooks for conventional commits (see [lines 44-107](action.yml#L44-L107))
-  3. Runs the compiled TypeScript via Node.js
+  2. Runs the compiled TypeScript via Node.js
 
 ### Testing
 
@@ -158,11 +115,6 @@ npm test -- --coverage      # With coverage report
 - Mock the pi SDK to test agent integration without real API calls
 - Use [`test-helpers.ts`](src/test-helpers.ts) for common mock factories
 
-**Coverage thresholds (enforced by pre-push hook):**
-- Lines: 80%
-- Functions: 80%
-- Branches: 70%
-
 ### Building
 
 ```bash
@@ -171,18 +123,18 @@ npm run build
 
 This compiles TypeScript to `dist/`. The `dist/` directory is committed to the repository (required for GitHub Actions).
 
-**Important:** The pre-commit hook verifies `dist/` is up to date. If you modify source files, you must rebuild and commit the changes to `dist/`.
+**Important:** You must rebuild and commit changes to `dist/` after modifying source files.
 
 ## CI/CD
 
 ### GitHub Actions Workflows
 
-- [**CI (`ci.yml`)**](.github/workflows/ci.yml): Runs on push/PR to main - type checking, linting, tests, build verification
+- [**CI (`ci.yml`)**](.github/workflows/ci.yml): Runs on push/PR to main - type checking, tests, build verification
 - [**pi Assistant (`pi-assistant.yml`)**](.github/workflows/pi-assistant.yml): Dogfooding - uses the action from this repo to respond to `@pi` triggers
 
 ### Release Process
 
-1. Ensure all tests pass and coverage thresholds are met
+1. Ensure all tests pass
 2. Update version in `package.json`
 3. Create a new release/tag (e.g., `v1.0.1`)
 4. Users reference the action via `cv/pi-action@v1`
@@ -190,19 +142,17 @@ This compiles TypeScript to `dist/`. The `dist/` directory is committed to the r
 ## Code Style
 
 - TypeScript with strict mode (see [`tsconfig.json`](tsconfig.json))
-- [Biome](https://biomejs.dev/) for formatting and linting (see [`biome.json`](biome.json))
 - No semicolons, tabs for indentation
 - Prefer explicit types over inference for function signatures
 - Use discriminated unions for result types (see [`AgentResult` in `types.ts`](src/types.ts))
 
 ## Pull Request Guidelines
 
-1. **Create a branch** with a descriptive name: `feat/123-description` or `fix/456-bug-name`
+1. **Create a branch** with a descriptive name
 2. **Write tests** for any new functionality
-3. **Ensure all hooks pass** - tests, type checking, linting, coverage
-4. **Follow conventional commits** for your commit messages
-5. **Keep changes focused** - one feature/fix per PR
-6. **Update documentation** if adding new features or changing behavior
+3. **Ensure all tests pass**
+4. **Keep changes focused** - one feature/fix per PR
+5. **Update documentation** if adding new features or changing behavior
 
 ## Questions?
 
