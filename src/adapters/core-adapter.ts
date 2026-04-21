@@ -19,6 +19,10 @@ export class RealCoreAdapter implements CoreAdapter {
     core.setFailed(error);
   }
 
+  setOutput(name: string, value: string | number | boolean): void {
+    core.setOutput(name, value);
+  }
+
   notice(message: string): void {
     core.notice(message);
   }

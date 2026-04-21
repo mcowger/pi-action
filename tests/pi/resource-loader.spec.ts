@@ -20,6 +20,7 @@ const mockCoreAdapter = {
     return defaults[name] ?? '';
   }),
   setFailed: mock(),
+  setOutput: mock(),
   notice: mock(),
   debug: mock(),
   info: mock(),

@@ -48,3 +48,17 @@ inputs:
 runs:
   using: 'node24'
   main: 'dist/index.js'
+
+outputs:
+  response:
+    description: 'The main agent response text'
+  success:
+    description: 'Whether the agent completed successfully (true/false)'
+  input_tokens:
+    description: 'Number of input tokens consumed'
+  output_tokens:
+    description: 'Number of output tokens generated'
+  cost:
+    description: 'Cost of the invocation in USD'
+  duration_seconds:
+    description: 'Wall-clock duration of agent execution in seconds'

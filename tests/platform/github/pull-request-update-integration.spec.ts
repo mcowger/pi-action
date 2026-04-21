@@ -30,6 +30,7 @@ mock.module('@actions/core', () => ({
   info: mock(noop),
   debug: mock(noop),
   setFailed: mock(noop),
+  setOutput: mock(noop),
   warning: mock(noop),
 }));
 
@@ -130,6 +131,7 @@ mock.module('@actions/github', () => ({
 const testCoreAdapter = {
   getInput: mockGetInput,
   setFailed: mock(noop),
+  setOutput: mock(noop),
   notice: mock(noop),
   info: mock(noop),
   debug: mock(noop),

@@ -70,6 +70,7 @@ import type { CoreAdapter } from '../../src/types.ts';
 const mockCoreAdapter: CoreAdapter = {
   getInput: mockGetInput,
   setFailed: mockSetFailed,
+  setOutput: mock(),
   notice: mockNotice,
   debug: mockDebug,
   info: mockInfo,
@@ -122,6 +123,7 @@ mock.module('@actions/core', () => ({
   info: mockInfo,
   debug: mockDebug,
   setFailed: mockSetFailed,
+  setOutput: mock(),
   warning: mockWarning,
 }));
 
@@ -386,6 +388,35 @@ describe('E2E: Real Pi Agent with Mocked GitHub', () => {
         await expect(agent.run(undefined as unknown as string)).rejects.toThrow(
           'no text, skipping prompt'
         );
+      },
+      E2E_TIMEOUT
+    );
+  });
+
+  describe('action outputs data', () => {
+    test(
+      'PromptResult contains all fields needed for action outputs',
+      async () => {
+        if (skipTests) {
+          return;
+        }
+
+        const agent = await createAgent();
+        await agent.ready();
+        const { result, sessionStats } = await agent.run('Say "test"');
+
+        // response output — must be a non-empty string
+        expect(result).toBeTruthy();
+        expect(typeof result).toBe('string');
+
+        // success is determined by the orchestrator (no error thrown),
+        // but we can verify sessionStats has the fields needed for
+        // the token/cost/duration outputs
+        expect(sessionStats).toBeDefined();
+        expect(sessionStats!.inputTokens).toBeGreaterThan(0);
+        expect(sessionStats!.outputTokens).toBeGreaterThan(0);
+        expect(typeof sessionStats!.cost).toBe('number');
+        expect(sessionStats!.cost).toBeGreaterThanOrEqual(0);
       },
       E2E_TIMEOUT
     );

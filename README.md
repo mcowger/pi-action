@@ -193,6 +193,60 @@ Create a workflow file, e.g., `.github/workflows/pi-agent.yml`. See the [interac
 
 Refer to [Pi documentation](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) for the current list of supported providers / models / etc.
 
+## Outputs
+
+The action exposes the following outputs, which can be consumed by downstream steps or jobs:
+
+| Output | Description | Example |
+|--------|-------------|----------|
+| `response` | The main agent response text (or error message on failure) | `Here is the fix for the bug...` |
+| `success` | Whether the agent completed successfully (`true` / `false`) | `true` |
+| `input_tokens` | Number of input tokens consumed (omitted if unavailable) | `1500` |
+| `output_tokens` | Number of output tokens generated (omitted if unavailable) | `800` |
+| `cost` | Cost of the invocation in USD (omitted if unavailable) | `0.042` |
+| `duration_seconds` | Wall-clock duration of agent execution in seconds | `12.7` |
+
+> [!WARNING]
+> Tokens and cost outputs are only set when the underlying provider returns session statistics. They will be absent for providers that don't report token usage.
+
+### Using Outputs in Downstream Jobs
+
+Use `outputs.<job-id>.outputs.<name>` to pass action outputs to another job in the same workflow. For example, you can have Pi generate release notes in one job and then create a release in another:
+
+```yaml
+jobs:
+  pi-agent:
+      # shortened for brevity...
+      - name: Run Pi agent
+        id: pi          # Required to access outputs from this step
+        uses: shaftoe/pi-coding-agent-action@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          provider: anthropic
+          model: claude-sonnet-4-5
+          token: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: 'Generate release notes for the latest commit'
+
+  publish:
+    needs: pi-agent
+    if: ${{ needs.pi-agent.outputs.success == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log results
+        run: |
+          echo "Response: ${{ needs.pi-agent.outputs.response }}"
+          echo "Cost: ${{ needs.pi-agent.outputs.cost }} USD"
+          echo "Tokens: ${{ needs.pi-agent.outputs.input_tokens }} in / ${{ needs.pi-agent.outputs.output_tokens }} out"
+          echo "Duration: ${{ needs.pi-agent.outputs.duration_seconds }}s"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo '${{ needs.pi-agent.outputs.response }}' > release-notes.md
+          gh release create v1.0.0 --notes-file release-notes.md
+```
+
 ## How It Works
 
 1. User comments `/pi [instructions]` in an issue or PR

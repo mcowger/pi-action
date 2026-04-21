@@ -35,6 +35,7 @@ mock.module('@actions/core', () => ({
   info: mock(noop),
   debug: mock(debugLogger),
   setFailed: mock(noop),
+  setOutput: mock(noop),
   warning: mock(noop),
 }));
 

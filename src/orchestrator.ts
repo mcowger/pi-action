@@ -65,7 +65,7 @@ export class ActionOrchestrator {
       const pi = this.piAgentFactory(config, this.core, this.platformProvider);
       const { result, sessionStats } = await pi.run(prompt);
 
-      await this.finalize(result, config, startTime, reaction, sessionStats);
+      await this.finalize(result, config, startTime, reaction, sessionStats, true);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
 
@@ -74,7 +74,7 @@ export class ActionOrchestrator {
       // NOT prevent setFailed from running. The action must always signal
       // failure to the CI runner, even when we cannot leave a comment.
       try {
-        await this.finalize(errorMessage, config, startTime, reaction, undefined);
+        await this.finalize(errorMessage, config, startTime, reaction, undefined, false);
       } catch (finalizeError) {
         const finalizeErrorMessage =
           finalizeError instanceof Error ? finalizeError.message : String(finalizeError);
@@ -116,14 +116,15 @@ export class ActionOrchestrator {
   }
 
   /**
-   * Finalize execution by posting the result/error as a comment.
+   * Finalize execution by posting the result/error as a comment and setting action outputs.
    */
   private async finalize(
     body: string,
     config: PiConfig,
     startTime: Temporal.Instant,
-    reaction?: CreateReactionType,
-    sessionStats?: SessionStats
+    reaction: CreateReactionType | undefined,
+    sessionStats: SessionStats | undefined,
+    success: boolean
   ): Promise<void> {
     try {
       if (reaction) {
@@ -134,12 +135,24 @@ export class ActionOrchestrator {
       this.core.notice(`failed to delete reaction: ${errorMessage}`);
     }
 
+    this.core.setOutput('response', body);
+    this.core.setOutput('success', success);
+
+    if (sessionStats !== undefined) {
+      this.core.setOutput('input_tokens', sessionStats.inputTokens);
+      this.core.setOutput('output_tokens', sessionStats.outputTokens);
+      this.core.setOutput('cost', sessionStats.cost);
+    }
+
+    const executionDuration = startTime.until(Temporal.Now.instant());
+    this.core.setOutput('duration_seconds', executionDuration.total('seconds'));
+
     const metadata: CommentMetadata = {
       actionVersion: __VERSION__,
       provider: config.provider,
       model: config.model,
       thinkingLevel: config.thinkingLevel,
-      executionDuration: startTime.until(Temporal.Now.instant()),
+      executionDuration,
     };
 
     if (sessionStats !== undefined) {

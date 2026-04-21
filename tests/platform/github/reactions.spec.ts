@@ -35,6 +35,7 @@ mock.module('@actions/core', () => ({
   info: mock(noop),
   debug: mock(debugLogger),
   setFailed: mock(noop),
+  setOutput: mock(noop),
   warning: mock(noop),
 }));
 
@@ -98,6 +99,7 @@ const testCoreAdapter = {
   },
   getInput: mockGetInput,
   setFailed: mock(noop),
+  setOutput: mock(noop),
   notice: mock(noop),
   info: mock(noop),
   warning: mock(noop),

@@ -41,6 +41,7 @@ describe('ActionOrchestrator', () => {
     });
 
     const setFailedMock = mock();
+    const setOutputMock = mock();
     const noticeMock = mock();
     const infoMock = mock();
     const debugMock = mock();
@@ -48,6 +49,7 @@ describe('ActionOrchestrator', () => {
     mockCore = {
       getInput: getInputMock,
       setFailed: setFailedMock,
+      setOutput: setOutputMock,
       notice: noticeMock,
       info: infoMock,
       debug: debugMock,
@@ -830,6 +832,113 @@ describe('ActionOrchestrator', () => {
 
       expect(mockCore.setFailed).toHaveBeenCalledWith(error);
       expect(mockCore.setFailed).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('action outputs', () => {
+    test('sets response output with agent result', async () => {
+      const runMock = mock(async () => ({
+        result: 'Your tests are ready!',
+        sessionStats: undefined,
+      }));
+      mockPiAgent.run = runMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockCore.setOutput).toHaveBeenCalledWith('response', 'Your tests are ready!');
+    });
+
+    test('sets success output to true on successful execution', async () => {
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockCore.setOutput).toHaveBeenCalledWith('success', true);
+    });
+
+    test('sets success output to false on error', async () => {
+      const runMock = mock(async () => {
+        throw new Error('API error');
+      });
+      mockPiAgent.run = runMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+
+      await expect(orchestrator.execute()).rejects.toThrow('API error');
+
+      expect(mockCore.setOutput).toHaveBeenCalledWith('success', false);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('response', 'API error');
+    });
+
+    test('sets token and cost outputs when session stats available', async () => {
+      const sessionStats = {
+        inputTokens: 500,
+        outputTokens: 200,
+        totalTokens: 700,
+        cost: 0.042,
+      };
+      const runMock = mock(async () => ({
+        result: 'Done!',
+        sessionStats,
+      }));
+      mockPiAgent.run = runMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockCore.setOutput).toHaveBeenCalledWith('input_tokens', 500);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('output_tokens', 200);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('cost', 0.042);
+    });
+
+    test('does not set token/cost outputs when session stats unavailable', async () => {
+      const runMock = mock(async () => ({
+        result: 'Done!',
+        sessionStats: undefined,
+      }));
+      mockPiAgent.run = runMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockCore.setOutput).not.toHaveBeenCalledWith('input_tokens', expect.anything());
+      expect(mockCore.setOutput).not.toHaveBeenCalledWith('output_tokens', expect.anything());
+      expect(mockCore.setOutput).not.toHaveBeenCalledWith('cost', expect.anything());
+    });
+
+    test('sets duration_seconds output', async () => {
+      const startTime = Temporal.Instant.from('2024-01-15T10:30:00Z');
+      const getStartTimeMock = mock(() => startTime);
+      mockGit.getStartTime = getStartTimeMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockCore.setOutput).toHaveBeenCalledWith('duration_seconds', expect.any(Number));
+    });
+
+    test('sets all outputs on success with session stats', async () => {
+      const sessionStats = {
+        inputTokens: 1000,
+        outputTokens: 500,
+        totalTokens: 1500,
+        cost: 0.05,
+      };
+      const runMock = mock(async () => ({
+        result: 'Analysis complete',
+        sessionStats,
+      }));
+      mockPiAgent.run = runMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockCore.setOutput).toHaveBeenCalledWith('response', 'Analysis complete');
+      expect(mockCore.setOutput).toHaveBeenCalledWith('success', true);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('input_tokens', 1000);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('output_tokens', 500);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('cost', 0.05);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('duration_seconds', expect.any(Number));
     });
   });
 });

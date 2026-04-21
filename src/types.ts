@@ -19,6 +19,8 @@ export interface CoreAdapter {
   getInput(name: string): string;
   /** Mark the workflow run as failed with an error message. */
   setFailed(error: Error): void;
+  /** Set an action output. */
+  setOutput(name: string, value: string | number | boolean): void;
   /** Log a notice message. */
   notice(message: string): void;
   /** Log a debug message (only visible when debug logging is enabled). */
