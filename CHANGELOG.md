@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.12.0] - 2026-04-22
 
-### Added
-
-- upgrade Pi SDK to v0.69.0 with TypeBox 1.x migration (#122)
-
-## [2.11.2] - 2026-04-22
-
 ### Changed
 
 - **deps**: upgrade `@mariozechner/pi-coding-agent` from v0.68.1 to v0.69.0 (#121)
