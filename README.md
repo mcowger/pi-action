@@ -173,6 +173,44 @@ Pi extensions often require environment variables for authentication or configur
 
 Since the action runs as a single Node.js process, these environment variables are available in `process.env` and accessible to all Pi extensions.
 
+### Using Outputs in Downstream Jobs
+
+Use `outputs.<job-id>.outputs.<name>` to pass action outputs to another step or another job in the same workflow. For example, you can have Pi generate release notes in one job and then create a release in another:
+
+```yaml
+jobs:
+  pi-agent:
+      # shortened for brevity...
+      - name: Run Pi agent
+        id: pi          # Required to access outputs from this step
+        uses: shaftoe/pi-coding-agent-action@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          provider: anthropic
+          model: claude-sonnet-4-5
+          token: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: 'Generate release notes for the latest commit'
+
+  publish:
+    needs: pi-agent
+    if: ${{ needs.pi-agent.outputs.success == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log results
+        run: |
+          echo "Response: ${{ needs.pi-agent.outputs.response }}"
+          echo "Cost: ${{ needs.pi-agent.outputs.cost }} USD"
+          echo "Tokens: ${{ needs.pi-agent.outputs.input_tokens }} in / ${{ needs.pi-agent.outputs.output_tokens }} out"
+          echo "Duration: ${{ needs.pi-agent.outputs.duration_seconds }}s"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo '${{ needs.pi-agent.outputs.response }}' > release-notes.md
+          gh release create v1.0.0 --notes-file release-notes.md
+```
+
 ### Quick Start
 
 Create a workflow file, e.g., `.github/workflows/pi-agent.yml`. See the [interactive](./.github/workflows/pi.yml) and [non-interactive](./.github/workflows/pr.yml) workflows in this repository to get started.
@@ -208,44 +246,6 @@ The action exposes the following outputs, which can be consumed by downstream st
 
 > [!WARNING]
 > Tokens and cost outputs are only set when the underlying provider returns session statistics. They will be absent for providers that don't report token usage.
-
-### Using Outputs in Downstream Jobs
-
-Use `outputs.<job-id>.outputs.<name>` to pass action outputs to another job in the same workflow. For example, you can have Pi generate release notes in one job and then create a release in another:
-
-```yaml
-jobs:
-  pi-agent:
-      # shortened for brevity...
-      - name: Run Pi agent
-        id: pi          # Required to access outputs from this step
-        uses: shaftoe/pi-coding-agent-action@v2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: anthropic
-          model: claude-sonnet-4-5
-          token: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: 'Generate release notes for the latest commit'
-
-  publish:
-    needs: pi-agent
-    if: ${{ needs.pi-agent.outputs.success == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Log results
-        run: |
-          echo "Response: ${{ needs.pi-agent.outputs.response }}"
-          echo "Cost: ${{ needs.pi-agent.outputs.cost }} USD"
-          echo "Tokens: ${{ needs.pi-agent.outputs.input_tokens }} in / ${{ needs.pi-agent.outputs.output_tokens }} out"
-          echo "Duration: ${{ needs.pi-agent.outputs.duration_seconds }}s"
-
-      - name: Create GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo '${{ needs.pi-agent.outputs.response }}' > release-notes.md
-          gh release create v1.0.0 --notes-file release-notes.md
-```
 
 ## How It Works
 
