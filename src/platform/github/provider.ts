@@ -77,7 +77,7 @@ export function createGitHubPlatformProvider(): PlatformProvider {
         repo: context.repo,
         issue: context.issue,
         eventName: context.eventName,
-        payload: context.payload as Record<string, unknown>,
+        payload: context.payload,
         serverUrl: context.serverUrl || 'https://github.com',
         runId: context.runId,
         workspace: process.env.GITHUB_WORKSPACE ?? process.cwd(),
