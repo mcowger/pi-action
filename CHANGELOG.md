@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.13.0] - 2026-04-24
+
+### Added
+
+- add base_url input to override provider endpoint URL (#125)
+
+### Changed
+
+- fix changelog
+
 ## [2.12.0] - 2026-04-22
 
 ### Changed
@@ -204,7 +214,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.12.0...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.0...HEAD
+[2.13.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.12.0...v2.13.0
 [2.12.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.10.0...v2.11.0
