@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, expect, test, mock, beforeEach } from 'bun:test';
+import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -82,6 +82,22 @@ mock.module('@actions/github', () => ({
   context: mockContext,
 }));
 
+// Import module context helper for test isolation
+import { resetModuleContext } from '../../../../src/platform/github';
+
+// Set up mock CoreAdapter so createLogger() -> getCoreAdapter() works
+const mockCoreAdapter = {
+  debug: mock(() => {}),
+  info: mock(() => {}),
+  warning: mock(() => {}),
+  notice: mock(() => {}),
+  setFailed: mock(() => {}),
+  setOutput: mock(() => {}),
+  getInput: mockGetInput,
+};
+
+resetModuleContext(mockCoreAdapter as any);
+
 // Dynamic import to ensure mocks are set before module loads
 const commitCreatorModule = import('../../../../src/platform/github/git/commit-creator.js');
 
@@ -91,6 +107,12 @@ describe('createCommitAndUpdateBranch', () => {
     mockUpdateRef.mockClear();
     // Reset to default context
     mockContext.repo = { owner: 'test-owner', repo: 'test-repo' };
+    // Ensure module context is initialized for each test
+    resetModuleContext(mockCoreAdapter as any);
+  });
+
+  afterEach(() => {
+    resetModuleContext(undefined);
   });
 
   test('creates a commit and updates branch reference', async () => {
