@@ -18,12 +18,33 @@ permissions:
 
 jobs:
   update-deps:
-    uses: ./.github/workflows/update-bun-deps.yml
-    with:
-      latest: true
-      validate-command: "bun run test && bun run validate"
-    secrets:
-      token: ${{ secrets.GITHUB_TOKEN }}
+    runs-on: ubuntu-latest
+    outputs:
+      pr-url: ${{ steps.update-deps.outputs.pr-url }}
+      updated-packages: ${{ steps.update-deps.outputs.updated-packages }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Update dependencies
+        id: update-deps
+        uses: shaftoe/update-bun-dependencies-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          latest: 'true'
+          create-pr: 'true'
+          pr-branch: 'deps/update'
+          pr-title: 'chore: update dependencies'
+          pr-commit-message: 'chore: update dependencies'
+          pr-labels: 'dependencies,automated'
 
   pi-review:
     needs: update-deps
@@ -39,7 +60,10 @@ jobs:
           token: ${{ secrets.API_KEY }}
           thinking_level: ${{ vars.THINKING_LEVEL }}
           prompt: >
-            Review PR #${{ needs.update-deps.outputs.pr-url }}
+            Review PR ${{ needs.update-deps.outputs.pr-url }}
+            Summarize your findings as a comment to the PR. If everything looks safe,
+            confirm that the upgrades are compatible and note any improvements.
+            Remember to *ALWAYS* add a comment to the PR, it's paramount.
 
             Focus on:
             - Breaking changes introduced by upgraded dependencies
@@ -48,5 +72,4 @@ jobs:
               highlight any new APIs, features, or use cases that the project could adopt
             - Any compatibility issues with the current codebase
 
-            Summarize your findings as a comment on the PR. If everything looks safe,
-            confirm that the upgrades are compatible and note any improvements.
+            List of updated packages for convenience so you don't have to use tools to list changes: ${{ needs.update-deps.outputs.updated-packages }}
