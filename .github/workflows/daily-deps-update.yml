@@ -45,31 +45,3 @@ jobs:
           pr-title: 'chore: update dependencies'
           pr-commit-message: 'chore: update dependencies'
           pr-labels: 'dependencies,automated'
-
-  pi-review:
-    needs: update-deps
-    if: ${{ needs.update-deps.outputs.pr-url != '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Pi dependency review
-        uses: shaftoe/pi-coding-agent-action@v2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: ${{ vars.PROVIDER }}
-          model: ${{ vars.MODEL }}
-          token: ${{ secrets.API_KEY }}
-          thinking_level: ${{ vars.THINKING_LEVEL }}
-          prompt: >
-            Review PR ${{ needs.update-deps.outputs.pr-url }}
-            Summarize your findings as a comment to the PR. If everything looks safe,
-            confirm that the upgrades are compatible and note any improvements.
-            Remember to *ALWAYS* add a comment to the PR, it's paramount.
-
-            Focus on:
-            - Breaking changes introduced by upgraded dependencies
-            - Deprecated APIs that may be removed in future releases
-            - If the Pi coding agent SDK (@mariozechner/pi-coding-agent) has been upgraded,
-              highlight any new APIs, features, or use cases that the project could adopt
-            - Any compatibility issues with the current codebase
-
-            List of updated packages for convenience so you don't have to use tools to list changes: ${{ needs.update-deps.outputs.updated-packages }}
