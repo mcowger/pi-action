@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.13.2] - 2026-04-30
+
+### Changed
+
+- update feature descriptions in README.md
+
+### Fixed
+
+- improve error messages for missing required inputs (#143)
+
 ## [2.13.1] - 2026-04-27
 
 ### Changed
@@ -240,7 +250,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.1...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.2...HEAD
+[2.13.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.1...v2.13.2
 [2.13.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.0...v2.13.1
 [2.13.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.12.0...v2.13.0
 [2.12.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.11.1...v2.12.0
