@@ -8,8 +8,8 @@ Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 
 ## Features
 
-- **Issue assistance**: Prefix any new issue description and/or any issue comment with `/pi` to have the agent analyze the issue and e.g. create a new PR with the fix
-- **PR assistance**: Prefix any PR comment/review comment/review message with `/pi` to have the agent review and improve the pull request
+- **Issue assistance**: Prefix any new issue description and/or any issue comment with `/pi` to have the agent analyze the issue, generate a report and/or create a new PR with the fix
+- **PR assistance**: Prefix any PR comment, review comment or review message with `/pi` to have the agent review the pull request and/or to apply further changes
 - **Automated code reviews**: Have Pi review every new pull request automatically
 - **Add Pi to your own pipelines**: (Optionally) generate prompt from upstream actions/workflows and have Pi do the work in background for you anywhere you like in your workflows
 - **Minimal batteries included**: Tries to follow Pi minimalistic phylosophy while providing a comfortable UX out of the box, e.g. pretty print of logs, auto replies to comments, and tools to interact efficiently with git and GitHub-compatible APIs.
