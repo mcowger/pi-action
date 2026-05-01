@@ -16,6 +16,11 @@ on:
 # Events triggered by GITHUB_TOKEN do not fire other workflows (GitHub prevents
 # recursive runs). A PAT bypasses this restriction.
 
+# NOTE: We use PAT_TOKEN instead of GITHUB_TOKEN so that the PR created by
+# update-bun-dependencies-action triggers downstream workflows (e.g. pr.yml).
+# Events triggered by GITHUB_TOKEN do not fire other workflows (GitHub prevents
+# recursive runs). A PAT bypasses this restriction.
+
 jobs:
   update-deps:
     runs-on: ubuntu-latest
