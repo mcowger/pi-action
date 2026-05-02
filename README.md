@@ -216,6 +216,7 @@ When `export_session_html` is enabled, the action writes a self-contained HTML f
 - uses: shaftoe/pi-coding-agent-action@v2
   id: pi
   with:
+    export_session_html: true
     github_token: ${{ secrets.GITHUB_TOKEN }}
     provider: anthropic
     model: claude-sonnet-4-5
