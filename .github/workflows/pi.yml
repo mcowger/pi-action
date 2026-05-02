@@ -52,5 +52,3 @@ jobs:
           token: ${{ secrets.token }}
           thinking_level: ${{ vars.THINKING_LEVEL }}
           prompt: ${{ inputs.prompt }}
-          extensions: |
-            npm:pi-librarian
