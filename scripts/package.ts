@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { build } from 'esbuild';
 import { join } from 'node:path';
 
@@ -23,6 +23,42 @@ export async function buildDist(cwd: string = process.cwd()): Promise<void> {
     },
     inject: [join(cwd, 'src/import-meta-url.js')],
   });
+
+  // Clean previous SDK assets before copying the minimal set
+  const piSdkDir = join(cwd, 'dist/pi-sdk');
+  if (existsSync(piSdkDir)) {
+    rmSync(piSdkDir, { recursive: true, force: true });
+  }
+
+  // Copy only the Pi SDK assets that are read at runtime via getPackageDir().
+  // The JS code is already fully inlined by esbuild — only non-code assets
+  // (templates, vendor libs, theme JSON) need to be present on disk so the
+  // SDK's file I/O can find them when PI_PACKAGE_DIR points to dist/pi-sdk/.
+  //
+  // Asset map: SDK source -> destination under dist/pi-sdk/dist/
+  const sdkDistDir = join(cwd, 'node_modules/@mariozechner/pi-coding-agent/dist');
+  const piSdkDest = join(cwd, 'dist/pi-sdk/dist');
+  const sdkAssets: [string, string[]][] = [
+    // HTML session export templates (read by export-html/index.js)
+    ['core/export-html', ['template.html', 'template.css', 'template.js']],
+    // Vendor libs for HTML export (read by export-html/index.js)
+    ['core/export-html/vendor', ['marked.min.js', 'highlight.min.js']],
+    // Built-in theme definitions (read by theme/theme.js via getThemesDir())
+    ['modes/interactive/theme', ['dark.json', 'light.json']],
+  ];
+  for (const [relDir, files] of sdkAssets) {
+    const srcDir = join(sdkDistDir, relDir);
+    const destDir = join(piSdkDest, relDir);
+    if (existsSync(srcDir)) {
+      mkdirSync(destDir, { recursive: true });
+      for (const file of files) {
+        const src = join(srcDir, file);
+        if (existsSync(src)) {
+          copyFileSync(src, join(destDir, file));
+        }
+      }
+    }
+  }
 }
 
 // If run directly, execute the build
