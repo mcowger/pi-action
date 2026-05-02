@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.15.0] - 2026-05-02
+
+### Added
+
+- add get_pr_diff tool and review comments to get_issue_or_pr_thread (#161)
+- enable custom provider registration via models.json (#158)
+
+### Changed
+
+- update readme
+
 ## [2.14.0] - 2026-05-02
 
 ### Added
@@ -268,7 +279,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.14.0...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.0...HEAD
+[2.15.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.14.0...v2.15.0
 [2.14.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.4...v2.14.0
 [2.13.4]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.3...v2.13.4
 [2.13.3]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.2...v2.13.3
