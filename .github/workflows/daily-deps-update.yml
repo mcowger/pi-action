@@ -45,5 +45,5 @@ jobs:
           create-pr: 'true'
           pr-branch: 'deps/update'
           pr-title: 'chore: update dependencies'
-          pr-commit-message: 'chore: update dependencies'
+          pr-commit-message: 'chore(deps): update dependencies'
           pr-labels: 'dependencies,automated'
