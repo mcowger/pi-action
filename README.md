@@ -134,6 +134,44 @@ Supported extension sources:
 - **git repositories**: `git:github.com/user/repo` (supports branches with `#branch`)
 - **local files**: Relative paths to `.ts` extension files
 
+### Custom Providers via `models.json`
+
+The Pi SDK supports registering custom LLM providers (e.g., local servers, API gateways, OpenAI-compatible endpoints) through a `models.json` configuration file. By default the SDK looks for `~/.pi/agent/models.json`. When the file doesn't exist, only the built-in providers are available — identical to the previous behavior.
+
+See the [Custom Provider documentation](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/custom-provider.md) for the full schema reference.
+
+#### Example: configure a custom provider in a previous workflow step
+
+```yaml
+- name: Configure custom LLM provider
+  run: |
+    mkdir -p ~/.pi/agent
+    cat > ~/.pi/agent/models.json << 'EOF'
+    {
+      "providers": {
+        "my-llm": {
+          "baseUrl": "https://api.example.com/v1",
+          "apiKey": "${{ secrets.LLM_API_KEY }}",
+          "models": [{
+            "id": "my-model-v1",
+            "name": "My Model V1",
+            "api": "openai-chat",
+            "cost": { "input": 0.001, "output": 0.002, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 128000,
+            "maxTokens": 4096
+          }]
+        }
+      }
+    }
+    EOF
+
+- uses: shaftoe/pi-coding-agent-action@v2
+  with:
+    provider: my-llm
+    model: my-model-v1
+    token: ${{ secrets.LLM_API_KEY }}
+```
+
 ### Disabling Built-in Extensions
 
 By default the action loads four built-in GitHub related tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`, `get_pr_diff`) to help Pi better interact with GitHub action environment without relying on external tools like `gh` nor need special skills setup for that. If you want Pi to use only your own custom extensions (or none at all), set `load_builtin_extensions` to `false`:
