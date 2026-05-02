@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.14.0] - 2026-05-02
+
+### Added
+
+- export session as self-contained HTML artifact (#151)
+
 ## [2.13.4] - 2026-05-02
 
 ### Changed
@@ -262,7 +268,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.4...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.14.0...HEAD
+[2.14.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.4...v2.14.0
 [2.13.4]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.3...v2.13.4
 [2.13.3]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.2...v2.13.3
 [2.13.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.1...v2.13.2
