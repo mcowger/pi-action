@@ -140,13 +140,6 @@ export const loggingFactory = (
     core.info('🚀 Starting agent session...');
     core.info('════════════════════════════════════════════════════════════════');
   });
-
-  pi.on('agent_end', async () => {
-    core.info('\n');
-    core.info('════════════════════════════════════════════════════════════════');
-    core.info('✅ Agent session completed');
-    core.info('════════════════════════════════════════════════════════════════');
-  });
 };
 
 /**
