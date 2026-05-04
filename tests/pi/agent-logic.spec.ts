@@ -1,7 +1,7 @@
 /**
  * Tests for Agent class.
  *
- * Tests the Pi agent wrapper including session stats handling.
+ * Tests the Pi agent wrapper including session stats handling and session error detection.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -75,6 +75,20 @@ const mockPlatformProvider: any = {
   getIssueOrPRThread: async () => undefined,
 };
 
+/**
+ * Create a standard agent instance for testing (calls real ready()).
+ */
+function createRealAgent(): InstanceType<typeof Agent> {
+  return new Agent(
+    'claude-sonnet-4-5',
+    'anthropic',
+    'test-token',
+    'off',
+    mockCoreAdapter as any,
+    mockPlatformProvider
+  );
+}
+
 describe('Agent', () => {
   describe('constructor', () => {
     test('throws error for non-existent model', () => {
@@ -134,27 +148,13 @@ describe('Agent', () => {
 
   describe('ready', () => {
     test('initializes session and returns self', async () => {
-      const agent = new Agent(
-        'claude-sonnet-4-5',
-        'anthropic',
-        'test-token',
-        'off',
-        mockCoreAdapter as any,
-        mockPlatformProvider
-      );
+      const agent = createRealAgent();
       const result = await agent.ready();
       expect(result).toBe(agent);
     });
 
     test('subscribes to message_update events', async () => {
-      const agent = new Agent(
-        'claude-sonnet-4-5',
-        'anthropic',
-        'test-token',
-        'off',
-        mockCoreAdapter as any,
-        mockPlatformProvider
-      );
+      const agent = createRealAgent();
 
       // The real session subscribe will be called during ready()
       await agent.ready();
@@ -165,28 +165,14 @@ describe('Agent', () => {
 
   describe('run', () => {
     test('throws error for empty text', async () => {
-      const agent = new Agent(
-        'claude-sonnet-4-5',
-        'anthropic',
-        'test-token',
-        'off',
-        mockCoreAdapter as any,
-        mockPlatformProvider
-      );
+      const agent = createRealAgent();
       await agent.ready();
 
       expect(agent.run('')).rejects.toThrow('no text, skipping prompt');
     });
 
     test('throws error for undefined text', async () => {
-      const agent = new Agent(
-        'claude-sonnet-4-5',
-        'anthropic',
-        'test-token',
-        'off',
-        mockCoreAdapter as any,
-        mockPlatformProvider
-      );
+      const agent = createRealAgent();
       await agent.ready();
 
       await expect(agent.run(undefined as unknown as string)).rejects.toThrow(
@@ -195,14 +181,7 @@ describe('Agent', () => {
     });
 
     test('returns PromptResult with sessionStats', async () => {
-      const agent = new Agent(
-        'claude-sonnet-4-5',
-        'anthropic',
-        'test-token',
-        'off',
-        mockCoreAdapter as any,
-        mockPlatformProvider
-      );
+      const agent = createRealAgent();
       await agent.ready();
 
       // Mock the session to return known stats
@@ -213,6 +192,7 @@ describe('Agent', () => {
         }),
         prompt: async () => {},
         subscribe: () => {},
+        state: { errorMessage: undefined },
       };
       agent['session'] = mockStats as any;
 
@@ -230,14 +210,7 @@ describe('Agent', () => {
     });
 
     test('returns PromptResult with undefined sessionStats when SDK throws', async () => {
-      const agent = new Agent(
-        'claude-sonnet-4-5',
-        'anthropic',
-        'test-token',
-        'off',
-        mockCoreAdapter as any,
-        mockPlatformProvider
-      );
+      const agent = createRealAgent();
       await agent.ready();
 
       // Mock the session to throw an error on getSessionStats
@@ -247,6 +220,7 @@ describe('Agent', () => {
         },
         prompt: async () => {},
         subscribe: () => {},
+        state: { errorMessage: undefined },
       };
       agent['session'] = mockSession as any;
 
@@ -258,14 +232,7 @@ describe('Agent', () => {
     });
 
     test('returns PromptResult with zero tokens and cost', async () => {
-      const agent = new Agent(
-        'claude-sonnet-4-5',
-        'anthropic',
-        'test-token',
-        'off',
-        mockCoreAdapter as any,
-        mockPlatformProvider
-      );
+      const agent = createRealAgent();
       await agent.ready();
 
       // Mock the session to return zero values
@@ -276,6 +243,7 @@ describe('Agent', () => {
         }),
         prompt: async () => {},
         subscribe: () => {},
+        state: { errorMessage: undefined },
       };
       agent['session'] = mockStats as any;
 
@@ -293,14 +261,7 @@ describe('Agent', () => {
     });
 
     test('returns PromptResult with large token counts', async () => {
-      const agent = new Agent(
-        'claude-sonnet-4-5',
-        'anthropic',
-        'test-token',
-        'off',
-        mockCoreAdapter as any,
-        mockPlatformProvider
-      );
+      const agent = createRealAgent();
       await agent.ready();
 
       // Mock the session to return large values
@@ -311,6 +272,7 @@ describe('Agent', () => {
         }),
         prompt: async () => {},
         subscribe: () => {},
+        state: { errorMessage: undefined },
       };
       agent['session'] = mockStats as any;
 
@@ -328,16 +290,134 @@ describe('Agent', () => {
     });
   });
 
+  describe('session error detection in run()', () => {
+    test('throws when sessionError is set from message_end event', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['sessionError'] = 'Provider finish_reason: model_context_window_exceeded';
+      agent['session'] = {
+        ...agent['session'],
+        prompt: async () => {},
+        state: { errorMessage: undefined },
+      } as any;
+
+      await expect(agent.run('Hello')).rejects.toThrow(
+        'Pi agent session error: Provider finish_reason: model_context_window_exceeded'
+      );
+    });
+
+    test('throws when session.state.errorMessage is set', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['sessionError'] = undefined;
+      agent['session'] = {
+        ...agent['session'],
+        prompt: async () => {},
+        state: { errorMessage: 'API rate limit exceeded' },
+      } as any;
+
+      await expect(agent.run('Hello')).rejects.toThrow(
+        'Pi agent session error: API rate limit exceeded'
+      );
+    });
+
+    test('prefers sessionError from events over state.errorMessage', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['sessionError'] = 'Event-tracked error';
+      agent['session'] = {
+        ...agent['session'],
+        prompt: async () => {},
+        state: { errorMessage: 'State-level error' },
+      } as any;
+
+      await expect(agent.run('Hello')).rejects.toThrow(
+        'Pi agent session error: Event-tracked error'
+      );
+    });
+
+    test('succeeds when no session error is present', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['sessionError'] = undefined;
+      agent['session'] = {
+        ...agent['session'],
+        prompt: async () => {},
+        state: { errorMessage: undefined },
+        getSessionStats: () => ({
+          tokens: { input: 100, output: 50, total: 150 },
+          cost: 0.001,
+        }),
+      } as any;
+
+      const result = await agent.run('Hello');
+      expect(result).toEqual({
+        result: '',
+        sessionStats: {
+          inputTokens: 100,
+          outputTokens: 50,
+          totalTokens: 150,
+          cost: 0.001,
+          version: expect.any(String),
+        },
+      });
+    });
+
+    test('compaction_end error is thrown', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['sessionError'] =
+        'Context overflow recovery failed after one compact-and-retry attempt.';
+
+      agent['session'] = {
+        ...agent['session'],
+        prompt: async () => {},
+        state: { errorMessage: undefined },
+      } as any;
+
+      await expect(agent.run('Hello')).rejects.toThrow(
+        'Pi agent session error: Context overflow recovery failed'
+      );
+    });
+
+    test('recovered error does not cause false failure', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      // Simulate: error was set then cleared by a successful message_end
+      agent['sessionError'] = undefined;
+      agent['session'] = {
+        ...agent['session'],
+        prompt: async () => {},
+        state: { errorMessage: undefined },
+        getSessionStats: () => ({
+          tokens: { input: 100, output: 50, total: 150 },
+          cost: 0.001,
+        }),
+      } as any;
+
+      const result = await agent.run('Hello');
+      expect(result).toEqual({
+        result: '',
+        sessionStats: {
+          inputTokens: 100,
+          outputTokens: 50,
+          totalTokens: 150,
+          cost: 0.001,
+          version: expect.any(String),
+        },
+      });
+    });
+  });
+
   describe('exportSessionHtml', () => {
     test('delegates to session.exportToHtml', async () => {
-      const agent = new Agent(
-        'claude-sonnet-4-5',
-        'anthropic',
-        'test-token',
-        'off',
-        mockCoreAdapter as any,
-        mockPlatformProvider
-      );
+      const agent = createRealAgent();
       await agent.ready();
 
       const mockExportToHtml = mock(async (outputPath: string) => outputPath);
