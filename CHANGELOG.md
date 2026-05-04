@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.15.3] - 2026-05-04
+
+### Changed
+
+- default to openai for examples
+- split context.ts into cohesive modules and create tools subpackage (#170)
+- update readme about optional token input
+
+### Fixed
+
+- catch Pi agent session errors and fail the workflow (#168)
+
 ## [2.15.2] - 2026-05-04
 
 ### Fixed
@@ -291,7 +303,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.2...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.3...HEAD
+[2.15.3]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.2...v2.15.3
 [2.15.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.1...v2.15.2
 [2.15.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.0...v2.15.1
 [2.15.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.14.0...v2.15.0
