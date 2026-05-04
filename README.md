@@ -103,9 +103,9 @@ You can use the `prompt` input to run the agent without requiring a comment trig
   uses: shaftoe/pi-coding-agent-action@v2
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
-    provider: anthropic
-    model: claude-opus-4-7
-    token: ${{ secrets.ANTHROPIC_API_KEY }}
+    provider: openai
+    model: gpt-5.4
+    token: ${{ secrets.OPENAI_API_KEY }}
     prompt: 'Review this pull request for security issues' # or e.g. ${{ steps.generate-prompt.outputs.prompt }}
 ```
 
@@ -120,9 +120,9 @@ You can load custom Pi extensions to add additional tools, custom tools, or modi
   uses: shaftoe/pi-coding-agent-action@v2
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
-    provider: anthropic
-    model: claude-opus-4-7
-    token: ${{ secrets.ANTHROPIC_API_KEY }}
+    provider: openai
+    model: gpt-5.4
+    token: ${{ secrets.OPENAI_API_KEY }}
     extensions: |
       npm:pi-subagents
       git:github.com/user/pi-custom-tools
@@ -181,9 +181,9 @@ By default the action loads four built-in GitHub related tools (`create_pull_req
   uses: shaftoe/pi-coding-agent-action@v2
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
-    provider: anthropic
-    model: claude-opus-4-7
-    token: ${{ secrets.ANTHROPIC_API_KEY }}
+    provider: openai
+    model: gpt-5.4
+    token: ${{ secrets.OPENAI_API_KEY }}
     load_builtin_extensions: false
     extensions: |
       npm:my-custom-github-tools
@@ -201,9 +201,9 @@ Pi extensions often require environment variables for authentication or configur
     ANOTHER_SERVICE_TOKEN: ${{ secrets.ANOTHER_SERVICE_TOKEN }}
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
-    provider: anthropic
-    model: claude-opus-4-7
-    token: ${{ secrets.ANTHROPIC_API_KEY }}
+    provider: openai
+    model: gpt-5.4
+    token: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 Since the action runs as a single Node.js process, these environment variables are available in `process.env` and accessible to all Pi extensions.
@@ -221,9 +221,9 @@ jobs:
         uses: shaftoe/pi-coding-agent-action@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: anthropic
-          model: claude-sonnet-4-5
-          token: ${{ secrets.ANTHROPIC_API_KEY }}
+          provider: openai
+          model: gpt-5.4
+          token: ${{ secrets.OPENAI_API_KEY }}
           prompt: 'Generate release notes for the latest commit'
 
   publish:
@@ -256,9 +256,9 @@ When `export_session_html` is enabled, the action writes a self-contained HTML f
   with:
     export_session_html: true
     github_token: ${{ secrets.GITHUB_TOKEN }}
-    provider: anthropic
-    model: claude-sonnet-4-5
-    token: ${{ secrets.ANTHROPIC_API_KEY }}
+    provider: openai
+    model: gpt-5.4
+    token: ${{ secrets.OPENAI_API_KEY }}
 
 - uses: actions/upload-artifact@v7
   if: ${{ steps.pi.outputs.session_html_path }}
@@ -280,9 +280,9 @@ Create a workflow file, e.g., `.github/workflows/pi-agent.yml`. See the [interac
 | `extensions` | Custom Pi extensions to load (one per line). Supports npm packages (npm:package-name), git repos (git:github.com/user/repo), or local file paths | No | - |
 | `github_token` | GitHub token for API access | Yes | - |
 | `load_builtin_extensions` | Whether to load built-in GitHub extensions (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`, `get_pr_diff`) | No | `true` |
-| `model` | Model to use (e.g., claude-sonnet-4-5, claude-opus-4-7, gpt-4o, gemini-2.5-pro) | Yes | - |
+| `model` | Model to use (e.g., gpt-5.4, gpt-4o, gemini-2.5-pro) | Yes | - |
 | `prompt` | Optional prompt to send to the agent (skips comment extraction) | No | - |
-| `provider` | LLM provider (anthropic, openai, google, etc.) | Yes | - |
+| `provider` | LLM provider (openai, google, anthropic, etc.) | Yes | - |
 | `thinking_level` | Model thinking level (off|low|medium|high) | No | off |
 | `token` | Provider API token. Required for most providers, but can be omitted when using providers that support alternative auth mechanisms (e.g., `google-vertex` with Application Default Credentials) | No | - |
 | `trigger` | Trigger phrase used to invoke the action | No | /pi |
