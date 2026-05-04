@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.15.2] - 2026-05-04
+
+### Fixed
+
+- remove hard token input requirement to allow for ADC auth (#164)
+
 ## [2.15.1] - 2026-05-02
 
 ### Fixed
@@ -285,7 +291,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.1...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.2...HEAD
+[2.15.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.1...v2.15.2
 [2.15.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.0...v2.15.1
 [2.15.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.14.0...v2.15.0
 [2.14.0]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.13.4...v2.14.0
