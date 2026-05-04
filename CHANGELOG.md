@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.15.4] - 2026-05-04
+
+### Fixed
+
+- only fail workflow on terminal session errors, not transient recovered ones (#172)
+
 ## [2.15.3] - 2026-05-04
 
 ### Changed
@@ -303,7 +309,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README link corrections
 - Codecov action updated, removed double build
 
-[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.3...HEAD
+[unreleased]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.4...HEAD
+[2.15.4]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.3...v2.15.4
 [2.15.3]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.2...v2.15.3
 [2.15.2]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.1...v2.15.2
 [2.15.1]: https://github.com/shaftoe/pi-coding-agent-action/compare/v2.15.0...v2.15.1
