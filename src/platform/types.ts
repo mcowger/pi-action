@@ -164,7 +164,16 @@ export interface PlatformProvider {
    * @param owner - Repository owner.
    * @param repo - Repository name.
    * @param pullNumber - Pull request number.
+   * @param ignoreFiles - Optional list of file paths to exclude from the diff.
+   *                      Supports exact paths (e.g. "dist/bundle.js") and prefix
+   *                      matching (e.g. "dist/" excludes everything under dist/).
+   *                      Matching is literal — glob patterns are NOT supported.
    * @returns The diff string, or empty string if unavailable.
    */
-  getPRDiff(owner: string, repo: string, pullNumber: number): Promise<string>;
+  getPRDiff(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    ignoreFiles?: string[]
+  ): Promise<string>;
 }

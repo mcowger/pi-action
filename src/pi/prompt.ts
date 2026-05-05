@@ -125,3 +125,6 @@ export const GET_PR_DIFF_PARAM_PULL_NUMBER_DESCRIPTION =
 
 export const GET_PR_DIFF_PARAM_MAX_LINES_DESCRIPTION =
   'Maximum number of diff lines to return. Defaults to 1000. Use for limiting very large diffs.';
+
+export const GET_PR_DIFF_PARAM_IGNORE_FILES_DESCRIPTION =
+  'List of file paths to exclude from the diff. Supports exact file paths (e.g. "package-lock.json") and directory prefixes (e.g. "dist/" to exclude everything under dist/). Matching is literal — glob patterns (e.g. "*.min.js") are NOT supported. Useful for filtering out generated files, build artifacts, or vendored dependencies.';
