@@ -116,6 +116,15 @@ const mockPlatformProvider: PlatformProvider = {
   }),
   getIssueOrPRThread: async () => undefined,
   getPRDiff: async () => '',
+  addIssueComment: async () => ({ comment_id: 0, issue_number: 0, url: '' }),
+  updateComment: async () => ({ comment_id: 0, url: '', updated: false }),
+  createInlineComment: async () => ({ comment_id: 0, pull_number: 0, path: '', line: 0, url: '' }),
+  listComments: async () => ({
+    issue_comments: [],
+    review_comments: [],
+    total_issue_comments: 0,
+    total_review_comments: 0,
+  }),
 };
 
 mock.module('@actions/core', () => ({

@@ -128,3 +128,112 @@ export const GET_PR_DIFF_PARAM_MAX_LINES_DESCRIPTION =
 
 export const GET_PR_DIFF_PARAM_IGNORE_FILES_DESCRIPTION =
   'List of file paths to exclude from the diff. Supports exact file paths (e.g. "package-lock.json") and directory prefixes (e.g. "dist/" to exclude everything under dist/). Matching is literal — glob patterns (e.g. "*.min.js") are NOT supported. Useful for filtering out generated files, build artifacts, or vendored dependencies.';
+
+//
+// Add Issue Comment
+//
+export const ADD_ISSUE_COMMENT_PROMPT_SNIPPET = 'Add a comment to a GitHub issue or pull request.';
+
+export const ADD_ISSUE_COMMENT_PROMPT_GUIDELINES = [
+  'Use add_issue_comment to post a new comment on an issue or PR.',
+  'The issue_number defaults to the current issue/PR from context if not provided.',
+  'Works for both issues and PRs since every PR is also an issue.',
+];
+
+export const ADD_ISSUE_COMMENT_DESCRIPTION =
+  "Add a comment to a GitHub issue or pull request. Works for both issues and PRs since every PR is also an issue in GitHub's data model.";
+
+export const ADD_ISSUE_COMMENT_PARAM_ISSUE_NUMBER_DESCRIPTION =
+  'Issue or pull request number. If not provided, uses the current issue/PR from context.';
+
+export const ADD_ISSUE_COMMENT_PARAM_BODY_DESCRIPTION = 'The comment body in markdown format.';
+
+//
+// Update Comment
+//
+export const UPDATE_COMMENT_PROMPT_SNIPPET =
+  'Update an existing comment on a GitHub issue or pull request.';
+
+export const UPDATE_COMMENT_PROMPT_GUIDELINES = [
+  'Use update_comment to edit an existing comment by its numeric ID.',
+  'Set is_review_comment=true when updating a PR inline review comment; leave false (default) for issue/PR general comments.',
+  'Use list_comments first to find the comment ID you want to update.',
+];
+
+export const UPDATE_COMMENT_DESCRIPTION =
+  'Update an existing comment on a GitHub issue or pull request. Can update both issue-level comments and PR inline review comments.';
+
+export const UPDATE_COMMENT_PARAM_COMMENT_ID_DESCRIPTION =
+  'The numeric ID of the comment to update.';
+
+export const UPDATE_COMMENT_PARAM_BODY_DESCRIPTION = 'The new comment body in markdown format.';
+
+export const UPDATE_COMMENT_PARAM_IS_REVIEW_COMMENT_DESCRIPTION =
+  'Set to true if updating a PR inline review comment. Defaults to false (issue/PR general comment).';
+
+//
+// Create Inline Comment
+//
+export const CREATE_INLINE_COMMENT_PROMPT_SNIPPET =
+  'Create an inline review comment on a specific line of a pull request diff.';
+
+export const CREATE_INLINE_COMMENT_PROMPT_GUIDELINES = [
+  'Use create_inline_comment to leave feedback on a specific line of code in a PR diff.',
+  'The pull_number defaults to the current PR from context if not provided.',
+  'Use start_line together with line for multi-line comments spanning a range.',
+  'side defaults to RIGHT (new code); use LEFT to comment on the old version of the code.',
+  'commit_id defaults to the PR head commit if not provided.',
+];
+
+export const CREATE_INLINE_COMMENT_DESCRIPTION =
+  'Create an inline review comment on a specific line of a pull request diff. Supports single-line and multi-line comments. The comment is attached to a specific file path and line number in the diff.';
+
+export const CREATE_INLINE_COMMENT_PARAM_PULL_NUMBER_DESCRIPTION =
+  'Pull request number. If not provided, uses the current PR from context.';
+
+export const CREATE_INLINE_COMMENT_PARAM_BODY_DESCRIPTION = 'The comment body in markdown format.';
+
+export const CREATE_INLINE_COMMENT_PARAM_PATH_DESCRIPTION =
+  "The relative file path to comment on (e.g., 'src/index.ts').";
+
+export const CREATE_INLINE_COMMENT_PARAM_LINE_DESCRIPTION =
+  'The line number in the diff to comment on. For multi-line comments, this is the last line of the range.';
+
+export const CREATE_INLINE_COMMENT_PARAM_SIDE_DESCRIPTION =
+  'Which side of the diff to comment on: RIGHT for new code (default), LEFT for old code.';
+
+export const CREATE_INLINE_COMMENT_PARAM_COMMIT_ID_DESCRIPTION =
+  'The commit SHA to attach the comment to. Defaults to the PR head commit if not provided.';
+
+export const CREATE_INLINE_COMMENT_PARAM_START_LINE_DESCRIPTION =
+  'For multi-line comments, the first line of the range. Must be used together with line (the end line).';
+
+export const CREATE_INLINE_COMMENT_PARAM_START_SIDE_DESCRIPTION =
+  'For multi-line comments, the side of the diff for the start line. Defaults to RIGHT.';
+
+//
+// List Comments
+//
+export const LIST_COMMENTS_PROMPT_SNIPPET = 'List comments on a GitHub issue or pull request.';
+
+export const LIST_COMMENTS_PROMPT_GUIDELINES = [
+  'Use list_comments to retrieve existing comments before deciding to add or update one.',
+  'For PRs, set include_review_comments=true to also fetch inline review comments.',
+  'Either issue_number or pull_number must be provided; defaults to the current issue/PR from context.',
+  'include_review_comments requires pull_number to be set.',
+];
+
+export const LIST_COMMENTS_DESCRIPTION =
+  'List comments on a GitHub issue or pull request. Can fetch issue-level comments, PR inline review comments, or both. Returns comment IDs, authors, timestamps, and bodies.';
+
+export const LIST_COMMENTS_PARAM_ISSUE_NUMBER_DESCRIPTION =
+  'Issue number. Use for issues or when fetching general PR comments. Defaults to the current issue/PR from context.';
+
+export const LIST_COMMENTS_PARAM_PULL_NUMBER_DESCRIPTION =
+  'Pull request number. Required when include_review_comments is true.';
+
+export const LIST_COMMENTS_PARAM_INCLUDE_ISSUE_COMMENTS_DESCRIPTION =
+  'Whether to include issue-level (general) comments. Defaults to true.';
+
+export const LIST_COMMENTS_PARAM_INCLUDE_REVIEW_COMMENTS_DESCRIPTION =
+  'Whether to include PR inline review comments. Defaults to false. Requires pull_number to be set.';

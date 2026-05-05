@@ -55,6 +55,11 @@ inputs:
     required: false
     default: 'false'
 
+  suppress_final_comment:
+    description: 'When true, the final summary comment is not posted on the issue/PR. Useful when the agent itself posts comments during execution and a redundant summary is not desired.'
+    required: false
+    default: 'false'
+
 runs:
   using: 'node24'
   main: 'dist/index.js'

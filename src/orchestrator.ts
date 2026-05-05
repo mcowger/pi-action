@@ -164,6 +164,11 @@ export class ActionOrchestrator {
       ? exportSessionHtmlInput.toLowerCase() === 'true'
       : true; // default to true
 
+    const suppressFinalCommentInput = this.core.getInput('suppress_final_comment');
+    const suppressFinalComment = suppressFinalCommentInput
+      ? suppressFinalCommentInput.toLowerCase() === 'true'
+      : false; // default to false
+
     return {
       provider,
       model,
@@ -174,6 +179,7 @@ export class ActionOrchestrator {
       loadBuiltinExtensions,
       ...(baseUrl ? { baseUrl } : {}),
       exportSessionHtml,
+      suppressFinalComment,
     };
   }
 
@@ -240,6 +246,11 @@ export class ActionOrchestrator {
 
     const executionDuration = startTime.until(Temporal.Now.instant());
     this.core.setOutput('duration_seconds', executionDuration.total('seconds'));
+
+    if (config.suppressFinalComment) {
+      this.core.debug('suppress_final_comment is enabled — skipping final comment');
+      return;
+    }
 
     const metadata: CommentMetadata = {
       actionVersion: __VERSION__,

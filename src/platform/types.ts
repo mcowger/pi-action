@@ -19,6 +19,14 @@ import type {
   UpdatePullRequestParams,
   UpdatePullRequestDetails,
   CreateReactionType,
+  AddIssueCommentParams,
+  AddIssueCommentDetails,
+  UpdateCommentParams,
+  UpdateCommentDetails,
+  CreateInlineCommentParams,
+  CreateInlineCommentDetails,
+  ListCommentsParams,
+  ListCommentsDetails,
 } from './github';
 
 // Re-export types used by consumers (pi tools, adapters, etc.) so they
@@ -33,6 +41,14 @@ export type {
   UpdatePullRequestParams,
   UpdatePullRequestDetails,
   CreateReactionType,
+  AddIssueCommentParams,
+  AddIssueCommentDetails,
+  UpdateCommentParams,
+  UpdateCommentDetails,
+  CreateInlineCommentParams,
+  CreateInlineCommentDetails,
+  ListCommentsParams,
+  ListCommentsDetails,
 } from './github';
 import type { CommentMetadata } from '../types';
 
@@ -176,4 +192,36 @@ export interface PlatformProvider {
     pullNumber: number,
     ignoreFiles?: string[]
   ): Promise<string>;
+
+  /**
+   * Add a comment to an issue or pull request.
+   *
+   * @param params - Parameters including issue_number and body.
+   * @returns The created comment details.
+   */
+  addIssueComment(params: AddIssueCommentParams): Promise<AddIssueCommentDetails>;
+
+  /**
+   * Update an existing issue or PR review comment.
+   *
+   * @param params - Parameters including comment_id, body, and optional is_review_comment flag.
+   * @returns The updated comment details.
+   */
+  updateComment(params: UpdateCommentParams): Promise<UpdateCommentDetails>;
+
+  /**
+   * Create an inline review comment on a pull request diff.
+   *
+   * @param params - Parameters including pull_number, path, line, and body.
+   * @returns The created comment details.
+   */
+  createInlineComment(params: CreateInlineCommentParams): Promise<CreateInlineCommentDetails>;
+
+  /**
+   * List comments on an issue or pull request.
+   *
+   * @param params - Parameters including issue_number/pull_number and filter flags.
+   * @returns Lists of issue comments and review comments.
+   */
+  listComments(params: ListCommentsParams): Promise<ListCommentsDetails>;
 }

@@ -11,3 +11,7 @@ export const CANCELLATION_MESSAGE_CREATE_PR = 'Pull request creation was cancell
 export const CANCELLATION_MESSAGE_GET_THREAD = 'Thread retrieval was cancelled';
 export const CANCELLATION_MESSAGE_UPDATE_PR = 'Pull request update was cancelled';
 export const CANCELLATION_MESSAGE_GET_PR_DIFF = 'PR diff retrieval was cancelled';
+export const CANCELLATION_MESSAGE_ADD_ISSUE_COMMENT = 'Adding issue comment was cancelled';
+export const CANCELLATION_MESSAGE_UPDATE_COMMENT = 'Updating comment was cancelled';
+export const CANCELLATION_MESSAGE_CREATE_INLINE_COMMENT = 'Creating inline comment was cancelled';
+export const CANCELLATION_MESSAGE_LIST_COMMENTS = 'Listing comments was cancelled';

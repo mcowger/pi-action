@@ -20,6 +20,12 @@ import { createPullRequest } from './tools/pull-request';
 import { updatePullRequest } from './tools/pull-request-update';
 import { getIssueOrPRThread } from './tools/thread';
 import { fetchPRDiff } from './tools/pr-diff';
+import {
+  addIssueComment,
+  updateComment,
+  createInlineComment,
+  listComments,
+} from './tools/comments';
 import { MAX_DIFF_LINES } from './constants';
 import type { Temporal } from '@js-temporal/polyfill';
 import type { PlatformProvider, PlatformType, PlatformContext } from '../types';
@@ -28,6 +34,16 @@ import type { CreateReactionType } from './reactions';
 import type { IssueOrPRThread, GetIssueOrPRThreadParams } from './types';
 import type { CreatePullRequestParams, CreatePullRequestDetails } from './tools/pull-request';
 import type { UpdatePullRequestParams, UpdatePullRequestDetails } from './tools/pull-request-update';
+import type {
+  AddIssueCommentParams,
+  AddIssueCommentDetails,
+  UpdateCommentParams,
+  UpdateCommentDetails,
+  CreateInlineCommentParams,
+  CreateInlineCommentDetails,
+  ListCommentsParams,
+  ListCommentsDetails,
+} from './types';
 
 /**
  * Detect the current platform based on the server URL.
@@ -127,6 +143,22 @@ export function createGitHubPlatformProvider(): PlatformProvider {
 
     async getPRDiff(owner: string, repo: string, pullNumber: number, ignoreFiles?: string[]): Promise<string> {
       return fetchPRDiff(owner, repo, pullNumber, MAX_DIFF_LINES, ignoreFiles);
+    },
+
+    async addIssueComment(params: AddIssueCommentParams): Promise<AddIssueCommentDetails> {
+      return addIssueComment(params);
+    },
+
+    async updateComment(params: UpdateCommentParams): Promise<UpdateCommentDetails> {
+      return updateComment(params);
+    },
+
+    async createInlineComment(params: CreateInlineCommentParams): Promise<CreateInlineCommentDetails> {
+      return createInlineComment(params);
+    },
+
+    async listComments(params: ListCommentsParams): Promise<ListCommentsDetails> {
+      return listComments(params);
     },
   };
 }

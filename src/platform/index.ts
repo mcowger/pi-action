@@ -19,6 +19,14 @@ export {
   type UpdatePullRequestParams,
   type UpdatePullRequestDetails,
   type CreateReactionType,
+  type AddIssueCommentParams,
+  type AddIssueCommentDetails,
+  type UpdateCommentParams,
+  type UpdateCommentDetails,
+  type CreateInlineCommentParams,
+  type CreateInlineCommentDetails,
+  type ListCommentsParams,
+  type ListCommentsDetails,
 } from './types';
 
 export { detectPlatform, createGitHubPlatformProvider } from './github/index';

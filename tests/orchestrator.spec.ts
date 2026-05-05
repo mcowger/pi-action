@@ -204,6 +204,7 @@ describe('ActionOrchestrator', () => {
           promptInput: '',
           loadBuiltinExtensions: true, // default value
           exportSessionHtml: true, // default value
+          suppressFinalComment: false, // default value
         },
         mockCore,
         mockProvider
@@ -239,6 +240,7 @@ describe('ActionOrchestrator', () => {
           promptInput: '',
           loadBuiltinExtensions: true, // default value
           exportSessionHtml: true, // default value
+          suppressFinalComment: false, // default value
         },
         mockCore,
         mockProvider
@@ -1258,6 +1260,13 @@ describe('ActionOrchestrator', () => {
       expect(mockCore.getInput).toHaveBeenCalledWith('export_session_html');
     });
 
+    test('calls getInput for suppress_final_comment', async () => {
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockCore.getInput).toHaveBeenCalledWith('suppress_final_comment');
+    });
+
     test('calls exportSessionHtml on agent when enabled', async () => {
       const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
       await orchestrator.execute();
@@ -1299,6 +1308,223 @@ describe('ActionOrchestrator', () => {
       expect(mockCore.notice).toHaveBeenCalledWith(
         expect.stringContaining('[session-html] failed to export HTML')
       );
+    });
+  });
+
+  describe('suppress_final_comment configuration', () => {
+    test('defaults to false when not provided', async () => {
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockPiFactory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          suppressFinalComment: false,
+        }),
+        mockCore,
+        mockProvider
+      );
+    });
+
+    test('parses true value correctly', async () => {
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          suppress_final_comment: 'true',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockPiFactory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          suppressFinalComment: true,
+        }),
+        mockCore,
+        mockProvider
+      );
+    });
+
+    test('parses false value correctly', async () => {
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          suppress_final_comment: 'false',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockPiFactory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          suppressFinalComment: false,
+        }),
+        mockCore,
+        mockProvider
+      );
+    });
+
+    test('does not create final comment when suppress_final_comment is true', async () => {
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          suppress_final_comment: 'true',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockGit.createFinalComment).not.toHaveBeenCalled();
+    });
+
+    test('still sets outputs when suppress_final_comment is true', async () => {
+      const sessionStats = {
+        inputTokens: 100,
+        outputTokens: 50,
+        totalTokens: 150,
+        cost: 0.001,
+      };
+      const runMock = mock(async () => ({
+        result: 'Done!',
+        sessionStats,
+      }));
+      mockPiAgent.run = runMock as any;
+
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          suppress_final_comment: 'true',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockCore.setOutput).toHaveBeenCalledWith('response', 'Done!');
+      expect(mockCore.setOutput).toHaveBeenCalledWith('success', true);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('input_tokens', 100);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('output_tokens', 50);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('cost', 0.001);
+      expect(mockCore.setOutput).toHaveBeenCalledWith('duration_seconds', expect.any(Number));
+    });
+
+    test('deletes reaction even when suppress_final_comment is true', async () => {
+      const mockReaction = { data: { id: 999 } } as CreateReactionType;
+      const addReactionMock = mock(async () => mockReaction);
+      mockGit.addReaction = addReactionMock as any;
+
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          suppress_final_comment: 'true',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockGit.deleteReaction).toHaveBeenCalledWith(mockReaction);
+    });
+
+    test('does not create final comment on error when suppress_final_comment is true', async () => {
+      const runMock = mock(async () => {
+        throw new Error('API error');
+      });
+      mockPiAgent.run = runMock as any;
+
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          suppress_final_comment: 'true',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+
+      await expect(orchestrator.execute()).rejects.toThrow('API error');
+
+      expect(mockGit.createFinalComment).not.toHaveBeenCalled();
+      expect(mockCore.setFailed).toHaveBeenCalled();
+    });
+
+    test('logs debug message when final comment is suppressed', async () => {
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          suppress_final_comment: 'true',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockCore.debug).toHaveBeenCalledWith(
+        'suppress_final_comment is enabled — skipping final comment'
+      );
+    });
+
+    test('creates final comment when suppress_final_comment is false', async () => {
+      const getInputMock = mock((name: string) => {
+        const inputs: Record<string, string> = {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          token: 'test-token',
+          thinking_level: '',
+          prompt: '',
+          suppress_final_comment: 'false',
+        };
+        return inputs[name];
+      });
+      mockCore.getInput = getInputMock as any;
+
+      const orchestrator = new ActionOrchestrator(mockCore, mockGit, mockPiFactory, mockProvider);
+      await orchestrator.execute();
+
+      expect(mockGit.createFinalComment).toHaveBeenCalled();
     });
   });
 });

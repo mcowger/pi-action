@@ -18,6 +18,10 @@ import { createPRToolFactory } from './create-pr';
 import { getIssueOrPRThreadToolFactory } from './get-thread';
 import { getPRDiffToolFactory } from './get-pr-diff';
 import { updatePullRequestToolFactory } from './update-pr';
+import { addIssueCommentToolFactory } from './add-issue-comment';
+import { updateCommentToolFactory } from './update-comment';
+import { createInlineCommentToolFactory } from './create-inline-comment';
+import { listCommentsToolFactory } from './list-comments';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import type { PlatformProvider } from '../../platform';
 
@@ -47,6 +51,10 @@ export function createToolsFactory(provider: PlatformProvider): (pi: ExtensionAP
       updatePullRequestToolFactory(provider),
       getIssueOrPRThreadToolFactory(provider),
       getPRDiffToolFactory(provider),
+      addIssueCommentToolFactory(provider),
+      updateCommentToolFactory(provider),
+      createInlineCommentToolFactory(provider),
+      listCommentsToolFactory(provider),
     ];
     tools.forEach(tool => {
       pi.registerTool(tool);

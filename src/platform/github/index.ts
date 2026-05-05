@@ -155,6 +155,14 @@ export {
   type ThreadComment,
   type ReviewComment,
   type GetIssueOrPRThreadParams,
+  type AddIssueCommentParams,
+  type AddIssueCommentDetails,
+  type UpdateCommentParams,
+  type UpdateCommentDetails,
+  type CreateInlineCommentParams,
+  type CreateInlineCommentDetails,
+  type ListCommentsParams,
+  type ListCommentsDetails,
 } from './types';
 
 // Reaction management functions (used by run.ts)

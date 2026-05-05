@@ -109,6 +109,7 @@ export interface PiConfig {
   loadBuiltinExtensions?: boolean;
   baseUrl?: string;
   exportSessionHtml?: boolean;
+  suppressFinalComment?: boolean;
 }
 
 /**
