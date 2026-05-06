@@ -75,7 +75,8 @@ runs:
       shell: bash
       working-directory: ${{ github.action_path }}
 
-    - run: bun run ${{ github.action_path }}/src/run.ts
+    - id: run
+      run: bun run ${{ github.action_path }}/src/run.ts
       shell: bash
       working-directory: ${{ github.workspace }}
       env:
@@ -96,15 +97,22 @@ runs:
 outputs:
   response:
     description: 'The main agent response text'
+    value: ${{ steps.run.outputs.response }}
   success:
     description: 'Whether the agent completed successfully (true/false)'
+    value: ${{ steps.run.outputs.success }}
   input_tokens:
     description: 'Number of input tokens consumed'
+    value: ${{ steps.run.outputs.input_tokens }}
   output_tokens:
     description: 'Number of output tokens generated'
+    value: ${{ steps.run.outputs.output_tokens }}
   cost:
     description: 'Cost of the invocation in USD'
+    value: ${{ steps.run.outputs.cost }}
   duration_seconds:
     description: 'Wall-clock duration of agent execution in seconds'
+    value: ${{ steps.run.outputs.duration_seconds }}
   session_html_path:
     description: 'Path to the exported session HTML file (when export_session_html is enabled)'
+    value: ${{ steps.run.outputs.session_html_path }}
