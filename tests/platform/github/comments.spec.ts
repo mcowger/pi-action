@@ -363,20 +363,6 @@ describe('createFinalComment', () => {
     expect(commentBody).not.toContain('($0)');
   });
 
-  test('includes action version when provided', async () => {
-    const body = 'Test result';
-    const metadata = {
-      actionVersion: '2.3.0',
-    };
-
-    await createFinalComment(body, metadata);
-
-    const call = (mockOctokit.rest.issues.createComment as any).mock.calls[0] as unknown[];
-    expect(call[0]).toMatchObject({
-      body: expect.stringContaining('Action v2.3.0'),
-    });
-  });
-
   test('includes Pi SDK version when session stats available', async () => {
     const body = 'Test result';
     const metadata = {

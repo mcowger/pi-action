@@ -27,8 +27,6 @@ export interface CommentMetadata {
   executionDuration?: Temporal.Duration;
   /** Session statistics including token usage */
   sessionStats?: SessionStats;
-  /** Action version */
-  actionVersion?: string;
   /** Pi SDK version */
   piSdkVersion?: string;
 }
@@ -208,10 +206,6 @@ export async function createFinalComment(
 
     if (metadata?.sessionStats?.version) {
       metadataParts.push(`Pi SDK v${metadata.sessionStats.version}`);
-    }
-
-    if (metadata?.actionVersion) {
-      metadataParts.push(`Action v${metadata.actionVersion}`);
     }
 
     finalBody = `${body}\n\n---\n\n${metadataParts.join(' | ')}`;

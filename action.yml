@@ -64,12 +64,27 @@ inputs:
     required: false
     default: 'false'
 
+  suppress_bun_install:
+    description: 'When true, skips installing bun via oven-sh/setup-bun. Useful when bun is already installed in the workflow or provided by a runner.'
+    required: false
+    default: 'false'
+
 runs:
   using: 'composite'
   steps:
     - uses: oven-sh/setup-bun@v2
+      if: inputs.suppress_bun_install != 'true'
       with:
         bun-version: latest
+
+    - name: Validate bun is available
+      if: inputs.suppress_bun_install == 'true'
+      run: |
+        if ! command -v bun &> /dev/null; then
+          echo "::error::bun is required but not found. Either remove suppress_bun_install or install bun first."
+          exit 1
+        fi
+      shell: bash
 
     - run: bun install --frozen-lockfile
       shell: bash

@@ -118,8 +118,6 @@ export interface PiConfig {
  * Metadata to include in the final comment footer.
  */
 export interface CommentMetadata {
-  /** The version of this action */
-  actionVersion?: string;
   /** LLM provider (e.g., "anthropic", "openai") */
   provider?: string;
   /** Model identifier (e.g., "claude-sonnet-4-5") */

@@ -5,15 +5,8 @@
  * ActionOrchestrator, which handles the complete execution flow.
  */
 
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as core from '@actions/core';
 
-// Read version from package.json at runtime
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf-8')
-);
-globalThis.__VERSION__ = packageJson.version;
 import { ActionOrchestrator } from './orchestrator';
 import { RealCoreAdapter } from './adapters/core-adapter';
 import { RealGitAdapter } from './adapters/git-adapter';

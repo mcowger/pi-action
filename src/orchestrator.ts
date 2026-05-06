@@ -23,8 +23,6 @@ import {
 } from './types';
 import type { CreateReactionType, PlatformProvider } from './platform';
 
-declare const __VERSION__: string;
-
 /**
  * Orchestrates the GitHub Action execution flow.
  *
@@ -47,7 +45,7 @@ export class ActionOrchestrator {
    *         so they never prevent setFailed from running.
    */
   async execute(): Promise<void> {
-    this.core.info(`running action v${__VERSION__}`);
+    this.core.info('running action');
     const startTime = this.git.getStartTime() ?? Temporal.Now.instant();
     let config: PiConfig | undefined;
     let reaction: CreateReactionType | undefined;
@@ -336,7 +334,6 @@ export class ActionOrchestrator {
     }
 
     const metadata: CommentMetadata = {
-      actionVersion: __VERSION__,
       provider: config.provider,
       model: config.model,
       thinkingLevel: config.thinkingLevel,
