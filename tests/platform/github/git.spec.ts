@@ -2,7 +2,16 @@ import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as crypto from 'node:crypto';
 import ignore from 'ignore';
+
+/**
+ * Compute the git blob SHA-1 for content (same as git hash-object).
+ */
+function gitBlobSha(content: string): string {
+  const header = `blob ${content.length}\0`;
+  return crypto.createHash('sha1').update(header).update(content).digest('hex');
+}
 
 // Swallow ::notice:: / ::warning:: / ::debug:: annotations from @actions/core
 const realStdoutWrite = process.stdout.write.bind(process.stdout);
@@ -96,7 +105,7 @@ describe('scanForChanges', () => {
 
   test('detects modified files', async () => {
     // Create reference and modify it
-    const referenceFiles = new Map([['test.txt', { sha: 'abc123', content: 'old content' }]]);
+    const referenceFiles = new Map([['test.txt', { sha: gitBlobSha('old content') }]]);
 
     const testFile = path.join(tempDir, 'test.txt');
     fs.writeFileSync(testFile, 'new content');
@@ -111,7 +120,7 @@ describe('scanForChanges', () => {
   });
 
   test('ignores unchanged files', async () => {
-    const referenceFiles = new Map([['unchanged.txt', { sha: 'abc123', content: 'same content' }]]);
+    const referenceFiles = new Map([['unchanged.txt', { sha: gitBlobSha('same content') }]]);
 
     const testFile = path.join(tempDir, 'unchanged.txt');
     fs.writeFileSync(testFile, 'same content');
@@ -124,8 +133,8 @@ describe('scanForChanges', () => {
 
   test('detects deleted files', async () => {
     const referenceFiles = new Map([
-      ['deleted.txt', { sha: 'abc123', content: 'content' }],
-      ['remaining.txt', { sha: 'def456', content: 'still here' }],
+      ['deleted.txt', { sha: gitBlobSha('content') }],
+      ['remaining.txt', { sha: gitBlobSha('still here') }],
     ]);
 
     // Only create remaining file
@@ -274,14 +283,14 @@ describe('scanForChanges', () => {
 
     // Reference has different state
     const referenceFiles = new Map([
-      ['package.json', { sha: 'abc', content: '{"version":"0.9.0"}' }],
-      [path.join('src', 'index.ts'), { sha: 'def', content: 'export {}; // old' }],
-      [path.join('src', 'app.ts'), { sha: 'ghi', content: 'export const app = () => {}' }],
+      ['package.json', { sha: gitBlobSha('{"version":"0.9.0"}') }],
+      [path.join('src', 'index.ts'), { sha: gitBlobSha('export {}; // old') }],
+      [path.join('src', 'app.ts'), { sha: gitBlobSha('export const app = () => {}') }],
       [
         path.join('src', 'utils', 'helper.ts'),
-        { sha: 'jkl', content: 'export function oldHelper() {}' },
+        { sha: gitBlobSha('export function oldHelper() {}') },
       ],
-      [path.join('docs', 'api.md'), { sha: 'mno', content: '# API Reference' }],
+      [path.join('docs', 'api.md'), { sha: gitBlobSha('# API Reference') }],
     ]);
 
     const result = await scanForChanges(referenceFiles, mockLog);
@@ -443,8 +452,8 @@ describe('scanDirectory', () => {
     fs.writeFileSync(path.join(nestedDir, 'nested.txt'), 'nested modified');
 
     const referenceFiles = new Map([
-      ['root.txt', { sha: 'abc123', content: 'root same' }],
-      [path.join('nested', 'nested.txt'), { sha: 'def456', content: 'old nested content' }],
+      ['root.txt', { sha: gitBlobSha('root same') }],
+      [path.join('nested', 'nested.txt'), { sha: gitBlobSha('old nested content') }],
     ]);
 
     const ig = ignore();
@@ -471,10 +480,10 @@ describe('scanDirectory', () => {
     fs.writeFileSync(path.join(nestedDir, 'remaining.txt'), 'remaining content');
 
     const referenceFiles = new Map([
-      ['root.txt', { sha: 'abc123', content: 'root content' }],
-      [path.join('nested', 'remaining.txt'), { sha: 'def456', content: 'remaining content' }],
-      [path.join('nested', 'deleted.txt'), { sha: 'ghi789', content: 'deleted content' }],
-      [path.join('nested', 'deep', 'also-deleted.txt'), { sha: 'jkl012', content: 'deep deleted' }],
+      ['root.txt', { sha: gitBlobSha('root content') }],
+      [path.join('nested', 'remaining.txt'), { sha: gitBlobSha('remaining content') }],
+      [path.join('nested', 'deleted.txt'), { sha: gitBlobSha('deleted content') }],
+      [path.join('nested', 'deep', 'also-deleted.txt'), { sha: gitBlobSha('deep deleted') }],
     ]);
 
     const ig = ignore();
@@ -528,9 +537,9 @@ describe('scanDirectory', () => {
     fs.writeFileSync(path.join(tempDir, 'new.txt'), 'new');
 
     const referenceFiles = new Map([
-      ['unchanged.txt', { sha: 'abc123', content: 'same' }],
-      ['changed.txt', { sha: 'def456', content: 'old' }],
-      ['deleted.txt', { sha: 'ghi789', content: 'deleted' }],
+      ['unchanged.txt', { sha: gitBlobSha('same') }],
+      ['changed.txt', { sha: gitBlobSha('old') }],
+      ['deleted.txt', { sha: gitBlobSha('deleted') }],
     ]);
 
     const ig = ignore();

@@ -9,6 +9,15 @@ import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as crypto from 'node:crypto';
+
+/**
+ * Compute the git blob SHA-1 for content (same as git hash-object).
+ */
+function gitBlobSha(content: string): string {
+  const header = `blob ${content.length}\0`;
+  return crypto.createHash('sha1').update(header).update(content).digest('hex');
+}
 
 // Swallow ::notice:: / ::warning:: / ::debug:: annotations from @actions/core
 const realStdoutWrite = process.stdout.write.bind(process.stdout);
@@ -116,7 +125,7 @@ describe('nested .gitignore support', () => {
     fs.writeFileSync(path.join(subdir, 'important.log'), 'important data');
     fs.writeFileSync(path.join(subdir, 'notes.txt'), 'notes');
 
-    const referenceFiles = new Map<string, { sha: string; content: string | null }>();
+    const referenceFiles = new Map<string, { sha: string }>();
     const result = await scanForChanges(referenceFiles);
 
     // important.log should be included (nested .gitignore negates root pattern)
@@ -147,7 +156,7 @@ describe('nested .gitignore support', () => {
     fs.mkdirSync(otherdir, { recursive: true });
     fs.writeFileSync(path.join(otherdir, 'skip.tmp'), 'should be skipped');
 
-    const referenceFiles = new Map<string, { sha: string; content: string | null }>();
+    const referenceFiles = new Map<string, { sha: string }>();
     const result = await scanForChanges(referenceFiles);
 
     const paths = result.changedFiles.map(f => f.path);
@@ -181,7 +190,7 @@ describe('nested .gitignore support', () => {
     // a/normal.txt - should be included
     fs.writeFileSync(path.join(a, 'normal.txt'), 'normal');
 
-    const referenceFiles = new Map<string, { sha: string; content: string | null }>();
+    const referenceFiles = new Map<string, { sha: string }>();
     const result = await scanForChanges(referenceFiles);
 
     const paths = result.changedFiles.map(f => f.path);
@@ -203,7 +212,7 @@ describe('nested .gitignore support', () => {
     fs.mkdirSync(nested, { recursive: true });
     fs.writeFileSync(path.join(nested, 'config.json'), '{"nested":true}');
 
-    const referenceFiles = new Map<string, { sha: string; content: string | null }>();
+    const referenceFiles = new Map<string, { sha: string }>();
     const result = await scanForChanges(referenceFiles);
 
     const paths = result.changedFiles.map(f => f.path);
@@ -229,8 +238,8 @@ describe('nested .gitignore support', () => {
     fs.writeFileSync(path.join(docs, 'README.md'), 'readme content');
 
     // Reference tree has docs/README.md tracked
-    const referenceFiles = new Map<string, { sha: string; content: string | null }>([
-      [path.join('docs', 'README.md'), { sha: 'abc123', content: 'old readme' }],
+    const referenceFiles = new Map<string, { sha: string }>([
+      [path.join('docs', 'README.md'), { sha: gitBlobSha('old readme') }],
     ]);
 
     const result = await scanForChanges(referenceFiles);
@@ -265,9 +274,9 @@ describe('gitignored file deletion safety', () => {
     fs.writeFileSync(path.join(tempDir, 'main.py'), 'print("hello")');
 
     // Reference tree has both app.log and main.py tracked
-    const referenceFiles = new Map<string, { sha: string; content: string | null }>([
-      ['app.log', { sha: 'abc', content: 'old log data' }],
-      ['main.py', { sha: 'def', content: 'print("old")' }],
+    const referenceFiles = new Map<string, { sha: string }>([
+      ['app.log', { sha: gitBlobSha('old log data') }],
+      ['main.py', { sha: gitBlobSha('print("old")') }],
     ]);
 
     const result = await scanForChanges(referenceFiles);
@@ -285,9 +294,9 @@ describe('gitignored file deletion safety', () => {
     fs.writeFileSync(path.join(tempDir, 'main.py'), 'print("hello")');
 
     // Reference tree has deleted.py which is NOT on disk
-    const referenceFiles = new Map<string, { sha: string; content: string | null }>([
-      ['main.py', { sha: 'abc', content: 'print("old")' }],
-      ['deleted.py', { sha: 'def', content: 'gone forever' }],
+    const referenceFiles = new Map<string, { sha: string }>([
+      ['main.py', { sha: gitBlobSha('print("old")') }],
+      ['deleted.py', { sha: gitBlobSha('gone forever') }],
     ]);
 
     const result = await scanForChanges(referenceFiles);
@@ -309,9 +318,9 @@ describe('gitignored file deletion safety', () => {
     fs.mkdirSync(buildDir, { recursive: true });
     fs.writeFileSync(path.join(buildDir, 'output.js'), 'compiled');
 
-    const referenceFiles = new Map<string, { sha: string; content: string | null }>([
-      ['main.py', { sha: 'abc', content: 'old code' }],
-      [path.join('build', 'output.js'), { sha: 'def', content: 'old compiled' }],
+    const referenceFiles = new Map<string, { sha: string }>([
+      ['main.py', { sha: gitBlobSha('old code') }],
+      [path.join('build', 'output.js'), { sha: gitBlobSha('old compiled') }],
     ]);
 
     const result = await scanForChanges(referenceFiles);

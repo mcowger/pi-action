@@ -12,6 +12,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import * as crypto from 'node:crypto';
 import ignore from 'ignore';
 import { DEFAULT_IGNORE_PATTERNS, FILE_MODE_REGULAR } from './constants';
 import type { Logger, FileMode } from './types';
@@ -19,6 +20,18 @@ import type { Logger, FileMode } from './types';
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+/**
+ * A file entry in the reference tree map.
+ *
+ * Contains only the blob SHA — content comparison is done locally
+ * by computing the git blob hash of the file on disk, which is much
+ * faster than fetching every file's content via the API.
+ */
+export interface ReferenceFileEntry {
+  /** Git blob SHA of the file in the reference tree. */
+  sha: string;
+}
 
 /**
  * Result of scanning for changes in the repository.
@@ -42,8 +55,8 @@ export interface ScanDirectoryParams {
   dir: string;
   /** Relative path within the repository. */
   relativePath: string;
-  /** Map of reference files for comparison. */
-  referenceFiles: Map<string, { sha: string; content: string | null }>;
+  /** Map of reference files for comparison (path → blob SHA). */
+  referenceFiles: Map<string, ReferenceFileEntry>;
   /** Ignore instance with loaded patterns. */
   ig: ignore.Ignore;
   /** Logger instance for debug output. */
@@ -83,11 +96,25 @@ async function readFileContentSafely(
 }
 
 /**
+ * Compute the git blob SHA-1 hash for content.
+ *
+ * The git blob object format is: "blob " + content.length + "\0" + content.
+ * We hash that with SHA-1 to get the same SHA that git stores for the blob.
+ */
+function computeGitBlobSha(content: string): string {
+  const header = `blob ${content.length}\0`;
+  return crypto.createHash('sha1').update(header).update(content).digest('hex');
+}
+
+/**
  * Compare local file content with reference file to determine if changed.
+ *
+ * Uses SHA-1 hash comparison instead of content comparison, which
+ * eliminates the need to fetch blob contents from the remote API.
  */
 function compareFileWithReference(
   localContent: string,
-  refFile: { sha: string; content: string | null } | undefined,
+  refFile: ReferenceFileEntry | undefined,
   relativePath: string,
   log: Logger
 ): boolean {
@@ -95,7 +122,8 @@ function compareFileWithReference(
     log.debug(`new file: ${relativePath}`);
     return true;
   }
-  if (refFile.content !== null && refFile.content !== localContent) {
+  const localSha = computeGitBlobSha(localContent);
+  if (localSha !== refFile.sha) {
     log.debug(`modified file: ${relativePath}`);
     return true;
   }
@@ -108,7 +136,7 @@ function compareFileWithReference(
 async function processFileEntry(
   fullPath: string,
   relativePath: string,
-  referenceFiles: Map<string, { sha: string; content: string | null }>,
+  referenceFiles: Map<string, ReferenceFileEntry>,
   log: Logger
 ): Promise<{ path: string; content: string; mode: FileMode } | null> {
   const localContent = await readFileContentSafely(fullPath, relativePath, log);
@@ -270,7 +298,7 @@ export async function scanDirectory(params: ScanDirectoryParams): Promise<{
  * @returns An object containing changed files and deleted files.
  */
 export async function scanForChanges(
-  referenceFiles: Map<string, { sha: string; content: string | null }>,
+  referenceFiles: Map<string, ReferenceFileEntry>,
   log: Logger,
   options?: ScanOptions
 ): Promise<ChangeScanResult> {

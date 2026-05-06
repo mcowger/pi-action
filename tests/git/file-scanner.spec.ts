@@ -9,9 +9,19 @@ import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as crypto from 'node:crypto';
 import ignore from 'ignore';
 import { scanForChanges, scanDirectory } from '../../src/git/file-scanner';
+import type { ReferenceFileEntry } from '../../src/git/file-scanner';
 import type { Logger } from '../../src/git/types';
+
+/**
+ * Compute the git blob SHA-1 for content (same as git hash-object).
+ */
+function gitBlobSha(content: string): string {
+  const header = `blob ${content.length}\0`;
+  return crypto.createHash('sha1').update(header).update(content).digest('hex');
+}
 
 /**
  * A simple console-capturing logger for tests.
@@ -63,7 +73,9 @@ describe('shared file scanner (platform-agnostic)', () => {
     });
 
     test('detects modified files', async () => {
-      const referenceFiles = new Map([['test.txt', { sha: 'abc123', content: 'old content' }]]);
+      const referenceFiles = new Map<string, ReferenceFileEntry>([
+        ['test.txt', { sha: gitBlobSha('old content') }],
+      ]);
       fs.writeFileSync(path.join(tempDir, 'test.txt'), 'new content');
 
       const result = await scanForChanges(referenceFiles, log, { repoRoot: tempDir });
@@ -73,9 +85,9 @@ describe('shared file scanner (platform-agnostic)', () => {
     });
 
     test('detects deleted files', async () => {
-      const referenceFiles = new Map([
-        ['deleted.txt', { sha: 'abc', content: 'gone' }],
-        ['kept.txt', { sha: 'def', content: 'still here' }],
+      const referenceFiles = new Map<string, ReferenceFileEntry>([
+        ['deleted.txt', { sha: gitBlobSha('gone') }],
+        ['kept.txt', { sha: gitBlobSha('still here') }],
       ]);
       fs.writeFileSync(path.join(tempDir, 'kept.txt'), 'still here');
 
@@ -117,9 +129,9 @@ describe('shared file scanner (platform-agnostic)', () => {
       fs.writeFileSync(path.join(tempDir, 'app.log'), 'log data');
       fs.writeFileSync(path.join(tempDir, 'main.py'), 'print("hello")');
 
-      const referenceFiles = new Map([
-        ['app.log', { sha: 'abc', content: 'old log' }],
-        ['main.py', { sha: 'def', content: 'print("old")' }],
+      const referenceFiles = new Map<string, ReferenceFileEntry>([
+        ['app.log', { sha: gitBlobSha('old log') }],
+        ['main.py', { sha: gitBlobSha('print("old")') }],
       ]);
 
       const result = await scanForChanges(referenceFiles, log, { repoRoot: tempDir });
@@ -213,9 +225,9 @@ describe('shared file scanner (platform-agnostic)', () => {
       fs.writeFileSync(path.join(tempDir, 'changed.txt'), 'different');
       fs.writeFileSync(path.join(tempDir, 'new.txt'), 'new');
 
-      const referenceFiles = new Map([
-        ['unchanged.txt', { sha: 'abc123', content: 'same' }],
-        ['changed.txt', { sha: 'def456', content: 'old' }],
+      const referenceFiles = new Map<string, ReferenceFileEntry>([
+        ['unchanged.txt', { sha: gitBlobSha('same') }],
+        ['changed.txt', { sha: gitBlobSha('old') }],
       ]);
 
       const result = await scanDirectory({
@@ -254,7 +266,7 @@ describe('shared file scanner (platform-agnostic)', () => {
         expect(result.changedFiles.every(f => f.path !== 'binary.bin')).toBe(true);
         // The file was encountered but skipped
         expect(
-          log.messages.some(m => m.includes('skipping file (likely binary): binary.bin'))
+          log.messages.some((m: string) => m.includes('skipping file (likely binary): binary.bin'))
         ).toBe(true);
       } finally {
         // Restore permissions so cleanup can delete the file
@@ -271,7 +283,7 @@ describe('shared file scanner (platform-agnostic)', () => {
         const result = await scanForChanges(new Map(), log, { repoRoot: tempDir });
 
         expect(result.changedFiles.every(f => f.path !== 'unreadable.dat')).toBe(true);
-        expect(log.messages.some(m => m.includes('skipping file'))).toBe(true);
+        expect(log.messages.some((m: string) => m.includes('skipping file'))).toBe(true);
       } finally {
         fs.chmodSync(binaryPath, 0o644);
       }

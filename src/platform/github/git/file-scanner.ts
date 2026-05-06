@@ -22,51 +22,22 @@ export type { ChangeScanResult, ScanDirectoryParams };
 export { scanDirectory };
 
 /**
- * Fetch blob content from GitHub.
- *
- * @param owner - Repository owner.
- * @param repo - Repository name.
- * @param sha - Blob SHA.
- * @returns The decoded UTF-8 content, or null if fetching fails.
- */
-async function fetchBlobContent(
-  owner: string,
-  repo: string,
-  sha: string,
-  log: Logger
-): Promise<string | null> {
-  try {
-    const octokit = getOctokit();
-    const blob = await octokit.rest.git.getBlob({
-      owner,
-      repo,
-      file_sha: sha,
-    });
-    const content = Buffer.from(blob.data.content, 'base64').toString('utf-8');
-    log.debug(`Fetched blob content: ${sha}`);
-    return content;
-  } catch (_e) {
-    log.debug(`Failed to fetch blob content: ${sha}`);
-    return null;
-  }
-}
-
-/**
  * Build a map of files from a Git tree via the GitHub REST API.
  *
- * Fetches the tree and optionally fetches blob contents for comparison.
- * This is the GitHub-specific counterpart to the platform-agnostic scanner.
+ * Fetches the tree recursively and returns a map of path → blob SHA.
+ * Content is NOT fetched — the scanner computes local file hashes for
+ * comparison, which is much faster than fetching every file's content.
  *
  * @param treeSha - SHA of the tree to fetch.
- * @param fetchContents - Whether to fetch blob contents (default: true).
+ * @param _fetchContents - Ignored (kept for backward compatibility).
  * @param log - Logger instance for debug output.
- * @returns Map of path -> { sha, content }.
+ * @returns Map of path -> { sha }.
  */
 export async function buildFileMap(
   treeSha: string,
-  fetchContents = true,
+  _fetchContents = true,
   log: Logger = createLogger()
-): Promise<Map<string, { sha: string; content: string | null }>> {
+): Promise<Map<string, { sha: string }>> {
   const octokit = getOctokit();
   const owner = github.context.repo.owner;
   const repo = github.context.repo.repo;
@@ -82,15 +53,11 @@ export async function buildFileMap(
 
   log.debug(`tree contains ${tree.data.tree.length} items`);
 
-  const fileMap = new Map<string, { sha: string; content: string | null }>();
+  const fileMap = new Map<string, { sha: string }>();
 
   for (const item of tree.data.tree) {
     if (item.type === 'blob' && item.sha) {
-      let content: string | null = null;
-      if (fetchContents) {
-        content = await fetchBlobContent(owner, repo, item.sha, log);
-      }
-      fileMap.set(item.path, { sha: item.sha, content });
+      fileMap.set(item.path, { sha: item.sha });
     }
   }
 
@@ -110,7 +77,7 @@ export async function buildFileMap(
  * @returns An object containing changed files and deleted files.
  */
 export async function scanForChanges(
-  referenceFiles: Map<string, { sha: string; content: string | null }>,
+  referenceFiles: Map<string, { sha: string }>,
   log: Logger = createLogger()
 ): Promise<ChangeScanResult> {
   return sharedScanForChanges(referenceFiles, log, {
