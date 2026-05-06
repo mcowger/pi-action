@@ -27,7 +27,11 @@ inputs:
     default: 'off'
 
   prompt:
-    description: 'Optional prompt to send to the agent. When provided, the trigger phrase is not required and the prompt is used as-is (useful for non-interactive workflows). Falls back to extracting the prompt from the triggering comment if not set.'
+    description: 'Optional prompt to send to the agent. When provided, the trigger phrase is not required and the prompt is used as-is (useful for non-interactive workflows). Falls back to extracting the prompt from the triggering comment if not set. Mutually exclusive with prompt_file.'
+    required: false
+
+  prompt_file:
+    description: 'Path to a Markdown/text file containing the prompt template (relative to the repository root). Supports {{VAR_NAME}} placeholders that are replaced with the corresponding environment variables at runtime. Mutually exclusive with prompt.'
     required: false
 
   trigger:
@@ -81,6 +85,7 @@ runs:
         INPUT_TOKEN: ${{ inputs.token }}
         INPUT_THINKING_LEVEL: ${{ inputs.thinking_level }}
         INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_PROMPT_FILE: ${{ inputs.prompt_file }}
         INPUT_TRIGGER: ${{ inputs.trigger }}
         INPUT_EXTENSIONS: ${{ inputs.extensions }}
         INPUT_LOAD_BUILTIN_EXTENSIONS: ${{ inputs.load_builtin_extensions }}

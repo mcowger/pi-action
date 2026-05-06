@@ -11,6 +11,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import * as github from '@actions/github';
 import {
   type CommentMetadata,
   type CoreAdapter,
@@ -54,7 +55,10 @@ export class ActionOrchestrator {
 
     try {
       config = this.gatherConfig();
-      prompt = await this.git.getPrompt(config.promptInput);
+      const resolvedPromptInput = config.promptFile
+        ? this.readAndRenderPromptFile(config.promptFile)
+        : config.promptInput;
+      prompt = await this.git.getPrompt(resolvedPromptInput);
 
       if (!prompt) {
         throw new Error('No prompt found - cannot proceed');
@@ -142,6 +146,15 @@ export class ActionOrchestrator {
       this.core.debug('[config] No token provided — relying on provider-side auth (e.g. ADC)');
     }
 
+    const promptFile = this.core.getInput('prompt_file') || undefined;
+    const promptInput = this.core.getInput('prompt');
+
+    if (promptFile && promptInput) {
+      throw new Error(
+        'Both `prompt` and `prompt_file` inputs are set. Use one or the other.'
+      );
+    }
+
     const extensionsInput = this.core.getInput('extensions');
     const extensions = extensionsInput
       ? extensionsInput
@@ -172,13 +185,85 @@ export class ActionOrchestrator {
       model,
       token,
       thinkingLevel: this.core.getInput('thinking_level') ?? 'off',
-      promptInput: this.core.getInput('prompt'),
+      promptInput,
+      ...(promptFile ? { promptFile } : {}),
       ...(extensions?.length ? { extensions } : {}),
       loadBuiltinExtensions,
       ...(baseUrl ? { baseUrl } : {}),
       exportSessionHtml,
       suppressFinalComment,
     };
+  }
+
+  /**
+   * Resolve a dot-notation path (e.g. `"context.payload.comment.body"`) against
+   * a namespace object, returning the value as a string or `undefined` if any
+   * segment along the path is absent.
+   */
+  private resolveTemplatePath(namespace: Record<string, unknown>, dotPath: string): string | undefined {
+    const parts = dotPath.split('.');
+    let current: unknown = namespace;
+    for (const part of parts) {
+      if (current === null || current === undefined || typeof current !== 'object') {
+        return undefined;
+      }
+      current = (current as Record<string, unknown>)[part];
+    }
+    if (current === undefined || current === null) {
+      return undefined;
+    }
+    return String(current);
+  }
+
+  /**
+   * Read a prompt template file and substitute `{{dot.notation.path}}` placeholders.
+   *
+   * Placeholders are resolved against a two-key namespace:
+   * - `context.*` — the raw `@actions/github` context object (`context.payload.comment.body`,
+   *   `context.actor`, `context.repo.owner`, etc.)
+   * - `env.*`     — all environment variables (`env.GITHUB_SHA`, `env.INITIAL_COMMENT_ID`, etc.)
+   *
+   * Unresolved placeholders are left unchanged and a warning is emitted.
+   * Values are never passed through a shell, so special characters are always safe.
+   *
+   * @param filePath - Path to the template file, relative to the workspace root.
+   * @returns The rendered prompt string.
+   * @throws When the file cannot be read.
+   */
+  private readAndRenderPromptFile(filePath: string): string {
+    const workspacePath = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(process.env.GITHUB_WORKSPACE ?? process.cwd(), filePath);
+
+    this.core.debug(`[prompt_file] reading template from ${workspacePath}`);
+
+    let template: string;
+    try {
+      template = fs.readFileSync(workspacePath, 'utf8');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Failed to read prompt_file '${filePath}': ${msg}`);
+    }
+
+    const namespace: Record<string, unknown> = {
+      context: github.context,
+      env: process.env,
+    };
+
+    // Replace every {{dot.notation.path}} with the resolved value.
+    const rendered = template.replace(/\{\{([a-zA-Z0-9._]+)\}\}/g, (_match, dotPath: string) => {
+      const value = this.resolveTemplatePath(namespace, dotPath);
+      if (value === undefined) {
+        this.core.warning(
+          `[prompt_file] placeholder {{${dotPath}}} could not be resolved — leaving as-is`
+        );
+        return _match;
+      }
+      return value;
+    });
+
+    this.core.debug(`[prompt_file] template rendered (${rendered.length} chars)`);
+    return rendered;
   }
 
   /**

@@ -12,7 +12,11 @@ declare global {
   var __VERSION__: string;
 }
 globalThis.__VERSION__ = 'test-version';
-import { describe, expect, test, mock } from 'bun:test';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import * as github from '@actions/github';
+import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
 import { Temporal } from '@js-temporal/polyfill';
 import { ActionOrchestrator } from '../src/orchestrator';
 import type { CoreAdapter, GitAdapter, PiAgent } from '../src/types';
@@ -26,6 +30,7 @@ function setupMocks(coreOverrides?: Partial<Record<string, string>>) {
       token: 'test-token',
       thinking_level: '',
       prompt: '',
+      prompt_file: '',
     };
     return coreOverrides?.[name] ?? defaults[name] ?? '';
   });
@@ -292,6 +297,136 @@ describe('ActionOrchestrator', () => {
     const m = setupMocks({ suppress_final_comment: 'false' });
     await createOrchestrator(m).execute();
     expect(m.mockGit.createFinalComment).toHaveBeenCalled();
+  });
+
+  // ── prompt_file ────────────────────────────────────────────────
+  //
+  // These tests mock github.context.payload to exercise buildContextVars()
+  // without needing a real GitHub Actions runner environment.
+
+  describe('prompt_file', () => {
+    let tmpDir: string;
+    let originalPayload: typeof github.context.payload;
+    let originalEventName: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pi-test-'));
+      process.env.GITHUB_WORKSPACE = tmpDir;
+      // Save originals so we can restore after each test
+      originalPayload = github.context.payload;
+      originalEventName = github.context.eventName;
+    });
+
+    afterEach(() => {
+      Object.defineProperty(github.context, 'payload', { value: originalPayload, writable: true, configurable: true });
+      Object.defineProperty(github.context, 'eventName', { value: originalEventName, writable: true, configurable: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    function setPayload(payload: Record<string, unknown>, eventName = 'issue_comment') {
+      Object.defineProperty(github.context, 'payload', { value: payload, writable: true, configurable: true });
+      Object.defineProperty(github.context, 'eventName', { value: eventName, writable: true, configurable: true });
+    }
+
+    test('substitutes {{context.payload.comment.body}} and nested payload fields', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'prompt.md'),
+        'Comment by {{context.payload.comment.user.login}}: {{context.payload.comment.body}}'
+      );
+      setPayload({ comment: { id: 1, body: "it's a test!", user: { login: 'octocat' } } });
+
+      const m = setupMocks({ prompt_file: 'prompt.md', prompt: '' });
+      await createOrchestrator(m).execute();
+
+      expect(m.mockGit.getPrompt).toHaveBeenCalledWith("Comment by octocat: it's a test!");
+    });
+
+    test('substitutes deeply nested context paths (issue title, PR head ref)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'prompt.md'),
+        'Issue: {{context.payload.issue.title}} (#{{context.payload.issue.number}})'
+      );
+      setPayload({ issue: { number: 42, title: 'Fix the thing', user: { login: 'dev' } } });
+
+      const m = setupMocks({ prompt_file: 'prompt.md', prompt: '' });
+      await createOrchestrator(m).execute();
+
+      expect(m.mockGit.getPrompt).toHaveBeenCalledWith('Issue: Fix the thing (#42)');
+    });
+
+    test('substitutes {{env.GITHUB_ACTOR}} and other env vars', async () => {
+      fs.writeFileSync(path.join(tmpDir, 'prompt.md'), 'Actor is {{env.GITHUB_ACTOR}}.');
+      process.env.GITHUB_ACTOR = 'monalisa';
+      setPayload({});
+
+      const m = setupMocks({ prompt_file: 'prompt.md', prompt: '' });
+      await createOrchestrator(m).execute();
+
+      expect(m.mockGit.getPrompt).toHaveBeenCalledWith('Actor is monalisa.');
+      delete process.env.GITHUB_ACTOR;
+    });
+
+    test('substitutes {{env.CUSTOM_VAR}} passed via workflow env: block', async () => {
+      fs.writeFileSync(path.join(tmpDir, 'prompt.md'), 'Comment ID: {{env.INITIAL_COMMENT_ID}}.');
+      process.env.INITIAL_COMMENT_ID = '99';
+      setPayload({});
+
+      const m = setupMocks({ prompt_file: 'prompt.md', prompt: '' });
+      await createOrchestrator(m).execute();
+
+      expect(m.mockGit.getPrompt).toHaveBeenCalledWith('Comment ID: 99.');
+      delete process.env.INITIAL_COMMENT_ID;
+    });
+
+    test('values with special characters (quotes, $, backticks, newlines) are substituted safely', async () => {
+      const tricky = "it's a `special` value with $DOLLARS and\nnewlines";
+      fs.writeFileSync(path.join(tmpDir, 'prompt.md'), 'Value: {{context.payload.comment.body}}');
+      setPayload({ comment: { id: 1, body: tricky, user: { login: 'user' } } });
+
+      const m = setupMocks({ prompt_file: 'prompt.md', prompt: '' });
+      await createOrchestrator(m).execute();
+
+      expect(m.mockGit.getPrompt).toHaveBeenCalledWith(`Value: ${tricky}`);
+    });
+
+    test('leaves unknown placeholder as-is and emits a warning', async () => {
+      fs.writeFileSync(path.join(tmpDir, 'prompt.md'), 'Unknown: {{context.payload.does.not.exist}}.');
+      setPayload({});
+
+      const m = setupMocks({ prompt_file: 'prompt.md', prompt: '' });
+      await createOrchestrator(m).execute();
+
+      expect(m.mockGit.getPrompt).toHaveBeenCalledWith('Unknown: {{context.payload.does.not.exist}}.');
+      expect(m.mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('context.payload.does.not.exist'));
+    });
+
+    test('accepts an absolute file path', async () => {
+      const promptPath = path.join(tmpDir, 'abs-prompt.md');
+      fs.writeFileSync(promptPath, 'Absolute path prompt.');
+      setPayload({});
+
+      const m = setupMocks({ prompt_file: promptPath, prompt: '' });
+      await createOrchestrator(m).execute();
+
+      expect(m.mockGit.getPrompt).toHaveBeenCalledWith('Absolute path prompt.');
+    });
+
+    test('throws a clear error when the file does not exist', async () => {
+      setPayload({});
+      const m = setupMocks({ prompt_file: 'nonexistent/prompt.md', prompt: '' });
+
+      await expect(createOrchestrator(m).execute()).rejects.toThrow('Failed to read prompt_file');
+      expect(m.mockCore.setFailed).toHaveBeenCalled();
+    });
+
+    test('throws when both prompt and prompt_file are set', async () => {
+      const m = setupMocks({ prompt: 'inline prompt', prompt_file: 'some-file.md' });
+
+      await expect(createOrchestrator(m).execute()).rejects.toThrow(
+        'Both `prompt` and `prompt_file` inputs are set'
+      );
+      expect(m.mockCore.setFailed).toHaveBeenCalled();
+    });
   });
 
   // ── Edge cases ─────────────────────────────────────────────────

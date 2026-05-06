@@ -91,6 +91,47 @@ Use the `prompt` input to run the agent without requiring a comment trigger:
 
 The prompt is enriched with issue/PR context (title and description) when available.
 
+### Prompt from a File
+
+Use `prompt_file` to load the prompt from a Markdown or text file in your repository. This is ideal for long or complex prompts that are easier to manage as a standalone file.
+
+The file supports `{{dot.notation.path}}` placeholders resolved against two namespaces:
+
+| Namespace | What it contains | Example placeholder |
+|-----------|-----------------|--------------------|
+| `context.*` | The raw [`@actions/github` context](https://github.com/actions/toolkit/tree/main/packages/github) — event payload, actor, SHA, ref, repo, etc. | `{{context.payload.comment.body}}` |
+| `env.*` | All environment variables — `GITHUB_*` / `RUNNER_*` runner vars plus anything you set in the step's `env:` block | `{{env.GITHUB_SHA}}`, `{{env.MY_CUSTOM_VAR}}` |
+
+**`.github/prompts/my-agent.md`:**
+```markdown
+You are a coding assistant.
+
+You were triggered by this comment from {{context.payload.comment.user.login}}:
+> {{context.payload.comment.body}}
+
+The progress comment ID is **{{env.INITIAL_COMMENT_ID}}**.
+Repository: {{context.payload.repository.full_name}}
+```
+
+**Workflow step:**
+```yaml
+- uses: mcowger/pi-coding-agent-action@v2
+  env:
+    INITIAL_COMMENT_ID: ${{ steps.initial_comment.outputs.comment_id }}
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    provider: openai
+    model: gpt-5.4
+    token: ${{ secrets.OPENAI_API_KEY }}
+    prompt_file: .github/prompts/my-agent.md
+```
+
+Most GitHub context data (comment body, issue/PR fields, actor, repo, etc.) is available automatically via `context.*` without any `env:` mapping. Only values derived from previous step outputs — like a comment ID you created earlier — need to be passed explicitly via `env:`.
+
+- Unresolved placeholders are left unchanged and a warning is emitted.
+- Values are substituted as plain strings with no shell involvement, so special characters (quotes, `$`, backticks, newlines) are always safe.
+- `prompt` and `prompt_file` are mutually exclusive — setting both is an error.
+
 ### Custom Extensions
 
 Load custom Pi extensions to add tools or modify agent behavior:
@@ -213,7 +254,8 @@ jobs:
 | `token` | Provider API token | No | - |
 | `thinking_level` | Model thinking level (off, low, medium, high) | No | `off` |
 | `trigger` | Trigger phrase to invoke the action | No | `/pi` |
-| `prompt` | Prompt to send (skips comment extraction) | No | - |
+| `prompt` | Inline prompt text (skips comment extraction). Mutually exclusive with `prompt_file`. | No | - |
+| `prompt_file` | Path to a prompt template file (relative to repo root). Supports `{{dot.notation.path}}` placeholders resolved via `context.*` (GitHub context) and `env.*` (environment variables). Mutually exclusive with `prompt`. | No | - |
 | `extensions` | Custom extensions (one per line) | No | - |
 | `load_builtin_extensions` | Load built-in GitHub tools | No | `true` |
 | `base_url` | Override provider base URL (proxies, gateways) | No | - |

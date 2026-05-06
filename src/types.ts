@@ -103,7 +103,10 @@ export interface PiConfig {
   model: string;
   token: string;
   thinkingLevel: string;
+  /** Inline prompt text passed directly via the `prompt` input. */
   promptInput: string;
+  /** Path to a prompt template file (relative to workspace). Mutually exclusive with promptInput. */
+  promptFile?: string;
   extensions?: string[];
   loadBuiltinExtensions?: boolean;
   baseUrl?: string;
