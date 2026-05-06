@@ -73,7 +73,7 @@ runs:
 
     - run: bun run ${{ github.action_path }}/src/run.ts
       shell: bash
-      working-directory: ${{ github.action_path }}
+      working-directory: ${{ github.workspace }}
       env:
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
         INPUT_PROVIDER: ${{ inputs.provider }}
