@@ -12,7 +12,6 @@ updates:
           - '@js-temporal/*'
           - '@mariozechner/*'
           - 'typebox'
-          - 'ignore'
       development-dependencies:
         patterns:
           - '@types/*'
@@ -21,5 +20,3 @@ updates:
           - 'eslint-*'
           - 'prettier'
           - 'typescript'
-          - 'esbuild'
-          - 'isomorphic-git'
