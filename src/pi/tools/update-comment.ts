@@ -14,11 +14,7 @@ import {
   UPDATE_COMMENT_PARAM_IS_REVIEW_COMMENT_DESCRIPTION,
 } from '../prompt';
 import { CANCELLATION_MESSAGE_UPDATE_COMMENT } from './constants';
-import type {
-  UpdateCommentParams,
-  UpdateCommentDetails,
-  PlatformProvider,
-} from '../../platform';
+import type { UpdateCommentParams, UpdateCommentDetails, PlatformProvider } from '../../platform';
 import { withCancellation } from './tool-execution';
 
 /**

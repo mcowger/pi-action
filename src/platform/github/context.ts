@@ -77,7 +77,13 @@ export function getStartTimeFromContext(): Temporal.Instant | undefined {
 export { isPR, getContextType };
 
 // Re-export types so existing consumers can import from this module
-export type { IssueOrPullRequestContext, IssueOrPRThread, ThreadComment, ReviewComment, GetIssueOrPRThreadParams } from './types';
+export type {
+  IssueOrPullRequestContext,
+  IssueOrPRThread,
+  ThreadComment,
+  ReviewComment,
+  GetIssueOrPRThreadParams,
+} from './types';
 
 /**
  * Extracts an {@link IssueOrPullRequestContext} from a GitHub event payload

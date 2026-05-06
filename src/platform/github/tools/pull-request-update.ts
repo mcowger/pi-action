@@ -1,25 +1,23 @@
 /**
  * @file GitHub pull request update tool implementation.
  *
- * Implements the server-side logic for the `update_pull_request` custom tool:
- * detecting changed files in the working tree, creating blobs/trees/commits
- * via the Git Data API, and pushing the new commit to an existing PR branch.
- * Supports updating the PR title and body as well. Supports dry-run mode for
- * testing without side effects.
+ * Uses native git CLI for staging, committing, and pushing to an existing
+ * PR branch. PR metadata updates (title/body) use the GitHub REST API.
  */
 
+import * as core from '@actions/core';
 import * as github from '@actions/github';
+import { execSync } from 'node:child_process';
 import { getOctokit } from '../octokit';
 import { MAX_TITLE_LENGTH } from '../constants';
-import {
-  createLogger,
-  scanForChanges,
-  createBlobsAndTree,
-  createCommitAndUpdateBranch,
-  buildFileMap,
-} from '../git/index';
 
-const log = createLogger();
+function git(args: string): string {
+  const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
+  return execSync(`git -C "${workspace}" ${args}`, {
+    encoding: 'utf-8',
+    timeout: 30_000,
+  }).trim();
+}
 
 export interface UpdatePullRequestParams {
   pull_number?: number;
@@ -47,57 +45,7 @@ export interface UpdatePullRequestDetails {
 }
 
 /**
- * Update an existing pull request's title and/or body via the GitHub REST API.
- *
- * @param pullNumber - PR number.
- * @param updates - Object with optional title and/or body.
- * @returns An object containing the updated PR URL.
- */
-async function updatePullRequestMetadata(
-  pullNumber: number,
-  updates: { title?: string; body?: string }
-): Promise<{ titleUpdated: boolean; bodyUpdated: boolean }> {
-  const owner = github.context.repo.owner;
-  const repo = github.context.repo.repo;
-
-  const updateParams: {
-    title?: string;
-    body?: string;
-  } = {};
-
-  if (updates.title !== undefined) {
-    updateParams.title = updates.title;
-  }
-  if (updates.body !== undefined) {
-    updateParams.body = updates.body;
-  }
-
-  if (Object.keys(updateParams).length === 0) {
-    return { titleUpdated: false, bodyUpdated: false };
-  }
-
-  log.debug(`Updating PR #${pullNumber} metadata...`);
-
-  const octokit = getOctokit();
-  await octokit.rest.pulls.update({
-    owner,
-    repo,
-    pull_number: pullNumber,
-    ...updateParams,
-  });
-
-  return {
-    titleUpdated: updates.title !== undefined,
-    bodyUpdated: updates.body !== undefined,
-  };
-}
-
-/**
  * Validate pull request update parameters.
- *
- * @param params - The pull request update parameters to validate.
- * @throws {Error} If validation fails.
- * @internal Exported for testing purposes.
  */
 export function validateUpdatePullRequestParams(params: UpdatePullRequestParams): void {
   if (params.title !== undefined && params.title.length > MAX_TITLE_LENGTH) {
@@ -106,12 +54,11 @@ export function validateUpdatePullRequestParams(params: UpdatePullRequestParams)
     );
   }
 
-  // Ensure at least one update parameter is provided (besides dryRun)
   const { title, body, message, pull_number } = params;
-  const hasContentUpdate = title !== undefined || body !== undefined || message !== undefined;
-  const hasPRContext = pull_number !== undefined || github.context.issue?.number;
+  const hasUpdate = title !== undefined || body !== undefined || message !== undefined;
+  const hasContext = pull_number !== undefined || github.context.issue?.number;
 
-  if (!hasContentUpdate && !hasPRContext) {
+  if (!hasUpdate && !hasContext) {
     throw new Error(
       'At least one update parameter (title, body, message, or pull_number) must be provided'
     );
@@ -121,105 +68,47 @@ export function validateUpdatePullRequestParams(params: UpdatePullRequestParams)
 /**
  * Update a pull request end-to-end.
  *
- * Orchestrates the full flow: fetches the PR and its branch, scans for changed
- * files, creates a commit on the PR branch, and optionally updates the PR's
- * title and/or body. When `dryRun` is `true` the operation is simulated and no
- * GitHub resources are modified.
- *
- * @param params - Parameters controlling PR number, title, body, and dry-run.
- * @returns The tool result containing a human-readable message and structured
- *          details about the updated PR (or dry-run output).
- * @throws {Error} If no changes are detected, the PR is not found, or the
- *                 GitHub API call fails.
+ * 1. Fetch PR details to get the head branch
+ * 2. Check out the PR branch
+ * 3. Stage all changes via `git add -A`
+ * 4. Commit via `git commit`
+ * 5. Push via `git push`
+ * 6. Optionally update PR title/body via API
  */
 export async function updatePullRequest(
   params: UpdatePullRequestParams
 ): Promise<UpdatePullRequestResult> {
-  const { pull_number, title, body, message, dryRun } = params;
-
-  // Validate input parameters early
   validateUpdatePullRequestParams(params);
 
-  // Resolve PR number from context if not provided
-  const resolvedPullNumber = pull_number ?? github.context.issue.number;
+  const resolvedPullNumber = params.pull_number ?? github.context.issue.number;
   if (!resolvedPullNumber) {
     throw new Error(
-      'Pull request number not provided and not available in context. ' +
-        'Please provide pull_number parameter or run this action in the context of a pull request.'
+      'Pull request number not provided and not available in context.'
     );
   }
 
-  log.debug(`PR Number: ${resolvedPullNumber}`);
-  log.debug(`Title: ${title ?? '(no change)'}`);
-  log.debug(`Body: ${body ? '(provided)' : '(no change)'}`);
-  log.debug(`DryRun: ${dryRun ?? false}`);
-
-  // Fetch PR details
   const octokit = getOctokit();
-  const owner = github.context.repo.owner;
-  const repo = github.context.repo.repo;
+  const { owner, repo } = github.context.repo;
 
-  log.debug(`Fetching PR #${resolvedPullNumber}...`);
-  const prData = await octokit.rest.pulls.get({
+  const { data: pr } = await octokit.rest.pulls.get({
     owner,
     repo,
     pull_number: resolvedPullNumber,
   });
 
-  // Verify we got a valid pull request (not an issue)
-  if (prData.status !== 200 || !prData.data) {
-    throw new Error(
-      `Could not fetch pull request #${resolvedPullNumber}. ` +
-        `Please verify the pull request number is correct and that you have access to this repository.`
-    );
-  }
+  const headBranch = pr.head.ref;
+  const baseBranch = pr.base.ref;
+  const prUrl = pr.html_url;
 
-  const headBranch = prData.data.head.ref;
-  const baseBranch = prData.data.base.ref;
-  const headSha = prData.data.head.sha;
-  const prUrl = prData.data.html_url;
-
-  log.debug(`PR found: ${prUrl}`);
-  log.debug(`Head branch: ${headBranch}`);
-  log.debug(`Base branch: ${baseBranch}`);
-  log.debug(`Head SHA: ${headSha}`);
-
-  // Get files that exist in the current PR head tree (for comparison)
-  log.debug(`Getting PR head tree...`);
-  const headFiles = await buildFileMap(headSha);
-  log.debug(`Found ${headFiles.size} files in PR head`);
-
-  // Scan for changes (do this before dry run check so dry run can report them)
-  const { changedFiles, deletedFiles } = await scanForChanges(headFiles, log);
-
-  // Dry run mode - report what would happen without making changes
-  if (dryRun) {
+  if (params.dryRun) {
     const parts: string[] = [`[DRY RUN] Would update pull request #${resolvedPullNumber}:`];
-    if (title !== undefined) {
-      parts.push(`- Title: ${title}`);
-    }
-    if (body !== undefined) {
-      parts.push(`- Body: ${body}`);
-    }
+    if (params.title !== undefined) {parts.push(`- Title: ${params.title}`);}
+    if (params.body !== undefined) {parts.push(`- Body: ${params.body}`);}
     parts.push(`- Head branch: ${headBranch}`);
     parts.push(`- Base branch: ${baseBranch}`);
-    if (changedFiles.length > 0 || deletedFiles.length > 0) {
-      parts.push(`- Code changes:`);
-      if (changedFiles.length > 0) {
-        parts.push(`  - ${changedFiles.length} modified/new file(s)`);
-      }
-      if (deletedFiles.length > 0) {
-        parts.push(`  - ${deletedFiles.length} deleted file(s)`);
-      }
-    } else {
-      parts.push(`- No code changes detected`);
-    }
-
-    const message = parts.join('\n');
-    log.debug(message);
 
     return {
-      content: [{ type: 'text' as const, text: message }],
+      content: [{ type: 'text', text: parts.join('\n') }],
       details: {
         pullRequestNumber: resolvedPullNumber,
         pullRequestUrl: prUrl,
@@ -230,79 +119,46 @@ export async function updatePullRequest(
     };
   }
 
+  // Checkout PR branch, stage, commit, push
+  git(`checkout ${headBranch}`);
+  git(`add -A`);
+
   let commitSha: string | undefined;
-  if (changedFiles.length > 0 || deletedFiles.length > 0) {
-    // Create blobs and tree
-    const treeSha = await createBlobsAndTree({
-      changedFiles,
-      deletedFiles,
-      parentSha: headSha,
-      log,
-    });
+  if (git(`status --porcelain`)) {
+    const commitMessage = params.message ?? `Update PR #${resolvedPullNumber}: changes by pi coding agent`;
 
-    // Generate commit message
-    let commitMessage = message;
-    if (!commitMessage) {
-      // Generate a descriptive commit message based on the changes
-      const changes: string[] = [];
-      if (changedFiles.length > 0) {
-        changes.push(`${changedFiles.length} modified/new file(s)`);
-      }
-      if (deletedFiles.length > 0) {
-        changes.push(`${deletedFiles.length} deleted file(s)`);
-      }
-      commitMessage = `Update PR #${resolvedPullNumber}: ${changes.join(', ')}`;
-    }
+    git(`commit -m "${commitMessage.replace(/"/g, '\\"')}"`);
+    git(`push origin ${headBranch}`);
 
-    // Create commit and update branch
-    commitSha = await createCommitAndUpdateBranch({
-      treeSha,
-      parentSha: headSha,
-      branchName: headBranch,
-      message: commitMessage,
-      log,
-    });
-    log.info(`Created new commit ${commitSha} on branch ${headBranch}`);
-  } else {
-    log.info(`No code changes detected, only updating PR metadata if provided`);
+    commitSha = git(`rev-parse HEAD`);
   }
 
-  // Update PR title/body if provided
+  // Update PR title/body via API
   let titleUpdated = false;
   let bodyUpdated = false;
-  if (title !== undefined || body !== undefined) {
-    const updateParams: { title?: string; body?: string } = {};
-    if (title !== undefined) {
-      updateParams.title = title;
-    }
-    if (body !== undefined) {
-      updateParams.body = body;
-    }
-    const metadataResult = await updatePullRequestMetadata(resolvedPullNumber, updateParams);
-    titleUpdated = metadataResult.titleUpdated;
-    bodyUpdated = metadataResult.bodyUpdated;
+  if (params.title !== undefined || params.body !== undefined) {
+    const updates: Record<string, string> = {};
+    if (params.title !== undefined) {updates.title = params.title;}
+    if (params.body !== undefined) {updates.body = params.body;}
 
-    if (titleUpdated) {
-      log.info(`Updated PR title to: ${title}`);
-    }
-    if (bodyUpdated) {
-      log.info(`Updated PR description`);
-    }
+    await octokit.rest.pulls.update({
+      owner,
+      repo,
+      pull_number: resolvedPullNumber,
+      ...updates,
+    });
+
+    titleUpdated = params.title !== undefined;
+    bodyUpdated = params.body !== undefined;
   }
 
-  const successParts: string[] = [`Pull request #${resolvedPullNumber} updated: ${prUrl}`];
-  if (commitSha) {
-    successParts.push(`- New commit: ${commitSha}`);
-  }
-  if (titleUpdated) {
-    successParts.push(`- Title updated`);
-  }
-  if (bodyUpdated) {
-    successParts.push(`- Description updated`);
-  }
+  const parts: string[] = [`Pull request #${resolvedPullNumber} updated: ${prUrl}`];
+  if (commitSha) {parts.push(`- New commit: ${commitSha}`);}
+  if (titleUpdated) {parts.push(`- Title updated`);}
+  if (bodyUpdated) {parts.push(`- Description updated`);}
 
-  const successMessage = successParts.join('\n');
-  log.info(`SUCCESS: ${successMessage}`);
+  const message = parts.join('\n');
+  core.info(`SUCCESS: ${message}`);
 
   const details: UpdatePullRequestDetails = {
     pullRequestNumber: resolvedPullNumber,
@@ -311,19 +167,12 @@ export async function updatePullRequest(
     baseBranch,
     dryRun: false,
   };
-
-  if (commitSha !== undefined) {
-    details.commitSha = commitSha;
-  }
-  if (titleUpdated) {
-    details.titleUpdated = titleUpdated;
-  }
-  if (bodyUpdated) {
-    details.bodyUpdated = bodyUpdated;
-  }
+  if (commitSha) {details.commitSha = commitSha;}
+  if (titleUpdated) {details.titleUpdated = titleUpdated;}
+  if (bodyUpdated) {details.bodyUpdated = bodyUpdated;}
 
   return {
-    content: [{ type: 'text' as const, text: successMessage }],
+    content: [{ type: 'text', text: message }],
     details,
   };
 }

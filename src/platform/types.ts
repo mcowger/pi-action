@@ -1,13 +1,9 @@
 /**
- * @file Platform abstraction types for multi-platform support.
+ * @file Platform types for GitHub Actions integration.
  *
- * Defines interfaces that abstract platform-specific operations (context
- * extraction, API client creation) to support GitHub, Codeberg, and
- * self-hosted Forgejo instances.
- *
- * All three platforms use GitHub-compatible REST APIs, so the abstraction
- * focuses on context extraction and API endpoint configuration rather than
- * full API abstraction.
+ * Defines interfaces for platform-specific operations used by the action
+ * and Pi custom tools. The platform module is built specifically for
+ * GitHub and GitHub-compatible APIs.
  */
 
 import type { Temporal } from '@js-temporal/polyfill';
@@ -53,15 +49,10 @@ export type {
 import type { CommentMetadata } from '../types';
 
 /**
- * Platform identifiers supported by this action.
- */
-export type PlatformType = 'github' | 'codeberg' | 'forgejo';
-
-/**
  * Platform-agnostic context information extracted from the CI/CD environment.
  *
  * Abstracts the event payload, repository info, and other context needed
- * by the action, regardless of which platform (GitHub, Codeberg, Forgejo)
+ * by the action, regardless of which platform triggered the workflow.
  * triggered the workflow.
  */
 export interface PlatformContext {
@@ -73,7 +64,7 @@ export interface PlatformContext {
   eventName: string;
   /** The full event payload */
   payload: Record<string, unknown>;
-  /** The server URL (e.g. https://github.com, https://codeberg.org) */
+  /** The server URL (e.g. https://github.com) */
   serverUrl: string;
   /** The current workflow run ID */
   runId: number;
@@ -82,22 +73,13 @@ export interface PlatformContext {
 }
 
 /**
- * Platform provider interface for multi-platform support.
+ * Platform provider interface for GitHub platform operations.
  *
- * Encapsulates all platform-specific operations needed by the action.
- * Each supported platform (GitHub, Codeberg, Forgejo) provides its own
- * implementation.
- *
- * The provider is responsible for:
- * - Detecting which platform the action is running on
- * - Extracting context from the platform's CI/CD environment
- * - Creating authenticated API clients for the platform
- * - Providing platform-specific implementations of common operations
+ * Encapsulates all platform-specific operations needed by the action
+ * and Pi custom tools. Provides a single injectable interface for
+ * dependency injection into tools and adapters.
  */
 export interface PlatformProvider {
-  /** The detected platform type */
-  readonly type: PlatformType;
-
   /**
    * Get the platform context (repo info, event payload, etc.).
    *

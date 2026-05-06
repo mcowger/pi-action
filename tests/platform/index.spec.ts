@@ -2,7 +2,7 @@
  * Tests for platform module barrel exports.
  *
  * Verifies that the platform module correctly re-exports
- * detectPlatform, createGitHubPlatformProvider, and type exports.
+ * createPlatformProvider and type exports.
  */
 
 import { describe, expect, test, mock } from 'bun:test';
@@ -56,21 +56,16 @@ process.env.GITHUB_EVENT_PATH = path.join(
 fs.writeFileSync(process.env.GITHUB_EVENT_PATH, JSON.stringify({}));
 
 // Import after mocks are set up
-import { detectPlatform, createGitHubPlatformProvider } from '../../src/platform';
+import { createPlatformProvider } from '../../src/platform';
 
 describe('platform barrel exports', () => {
-  test('exports detectPlatform function', () => {
-    expect(typeof detectPlatform).toBe('function');
+  test('exports createPlatformProvider function', () => {
+    expect(typeof createPlatformProvider).toBe('function');
   });
 
-  test('exports createGitHubPlatformProvider function', () => {
-    expect(typeof createGitHubPlatformProvider).toBe('function');
-  });
-
-  test('createGitHubPlatformProvider returns a valid provider', () => {
-    const provider = createGitHubPlatformProvider();
+  test('createPlatformProvider returns a valid provider', () => {
+    const provider = createPlatformProvider();
     expect(provider).toBeDefined();
-    expect(['github', 'codeberg', 'forgejo']).toContain(provider.type);
     expect(typeof provider.getContext).toBe('function');
     expect(typeof provider.addReaction).toBe('function');
   });

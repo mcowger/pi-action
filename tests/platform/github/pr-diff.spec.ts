@@ -3,7 +3,10 @@
  */
 
 import { describe, expect, test, beforeAll } from 'bun:test';
-import { filterDiffByIgnoreFiles, matchesIgnorePattern } from '../../../src/platform/github/tools/pr-diff';
+import {
+  filterDiffByIgnoreFiles,
+  matchesIgnorePattern,
+} from '../../../src/platform/github/tools/pr-diff';
 import { resetModuleContext } from '../../../src/platform/github';
 
 const SAMPLE_DIFF = `diff --git a/src/index.ts b/src/index.ts

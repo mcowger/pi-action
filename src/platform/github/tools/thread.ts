@@ -10,7 +10,12 @@ import * as github from '@actions/github';
 import { getOctokit } from '../octokit';
 import { MAX_COMMENTS, MAX_REVIEW_COMMENTS } from '../constants';
 import { getCoreAdapter } from '../index';
-import type { ThreadComment, ReviewComment, IssueOrPRThread, GetIssueOrPRThreadParams } from '../types';
+import type {
+  ThreadComment,
+  ReviewComment,
+  IssueOrPRThread,
+  GetIssueOrPRThreadParams,
+} from '../types';
 import RestEndpointMethodTypes from '@octokit/plugin-rest-endpoint-methods';
 
 /**

@@ -33,10 +33,7 @@ function debug(msg: string): void {
   getCoreAdapter().debug(msg);
 }
 
-function resolveOwnerRepo(
-  owner?: string,
-  repo?: string
-): { owner: string; repo: string } {
+function resolveOwnerRepo(owner?: string, repo?: string): { owner: string; repo: string } {
   return {
     owner: owner ?? github.context.repo.owner,
     repo: repo ?? github.context.repo.repo,
@@ -103,9 +100,7 @@ export async function addIssueComment(
  * @returns The updated comment details.
  * @throws {Error} If the API call fails.
  */
-export async function updateComment(
-  params: UpdateCommentParams
-): Promise<UpdateCommentDetails> {
+export async function updateComment(params: UpdateCommentParams): Promise<UpdateCommentDetails> {
   const { comment_id, body, is_review_comment = false } = params;
   const { owner, repo } = resolveOwnerRepo(params.owner, params.repo);
 
@@ -266,9 +261,7 @@ export async function createInlineComment(
  * @returns List of comments and review comments.
  * @throws {Error} If the API call fails.
  */
-export async function listComments(
-  params: ListCommentsParams
-): Promise<ListCommentsDetails> {
+export async function listComments(params: ListCommentsParams): Promise<ListCommentsDetails> {
   const {
     issue_number,
     pull_number,
@@ -325,9 +318,8 @@ export async function listComments(
         // Update total count from response headers
         if (page === 1 && response.headers['x-total-count']) {
           const headerValue = response.headers['x-total-count'];
-          totalIssueComments = typeof headerValue === 'string' 
-            ? parseInt(headerValue, 10) 
-            : headerValue;
+          totalIssueComments =
+            typeof headerValue === 'string' ? parseInt(headerValue, 10) : headerValue;
         }
 
         if (response.data.length < MAX_COMMENTS_PER_PAGE) {

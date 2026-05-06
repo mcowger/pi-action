@@ -1,7 +1,5 @@
 /**
- * @file Real implementation of GitAdapter using git hosting platform module.
- *
- * Provides the production implementation for GitHub operations.
+ * @file Real implementation of GitAdapter using the GitHub platform module.
  */
 
 import { Temporal } from '@js-temporal/polyfill';
@@ -17,11 +15,10 @@ import {
 import type { GitAdapter, CommentMetadata, CoreAdapter } from '../types';
 
 /**
- * Production adapter for git hosting platform operations.
+ * Production adapter for GitHub platform operations.
  *
  * Wraps the git module to provide a testable interface for platform
- * operations (reactions, comments, prompts). Supports GitHub, Codeberg,
- * and self-hosted Forgejo instances.
+ * operations (reactions, comments, prompts).
  */
 export class RealGitAdapter implements GitAdapter {
   constructor(private readonly core: CoreAdapter) {

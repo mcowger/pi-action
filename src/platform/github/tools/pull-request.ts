@@ -1,26 +1,17 @@
 /**
  * @file GitHub pull request creation tool implementation.
  *
- * Implements the server-side logic for the `create_pull_request` custom tool:
- * detecting changed files in the working tree, creating blobs/trees/commits
- * via the Git Data API, creating a new branch, and opening a pull request.
- * Supports dry-run mode for testing without side effects.
+ * Uses native git CLI for branch creation, staging, committing, and pushing.
+ * Only the final PR creation step uses the GitHub REST API.
  */
 
+import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Temporal } from '@js-temporal/polyfill';
+import { execSync } from 'node:child_process';
 import { getOctokit } from '../octokit';
 import { BRANCH_PREFIX, MAX_TITLE_LENGTH } from '../constants';
 import { getContextType } from '../context-utils';
-import {
-  createLogger,
-  scanForChanges,
-  createBlobsAndTree,
-  createCommitAndUpdateBranch,
-  buildFileMap,
-} from '../git/index';
-
-const log = createLogger();
 
 export interface CreatePullRequestParams {
   title: string;
@@ -44,83 +35,51 @@ export interface CreatePullRequestDetails {
 }
 
 /**
- * Resolve the base (target) branch for the pull request.
+ * Determine the base branch for the pull request.
  *
- * Uses the explicitly provided branch if given, otherwise falls back to the
- * repository's default branch (from the workflow context or the GitHub API).
- *
- * @param providedBase - Optional branch name override.
- * @returns The resolved base branch name.
- * @internal Exported for testing purposes.
+ * Uses the caller-supplied base or falls back to the repo's default branch.
  */
 export async function determineBaseBranch(providedBase: string | undefined): Promise<string> {
-  let baseBranch: string;
   if (providedBase) {
-    // Explicitly provided by caller
-    baseBranch = providedBase;
-    log.debug(`Using provided base branch: ${baseBranch}`);
-    return baseBranch;
+    core.debug(`Using provided base branch: ${providedBase}`);
+    return providedBase;
   }
 
   if (github.context.payload.repository?.default_branch) {
-    // Available in context
-    baseBranch = github.context.payload.repository.default_branch;
-    log.debug(`Using default branch from context: ${baseBranch}`);
-    return baseBranch;
+    return github.context.payload.repository.default_branch;
   }
 
-  // Fetch from GitHub API
-  log.debug(`Fetching repository default branch from GitHub API...`);
+  core.debug('Fetching default branch from GitHub API...');
   const octokit = getOctokit();
-  const owner = github.context.repo.owner;
-  const repo = github.context.repo.repo;
-  const repoData = await octokit.rest.repos.get({
-    owner,
-    repo,
-  });
-  baseBranch = repoData.data.default_branch;
-  log.debug(`Fetched default branch: ${baseBranch}`);
-  return baseBranch;
+  const { owner, repo } = github.context.repo;
+  const { data } = await octokit.rest.repos.get({ owner, repo });
+  return data.default_branch;
 }
 
 /**
- * Build the pull request body text.
+ * Generate the pull request body.
  *
- * Uses the caller-supplied body if provided. Otherwise auto-generates a body
- * that references the originating issue/PR number (e.g. "Fixes #42").
- *
- * @param providedBody - Optional body text from the tool caller.
- * @returns The final Markdown body string.
- * @internal Exported for testing purposes.
+ * Uses the caller-supplied body or auto-generates one referencing the
+ * originating issue/PR number.
  */
 export function generatePullRequestBody(providedBody: string | undefined): string {
-  let bodyText = providedBody ?? '';
-  if (!bodyText && github.context.issue?.number) {
-    const contextType = getContextType();
-    const issueNum = github.context.issue.number;
-    if (contextType === 'issue') {
-      bodyText = `Fixes #${issueNum}\n\nCreated by pi coding agent.`;
-    } else if (contextType === 'pull_request') {
-      bodyText = `Related to #${issueNum}\n\nCreated by pi coding agent.`;
-    }
-    log.debug(`Auto-generated body from issue #${issueNum}`);
-  }
+  if (providedBody) {return providedBody;}
+  if (!github.context.issue?.number) {return '';}
 
-  return bodyText;
+  const issueNum = github.context.issue.number;
+  const contextType = getContextType();
+  if (contextType === 'issue') {return `Fixes #${issueNum}\n\nCreated by pi coding agent.`;}
+  if (contextType === 'pull_request') {return `Related to #${issueNum}\n\nCreated by pi coding agent.`;}
+  return '';
 }
 
 /**
  * Validate pull request creation parameters.
- *
- * @param params - The pull request parameters to validate.
- * @throws {Error} If validation fails.
- * @internal Exported for testing purposes.
  */
 export function validateCreatePullRequestParams(params: CreatePullRequestParams): void {
   if (!params.title || params.title.trim() === '') {
     throw new Error('Pull request title is required and cannot be empty');
   }
-
   if (params.title.length > MAX_TITLE_LENGTH) {
     throw new Error(
       `Pull request title exceeds maximum length of ${MAX_TITLE_LENGTH} characters (got ${params.title.length})`
@@ -129,176 +88,94 @@ export function validateCreatePullRequestParams(params: CreatePullRequestParams)
 }
 
 /**
- * Create a pull request via the GitHub REST API.
- *
- * @param title - PR title.
- * @param body - PR body in Markdown.
- * @param baseBranch - Target (base) branch name.
- * @param headBranch - Source (head) branch name.
- * @returns An object containing the PR number, URL, and branch refs.
+ * Run a git command in the workspace and return stdout.
  */
-async function createPullRequestOnGitHub(
-  title: string,
-  body: string,
-  baseBranch: string,
-  headBranch: string
-): Promise<{ number: number; url: string; headRef: string; baseRef: string }> {
-  const owner = github.context.repo.owner;
-  const repo = github.context.repo.repo;
-
-  log.debug(`Creating pull request...`);
-
-  const octokit = getOctokit();
-  const result = await octokit.rest.pulls.create({
-    owner,
-    repo,
-    title,
-    body,
-    base: baseBranch,
-    head: headBranch,
-  });
-
-  return {
-    number: result.data.number,
-    url: result.data.html_url,
-    headRef: result.data.head.ref,
-    baseRef: result.data.base.ref,
-  };
+function git(args: string): string {
+  const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
+  return execSync(`git -C "${workspace}" ${args}`, {
+    encoding: 'utf-8',
+    timeout: 30_000,
+  }).trim();
 }
 
 /**
  * Create a pull request end-to-end.
  *
- * Orchestrates the full flow: determines the base branch, scans for changed
- * files, creates a branch, commits, and opens the PR. When `dryRun` is `true`
- * the operation is simulated and no GitHub resources are created.
+ * 1. Create a new branch via `git checkout -b`
+ * 2. Stage all changes via `git add -A`
+ * 3. Commit via `git commit`
+ * 4. Push via `git push`
+ * 5. Open the PR via GitHub REST API
  *
- * @param params - Parameters controlling title, body, base branch, and dry-run.
- * @returns The tool result containing a human-readable message and structured
- *          details about the created PR (or dry-run output).
- * @throws {Error} If no changed files are detected or the GitHub API call fails.
+ * In dry-run mode, steps 1-5 are reported but not executed.
  */
 export async function createPullRequest(
   params: CreatePullRequestParams
 ): Promise<CreatePullRequestResult> {
-  const { title, body, base, dryRun } = params;
-
-  // Validate input parameters early
   validateCreatePullRequestParams(params);
 
-  // Auto-generate branch name
   const issueNumber = github.context.issue?.number ?? 'unknown';
   const timestamp = Temporal.Now.instant().epochMilliseconds;
-  const head = `${BRANCH_PREFIX}${issueNumber}-${timestamp}`;
+  const head = `${BRANCH_PREFIX}-${issueNumber}-${timestamp}`;
+  const baseBranch = await determineBaseBranch(params.base);
+  const bodyText = generatePullRequestBody(params.body);
 
-  log.debug(`Title: ${title}`);
-  log.debug(`Auto-generated branch: ${head}`);
-  log.debug(`Base: ${base ?? 'default'}`);
-  log.debug(`DryRun: ${dryRun ?? false}`);
-
-  // Determine base branch
-  const baseBranch = await determineBaseBranch(base);
-
-  // Generate body text
-  const bodyText = generatePullRequestBody(body);
-
-  // Dry run mode
-  if (dryRun) {
-    const message = `[DRY RUN] Would create pull request:\n- Title: ${title}\n- Body: ${bodyText || '(empty)'}\n- Base: ${baseBranch}\n- Head: ${head}`;
-    log.debug(message);
-
+  if (params.dryRun) {
+    const message = [
+      `[DRY RUN] Would create pull request:`,
+      `- Title: ${params.title}`,
+      `- Body: ${bodyText || '(empty)'}`,
+      `- Base: ${baseBranch}`,
+      `- Head: ${head}`,
+    ].join('\n');
     return {
-      content: [{ type: 'text' as const, text: message }],
-      details: {
-        pullRequestNumber: 0,
-        pullRequestUrl: '',
-        headBranch: head,
-        baseBranch,
-        dryRun: true,
-      },
+      content: [{ type: 'text', text: message }],
+      details: { pullRequestNumber: 0, pullRequestUrl: '', headBranch: head, baseBranch, dryRun: true },
     };
   }
 
-  // Create and push the new branch via GitHub API
-  log.debug(`Preparing branch and changes via GitHub API...`);
-
   try {
-    const octokit = getOctokit();
-    const owner = github.context.repo.owner;
-    const repo = github.context.repo.repo;
+    // Checkout base, create feature branch
+    git(`checkout ${baseBranch}`);
+    git(`checkout -b ${head}`);
 
-    // Get base branch reference
-    log.debug(`Getting base branch "${baseBranch}" reference...`);
-    const baseRef = await octokit.rest.git.getRef({
-      owner,
-      repo,
-      ref: `heads/${baseBranch}`,
-    });
-    const baseSha = baseRef.data.object.sha;
-    log.debug(`Base branch SHA: ${baseSha}`);
-
-    // Get files that exist in the base branch tree (for comparison)
-    log.debug(`Getting base branch tree...`);
-    const baseFiles = await buildFileMap(baseSha);
-    log.debug(`Found ${baseFiles.size} files in base branch`);
-
-    // Scan for changes
-    const { changedFiles, deletedFiles } = await scanForChanges(baseFiles, log);
-
-    if (changedFiles.length === 0 && deletedFiles.length === 0) {
-      const errorMsg =
-        'No changes detected. Please add new files and/or make your changes before creating a pull request.';
-      throw new Error(errorMsg);
+    // Stage and verify there's something to commit
+    git(`add -A`);
+    if (!git(`status --porcelain`)) {
+      throw new Error(
+        'No changes detected. Please add new files and/or make your changes before creating a pull request.'
+      );
     }
 
-    // Create new branch reference from base branch
-    log.debug(`Creating new branch "${head}"...`);
-    await octokit.rest.git.createRef({
+    git(`commit -m "${params.title.replace(/"/g, '\\"')}"`);
+    git(`push origin ${head}`);
+
+    // Create PR via API
+    const { owner, repo } = github.context.repo;
+    const result = await getOctokit().rest.pulls.create({
       owner,
       repo,
-      ref: `refs/heads/${head}`,
-      sha: baseSha,
-    });
-    log.debug(`Branch created successfully`);
-
-    // Create blobs and tree
-    const treeSha = await createBlobsAndTree({
-      changedFiles,
-      deletedFiles,
-      parentSha: baseSha,
-      log,
+      title: params.title,
+      body: bodyText,
+      base: baseBranch,
+      head,
     });
 
-    // Create commit and update branch
-    await createCommitAndUpdateBranch({
-      treeSha,
-      parentSha: baseSha,
-      branchName: head,
-      message: title,
-      log,
-    });
-
-    // Create pull request
-    const prResult = await createPullRequestOnGitHub(title, bodyText, baseBranch, head);
-
-    const successMessage = `Pull request #${prResult.number} created: ${prResult.url}`;
-
-    log.info(`SUCCESS: ${successMessage}`);
-
-    const details: CreatePullRequestDetails = {
-      pullRequestNumber: prResult.number,
-      pullRequestUrl: prResult.url,
-      headBranch: prResult.headRef,
-      baseBranch: prResult.baseRef,
-      dryRun: false,
-    };
+    const message = `Pull request #${result.data.number} created: ${result.data.html_url}`;
+    core.info(`SUCCESS: ${message}`);
 
     return {
-      content: [{ type: 'text' as const, text: successMessage }],
-      details,
+      content: [{ type: 'text', text: message }],
+      details: {
+        pullRequestNumber: result.data.number,
+        pullRequestUrl: result.data.html_url,
+        headBranch: result.data.head.ref,
+        baseBranch: result.data.base.ref,
+        dryRun: false,
+      },
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`[pull-request] Failed to create pull request: ${message}`);
+    throw new Error(`[pull-request] ${message}`);
   }
 }

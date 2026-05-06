@@ -1,15 +1,9 @@
 /**
- * @file GitHub/Codeberg/Forgejo platform provider implementation.
+ * @file GitHub platform provider implementation.
  *
- * Provides the default platform implementation that works with GitHub,
- * Codeberg, and self-hosted Forgejo instances. All three platforms use
- * GitHub-compatible REST APIs and the same CI/CD environment variables
- * (GITHUB_* env vars), so a single implementation covers all of them.
- *
- * Platform detection is based on the GITHUB_SERVER_URL environment variable:
- * - https://github.com → 'github'
- * - https://codeberg.org → 'codeberg'
- * - Anything else → throws an error (unsupported platform)
+ * Provides the platform implementation for GitHub and GitHub-compatible
+ * APIs (GitHub Enterprise, etc.). Uses the standard GitHub Actions
+ * environment variables (GITHUB_* env vars).
  */
 
 import { context } from '@actions/github';
@@ -28,12 +22,15 @@ import {
 } from './tools/comments';
 import { MAX_DIFF_LINES } from './constants';
 import type { Temporal } from '@js-temporal/polyfill';
-import type { PlatformProvider, PlatformType, PlatformContext } from '../types';
+import type { PlatformProvider, PlatformContext } from '../types';
 import type { CommentMetadata } from '../../types';
 import type { CreateReactionType } from './reactions';
 import type { IssueOrPRThread, GetIssueOrPRThreadParams } from './types';
 import type { CreatePullRequestParams, CreatePullRequestDetails } from './tools/pull-request';
-import type { UpdatePullRequestParams, UpdatePullRequestDetails } from './tools/pull-request-update';
+import type {
+  UpdatePullRequestParams,
+  UpdatePullRequestDetails,
+} from './tools/pull-request-update';
 import type {
   AddIssueCommentParams,
   AddIssueCommentDetails,
@@ -46,51 +43,15 @@ import type {
 } from './types';
 
 /**
- * Detect the current platform based on the server URL.
+ * Create the platform provider for GitHub.
  *
- * @returns The detected platform type.
- */
-export function detectPlatform(): PlatformType {
-  const serverUrl = process.env.GITHUB_SERVER_URL;
-  if (!serverUrl) {
-    throw new Error('GITHUB_SERVER_URL environment variable is not set. Cannot detect platform.');
-  }
-
-  // Check for known Forgejo/Gitea indicators
-  if (serverUrl.includes('codeberg')) {
-    return 'codeberg';
-  }
-  if (serverUrl.includes('forgejo') || serverUrl.includes('gitea')) {
-    return 'forgejo';
-  }
-
-  // github.com and GitHub Enterprise (github.*.com patterns)
-  if (serverUrl.includes('github.com')) {
-    return 'github';
-  }
-
-  // Unknown server URL - cannot determine the platform
-  throw new Error(
-    `Unsupported platform server URL: ${serverUrl}. ` +
-      `Expected one of: github.com, codeberg.org, or a URL containing 'forgejo'/'gitea'.`
-  );
-}
-
-/**
- * Create a GitHub-compatible platform provider.
- *
- * This implementation works with GitHub, Codeberg, and self-hosted Forgejo
- * instances since all three use the same CI/CD environment variables and
- * GitHub-compatible REST APIs.
+ * Uses the standard GitHub Actions CI/CD environment variables
+ * (GITHUB_* env vars) for context extraction.
  *
  * @returns A PlatformProvider instance.
  */
-export function createGitHubPlatformProvider(): PlatformProvider {
-  const type = detectPlatform();
-
+export function createPlatformProvider(): PlatformProvider {
   return {
-    type,
-
     getContext(): PlatformContext {
       return {
         repo: context.repo,
@@ -141,7 +102,12 @@ export function createGitHubPlatformProvider(): PlatformProvider {
       return getIssueOrPRThread(params);
     },
 
-    async getPRDiff(owner: string, repo: string, pullNumber: number, ignoreFiles?: string[]): Promise<string> {
+    async getPRDiff(
+      owner: string,
+      repo: string,
+      pullNumber: number,
+      ignoreFiles?: string[]
+    ): Promise<string> {
       return fetchPRDiff(owner, repo, pullNumber, MAX_DIFF_LINES, ignoreFiles);
     },
 
@@ -153,7 +119,9 @@ export function createGitHubPlatformProvider(): PlatformProvider {
       return updateComment(params);
     },
 
-    async createInlineComment(params: CreateInlineCommentParams): Promise<CreateInlineCommentDetails> {
+    async createInlineComment(
+      params: CreateInlineCommentParams
+    ): Promise<CreateInlineCommentDetails> {
       return createInlineComment(params);
     },
 

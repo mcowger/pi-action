@@ -1,11 +1,10 @@
 /**
- * Tests for platform abstraction module.
+ * Tests for GitHub platform provider.
  *
- * Tests platform detection, provider creation, and the module's
- * public API surface.
+ * Tests provider creation, and the public API surface.
  */
 
-import { describe, expect, test, mock, afterEach } from 'bun:test';
+import { describe, expect, test, mock } from 'bun:test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -59,87 +58,11 @@ fs.writeFileSync(process.env.GITHUB_EVENT_PATH, JSON.stringify({}));
 
 // Import after mocks are set up
 import type { PlatformProvider } from '../../../src/platform/types';
-import {
-  detectPlatform,
-  createGitHubPlatformProvider,
-} from '../../../src/platform/github/provider';
+import { createPlatformProvider } from '../../../src/platform/github/provider';
 
-describe('detectPlatform', () => {
-  const originalServerUrl = process.env.GITHUB_SERVER_URL;
-
-  afterEach(() => {
-    if (originalServerUrl !== undefined) {
-      process.env.GITHUB_SERVER_URL = originalServerUrl;
-    } else {
-      delete process.env.GITHUB_SERVER_URL;
-    }
-  });
-
-  test('returns github for github.com server URL', () => {
-    process.env.GITHUB_SERVER_URL = 'https://github.com';
-    expect(detectPlatform()).toBe('github');
-  });
-
-  test('throws when GITHUB_SERVER_URL is not set', () => {
-    delete process.env.GITHUB_SERVER_URL;
-    expect(() => detectPlatform()).toThrow(/GITHUB_SERVER_URL environment variable is not set/);
-  });
-
-  test('returns codeberg for codeberg.org server URL', () => {
-    process.env.GITHUB_SERVER_URL = 'https://codeberg.org';
-    expect(detectPlatform()).toBe('codeberg');
-  });
-
-  test('returns forgejo for server URL containing forgejo', () => {
-    process.env.GITHUB_SERVER_URL = 'https://forgejo.example.com';
-    expect(detectPlatform()).toBe('forgejo');
-  });
-
-  test('returns forgejo for server URL containing gitea', () => {
-    process.env.GITHUB_SERVER_URL = 'https://gitea.example.com';
-    expect(detectPlatform()).toBe('forgejo');
-  });
-
-  test('throws for unknown non-github.com server URL', () => {
-    process.env.GITHUB_SERVER_URL = 'https://git.mycompany.com';
-    expect(() => detectPlatform()).toThrow(/Unsupported platform server URL/);
-  });
-
-  test('throws for GitHub Enterprise-like URL (custom domain)', () => {
-    process.env.GITHUB_SERVER_URL = 'https://github.mycompany.com';
-    expect(() => detectPlatform()).toThrow(/Unsupported platform server URL/);
-  });
-
-  test('detects codeberg with subpath URL', () => {
-    process.env.GITHUB_SERVER_URL = 'https://codeberg.org/some/repo';
-    expect(detectPlatform()).toBe('codeberg');
-  });
-
-  test('detects forgejo with nested subdomain', () => {
-    process.env.GITHUB_SERVER_URL = 'https://git.forgejo.internal.company.net';
-    expect(detectPlatform()).toBe('forgejo');
-  });
-
-  test('detects gitea with trailing slash', () => {
-    process.env.GITHUB_SERVER_URL = 'https://gitea.example.com/';
-    expect(detectPlatform()).toBe('forgejo');
-  });
-
-  test('error message includes the problematic URL', () => {
-    process.env.GITHUB_SERVER_URL = 'https://unknown.host';
-    expect(() => detectPlatform()).toThrow('https://unknown.host');
-  });
-
-  test('error message mentions supported platforms', () => {
-    process.env.GITHUB_SERVER_URL = 'https://unknown.host';
-    expect(() => detectPlatform()).toThrow(/github\.com.*codeberg.*forgejo/i);
-  });
-});
-
-describe('createGitHubPlatformProvider', () => {
+describe('createPlatformProvider', () => {
   test('returns a PlatformProvider', () => {
-    process.env.GITHUB_SERVER_URL = 'https://github.com';
-    const provider = createGitHubPlatformProvider();
+    const provider = createPlatformProvider();
     expect(provider).toBeDefined();
     expect(typeof provider.addReaction).toBe('function');
     expect(typeof provider.deleteReaction).toBe('function');
@@ -151,57 +74,20 @@ describe('createGitHubPlatformProvider', () => {
     expect(typeof provider.getIssueOrPRThread).toBe('function');
   });
 
-  test('has a type property matching the detected platform', () => {
+  test('returns a valid context via getContext', () => {
     process.env.GITHUB_SERVER_URL = 'https://github.com';
-    const provider = createGitHubPlatformProvider();
-    expect(['github', 'codeberg', 'forgejo']).toContain(provider.type);
-  });
-
-  test('has a type of github in default CI environment', () => {
-    process.env.GITHUB_SERVER_URL = 'https://github.com';
-    const provider = createGitHubPlatformProvider();
-    expect(provider.type).toBe('github');
-  });
-
-  test('has type codeberg when GITHUB_SERVER_URL is codeberg', () => {
-    const original = process.env.GITHUB_SERVER_URL;
-    process.env.GITHUB_SERVER_URL = 'https://codeberg.org';
-    const provider = createGitHubPlatformProvider();
-    expect(provider.type).toBe('codeberg');
-    process.env.GITHUB_SERVER_URL = original;
-  });
-
-  test('has type forgejo when GITHUB_SERVER_URL contains forgejo', () => {
-    const original = process.env.GITHUB_SERVER_URL;
-    process.env.GITHUB_SERVER_URL = 'https://forgejo.mycompany.com';
-    const provider = createGitHubPlatformProvider();
-    expect(provider.type).toBe('forgejo');
-    process.env.GITHUB_SERVER_URL = original;
-  });
-
-  test('type property is immutable from TypeScript perspective (readonly)', () => {
-    process.env.GITHUB_SERVER_URL = 'https://github.com';
-    const provider = createGitHubPlatformProvider();
-    // The type property is typed as readonly in TypeScript but can be
-    // reassigned at runtime in JavaScript. Verify it starts correct.
-    expect(provider.type).toBe('github');
-  });
-
-  test('type is captured at creation time and not affected by later env changes', () => {
-    process.env.GITHUB_SERVER_URL = 'https://github.com';
-    const provider = createGitHubPlatformProvider();
-    expect(provider.type).toBe('github');
-    // Change env after creation
-    process.env.GITHUB_SERVER_URL = 'https://codeberg.org';
-    // Provider type should still be 'github'
-    expect(provider.type).toBe('github');
+    const provider = createPlatformProvider();
+    const ctx = provider.getContext();
+    expect(ctx.repo.owner).toBe('test-owner');
+    expect(ctx.repo.repo).toBe('test-repo');
+    expect(ctx.issue.number).toBe(123);
   });
 });
 
 describe('PlatformProvider interface compliance', () => {
   test('provider implements all required methods', () => {
     process.env.GITHUB_SERVER_URL = 'https://github.com';
-    const provider = createGitHubPlatformProvider();
+    const provider = createPlatformProvider();
 
     const requiredMethods: (keyof PlatformProvider)[] = [
       'addReaction',

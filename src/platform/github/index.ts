@@ -1,10 +1,8 @@
 /**
- * @file GitHub/Codeberg/Forgejo module barrel export.
+ * @file GitHub module barrel export.
  *
  * Re-exports public symbols used by consumers outside the github/ module.
  * Internal implementation details are not exported from this barrel file.
- *
- * Supports GitHub, Codeberg, and self-hosted Forgejo instances.
  */
 
 import type { CoreAdapter } from '../../types';
@@ -189,4 +187,4 @@ export { getIssueOrPRThread } from './tools/thread';
 export { fetchPRDiff } from './tools/pr-diff';
 
 // Platform provider (used by platform/index.ts)
-export { detectPlatform, createGitHubPlatformProvider } from './provider';
+export { createPlatformProvider } from './provider';

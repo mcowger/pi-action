@@ -1,5 +1,5 @@
 /**
- * @file Shared type definitions for the GitHub/Codeberg/Forgejo platform module.
+ * @file Shared type definitions for the GitHub platform module.
  *
  * Centralises all interfaces used across the github module so that individual
  * files can import types without creating circular dependencies.

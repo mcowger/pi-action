@@ -39,7 +39,9 @@ type AddIssueCommentToolParams = Static<typeof addIssueCommentSchema>;
 /**
  * Create a success result for the add_issue_comment tool.
  */
-function createSuccessResult(details: AddIssueCommentDetails): AgentToolResult<AddIssueCommentDetails> {
+function createSuccessResult(
+  details: AddIssueCommentDetails
+): AgentToolResult<AddIssueCommentDetails> {
   return {
     content: [{ type: 'text' as const, text: `Comment added successfully: ${details.url}` }],
     details,

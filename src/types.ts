@@ -35,7 +35,6 @@ export interface CoreAdapter {
  * Adapter interface for git hosting platform operations.
  *
  * Provides a testable wrapper around the git module functions.
- * Supports GitHub, Codeberg, and self-hosted Forgejo instances.
  */
 export interface GitAdapter {
   /** Add an "eyes" reaction to the triggering comment. */

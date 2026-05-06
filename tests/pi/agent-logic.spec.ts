@@ -55,7 +55,6 @@ const mockCoreAdapter = {
 
 // Create a mock PlatformProvider for tests
 const mockPlatformProvider: any = {
-  type: 'github',
   getContext: () => ({
     repo: { owner: 'test-owner', repo: 'test-repo' },
     issue: { number: 1 },

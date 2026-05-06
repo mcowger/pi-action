@@ -14,11 +14,7 @@ import {
   LIST_COMMENTS_PARAM_INCLUDE_REVIEW_COMMENTS_DESCRIPTION,
 } from '../prompt';
 import { CANCELLATION_MESSAGE_LIST_COMMENTS } from './constants';
-import type {
-  ListCommentsParams,
-  ListCommentsDetails,
-  PlatformProvider,
-} from '../../platform';
+import type { ListCommentsParams, ListCommentsDetails, PlatformProvider } from '../../platform';
 import { withCancellation } from './tool-execution';
 
 /**
@@ -58,7 +54,9 @@ function formatCommentsAsText(details: ListCommentsDetails): string {
   if (details.issue_comments.length > 0) {
     lines.push(`## Issue Comments (${details.total_issue_comments} total)`);
     for (const comment of details.issue_comments) {
-      lines.push(`- **#${comment.id}** by ${comment.author} (${comment.author_type}) on ${comment.created_at}`);
+      lines.push(
+        `- **#${comment.id}** by ${comment.author} (${comment.author_type}) on ${comment.created_at}`
+      );
       lines.push(`  ${comment.body.substring(0, 200)}${comment.body.length > 200 ? '...' : ''}`);
     }
   }
@@ -69,7 +67,9 @@ function formatCommentsAsText(details: ListCommentsDetails): string {
     }
     lines.push(`## Review Comments (${details.total_review_comments} total)`);
     for (const comment of details.review_comments) {
-      lines.push(`- **#${comment.id}** on \`${comment.path}:${comment.line}\` by ${comment.author}`);
+      lines.push(
+        `- **#${comment.id}** on \`${comment.path}:${comment.line}\` by ${comment.author}`
+      );
       lines.push(`  ${comment.body.substring(0, 200)}${comment.body.length > 200 ? '...' : ''}`);
     }
   }

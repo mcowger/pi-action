@@ -71,9 +71,13 @@ type CreateInlineCommentToolParams = Static<typeof createInlineCommentSchema>;
 /**
  * Create a success result for the create_inline_comment tool.
  */
-function createSuccessResult(details: CreateInlineCommentDetails): AgentToolResult<CreateInlineCommentDetails> {
+function createSuccessResult(
+  details: CreateInlineCommentDetails
+): AgentToolResult<CreateInlineCommentDetails> {
   return {
-    content: [{ type: 'text' as const, text: `Inline comment created successfully: ${details.url}` }],
+    content: [
+      { type: 'text' as const, text: `Inline comment created successfully: ${details.url}` },
+    ],
     details,
   };
 }
@@ -110,10 +114,18 @@ export function createInlineCommentToolFactory(provider: PlatformProvider) {
           line,
         };
         const result: CreateInlineCommentParams = { ...base };
-        if (params.side) { result.side = params.side; }
-        if (params.commit_id) { result.commit_id = params.commit_id; }
-        if (params.start_line) { result.start_line = params.start_line; }
-        if (params.start_side) { result.start_side = params.start_side; }
+        if (params.side) {
+          result.side = params.side;
+        }
+        if (params.commit_id) {
+          result.commit_id = params.commit_id;
+        }
+        if (params.start_line) {
+          result.start_line = params.start_line;
+        }
+        if (params.start_side) {
+          result.start_side = params.start_side;
+        }
         return result;
       },
       execute: async (params: CreateInlineCommentParams) => {

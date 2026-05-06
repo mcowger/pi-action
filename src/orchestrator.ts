@@ -139,9 +139,7 @@ export class ActionOrchestrator {
     }
 
     if (!token) {
-      this.core.debug(
-        '[config] No token provided — relying on provider-side auth (e.g. ADC)'
-      );
+      this.core.debug('[config] No token provided — relying on provider-side auth (e.g. ADC)');
     }
 
     const extensionsInput = this.core.getInput('extensions');

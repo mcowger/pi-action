@@ -29,7 +29,6 @@ const mockCoreAdapter = {
 
 // Mock platform provider for getResourceLoader
 const mockPlatformProvider: PlatformProvider = {
-  type: 'github',
   getContext: () => ({
     repo: { owner: 'test-owner', repo: 'test-repo' },
     issue: { number: 1 },
