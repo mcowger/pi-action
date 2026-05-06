@@ -74,6 +74,19 @@ runs:
     - run: bun run ${{ github.action_path }}/src/run.ts
       shell: bash
       working-directory: ${{ github.action_path }}
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_PROVIDER: ${{ inputs.provider }}
+        INPUT_MODEL: ${{ inputs.model }}
+        INPUT_TOKEN: ${{ inputs.token }}
+        INPUT_THINKING_LEVEL: ${{ inputs.thinking_level }}
+        INPUT_PROMPT: ${{ inputs.prompt }}
+        INPUT_TRIGGER: ${{ inputs.trigger }}
+        INPUT_EXTENSIONS: ${{ inputs.extensions }}
+        INPUT_LOAD_BUILTIN_EXTENSIONS: ${{ inputs.load_builtin_extensions }}
+        INPUT_BASE_URL: ${{ inputs.base_url }}
+        INPUT_EXPORT_SESSION_HTML: ${{ inputs.export_session_html }}
+        INPUT_SUPPRESS_FINAL_COMMENT: ${{ inputs.suppress_final_comment }}
 
 outputs:
   response:
