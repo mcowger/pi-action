@@ -13,10 +13,21 @@ import { MAX_TITLE_LENGTH } from '../constants';
 
 function git(args: string): string {
   const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
-  return execSync(`git -C "${workspace}" ${args}`, {
-    encoding: 'utf-8',
-    timeout: 30_000,
-  }).trim();
+  try {
+    return execSync(`git -C "${workspace}" ${args}`, {
+      encoding: 'utf-8',
+      timeout: 60_000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException & { stderr?: string; stdout?: string; status?: number };
+    const stderr = err.stderr?.trim();
+    const stdout = err.stdout?.trim();
+    const status = err.status ?? '?';
+    const detail = [stderr, stdout].filter(Boolean).join('\n');
+    const base = `git ${args} exited with status ${status}`;
+    throw new Error(detail ? `${base}:\n${detail}` : base);
+  }
 }
 
 export interface UpdatePullRequestParams {
@@ -120,17 +131,27 @@ export async function updatePullRequest(
   }
 
   // Checkout PR branch, stage, commit, push
-  git(`checkout ${headBranch}`);
-  git(`add -A`);
+  try {
+    git(`checkout ${headBranch}`);
+    git(`add -A`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    core.error(`[update_pull_request] git setup failed:\n${message}`);
+    throw new Error(`[pull-request-update] ${message}`);
+  }
 
   let commitSha: string | undefined;
   if (git(`status --porcelain`)) {
     const commitMessage = params.message ?? `Update PR #${resolvedPullNumber}: changes by pi coding agent`;
-
-    git(`commit -m "${commitMessage.replace(/"/g, '\\"')}"`);
-    git(`push origin ${headBranch}`);
-
-    commitSha = git(`rev-parse HEAD`);
+    try {
+      git(`commit -m "${commitMessage.replace(/"/g, '\\"')}"`);
+      git(`push origin ${headBranch}`);
+      commitSha = git(`rev-parse HEAD`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      core.error(`[update_pull_request] commit/push failed:\n${message}`);
+      throw new Error(`[pull-request-update] ${message}`);
+    }
   }
 
   // Update PR title/body via API

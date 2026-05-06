@@ -89,13 +89,28 @@ export function validateCreatePullRequestParams(params: CreatePullRequestParams)
 
 /**
  * Run a git command in the workspace and return stdout.
+ *
+ * On failure, throws with both the exit code and the full stderr so that
+ * the calling tool — and the agent reading its output — can see exactly
+ * what went wrong (pre-commit hook output, push rejection, etc.).
  */
 function git(args: string): string {
   const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
-  return execSync(`git -C "${workspace}" ${args}`, {
-    encoding: 'utf-8',
-    timeout: 30_000,
-  }).trim();
+  try {
+    return execSync(`git -C "${workspace}" ${args}`, {
+      encoding: 'utf-8',
+      timeout: 60_000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException & { stderr?: string; stdout?: string; status?: number };
+    const stderr = err.stderr?.trim();
+    const stdout = err.stdout?.trim();
+    const status = err.status ?? '?';
+    const detail = [stderr, stdout].filter(Boolean).join('\n');
+    const base = `git ${args} exited with status ${status}`;
+    throw new Error(detail ? `${base}:\n${detail}` : base);
+  }
 }
 
 /**
@@ -176,6 +191,7 @@ export async function createPullRequest(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    core.error(`[create_pull_request] failed:\n${message}`);
     throw new Error(`[pull-request] ${message}`);
   }
 }
