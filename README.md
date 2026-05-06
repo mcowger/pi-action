@@ -1,65 +1,19 @@
 # Pi Coding Agent Action
 
-[![Codecov](https://codecov.io/gh/shaftoe/pi-coding-agent-action/branch/v2/graph/badge.svg)](https://app.codecov.io/gh/shaftoe/pi-coding-agent-action/)
-
-A CI/CD action that integrates [Pi coding agent](https://pi.dev) with git hosting platform workflows. Works with **GitHub**, **Codeberg**, and self-hosted **Forgejo** instances — any platform that provides GitHub-compatible APIs and CI/CD environment variables.
+A CI/CD action that integrates [Pi coding agent](https://pi.dev) with GitHub Actions workflows.
 
 Inspired by OpenCode's [GitHub action](https://opencode.ai/docs/github/).
 
 ## Features
 
-- **Issue assistance**: Prefix any new issue description and/or any issue comment with `/pi` to have the agent analyze the issue, generate a report and/or create a new PR with the fix
-- **PR assistance**: Prefix any PR comment, review comment or review message with `/pi` to have the agent review the pull request and/or to apply further changes
+- **Issue assistance**: Prefix any issue comment with `/pi` to have the agent analyze the issue, generate a report, and/or create a PR with the fix
+- **PR assistance**: Prefix any PR comment, review comment, or review with `/pi` to have the agent review or update the pull request
 - **Automated code reviews**: Have Pi review every new pull request automatically
-- **Add Pi to your own pipelines**: (Optionally) generate prompt from upstream actions/workflows and have Pi do the work in background for you anywhere you like in your workflows
-- **Minimal batteries included**: Tries to follow Pi minimalistic phylosophy while providing a comfortable UX out of the box, e.g. pretty print of logs, auto replies to comments, and tools to interact efficiently with git and GitHub-compatible APIs.
+- **Non-interactive workflows**: Generate prompts from upstream steps and run Pi in background anywhere in your pipeline
 
-## Goal
+## Quick Start
 
-If all you want is running Pi inside a CI/CD environment technically you don't need any custom action, something like
-
-```yaml
-- uses: actions/setup-node@v6
-- run: npm -g install @mariozechner/pi-coding-agent
-- run: pi -p "do something useful for me"
-```
-
-might be just good enough and probably will always be the best fit for a pure "as minimalist as Pi" approach.
-
-On the other hand that's true for almost everything which is offered by the Actions ecosystem, useful and popular Actions are mostly focused on providing a pleasant UX around the raw core functionality they provide.
-
-This project goal is exactly that: to provide a short list of (opt-out) opinionated default features for interacting with and executing Pi agent sessions inside CI/CD environments compatible with GitHub API.
-
-For all the rest you're free and encouraged to just configure the action environment as you would your local Pi instance, e.g. adding files to `~/.pi/agent/`, environment variables, etc., and more generally to compose workflow pipelines around this action's inputs and outputs to fullfill your specific needs.
-
-Refer to [the official Pi documentation](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent#customization) to learn how to tweak Pi to best fit your needs.
-
-## Disclaimer
-
-> [!NOTE]
-> Codeberg/Forgejo compatibility _should_ work but hasn't been tested yet.
-
-## Securing your workflows
-
-> [!WARNING]
-> Depending on the permissions assigned to your workflow you should consider restricting who's allowed to trigger it e.g. filtering for GitHub user name or role (`if github.actor == '<my-user>'`).
-
-> [!IMPORTANT]
-> The default `v2` branch is in active development so if you don't want the bleeding edge you should pin to the latest release, e.g.
-> ```yaml
->    uses: shaftoe/pi-coding-agent-action@v2.15.5
-> ```
-
-## Usage
-
-### Interactive Workflows
-
-- Create a GitHub workflow which triggers when comments are added (e.g., `issue_comment`)
-- Filter by `if` to only run on the trigger phrase (e.g., `contains(github.event.comment.body, '/pi')`)
-- Add `actions/setup-node` as prerequisite step (Node version >= `v22.x`)
-- Finally, add `shaftoe/pi-coding-agent-action`
-
-Example:
+Create a workflow file, e.g. `.github/workflows/pi.yml`:
 
 ```yaml
 name: Pi Agent
@@ -78,46 +32,71 @@ jobs:
     if: contains(github.event.comment.body, '/pi')
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
+      - uses: actions/checkout@v6
 
-      - name: Run Pi agent
-        uses: shaftoe/pi-coding-agent-action@v2
+      - uses: mcowger/pi-coding-agent-action@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: my-provider
-          model: some-model
-          token: ${{ secrets.MODEL_API_KEY }}
-          base_url: https://my-gateway.example.com/v1
-          thinking_level: medium
+          provider: anthropic
+          model: claude-sonnet-4-5
+          token: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
+
+> [!IMPORTANT]
+> The `v2` branch is in active development. Pin to a specific release tag for production use:
+> ```yaml
+>    uses: mcowger/pi-coding-agent-action@v2.15.5
+> ```
+
+## Usage
+
+### Interactive Workflows
+
+Trigger on comments containing `/pi`:
+
+```yaml
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  pi-agent:
+    if: contains(github.event.comment.body, '/pi')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: mcowger/pi-coding-agent-action@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          provider: openai
+          model: gpt-5.4
+          token: ${{ secrets.OPENAI_API_KEY }}
+```
+
+The action automatically checks out the repository, installs dependencies, and runs Pi with native Bun support — no Node.js setup needed.
 
 ### Non-Interactive Workflows
 
-You can use the `prompt` input to run the agent without requiring a comment trigger. This is useful for automated workflows like PR reviews, scheduled tasks, or prompts generated by a previous step:
+Use the `prompt` input to run the agent without requiring a comment trigger:
 
 ```yaml
-- name: Run Pi agent with fixed prompt
-  uses: shaftoe/pi-coding-agent-action@v2
+- uses: mcowger/pi-coding-agent-action@v2
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     provider: openai
     model: gpt-5.4
     token: ${{ secrets.OPENAI_API_KEY }}
-    prompt: 'Review this pull request for security issues' # or e.g. ${{ steps.generate-prompt.outputs.prompt }}
+    prompt: 'Review this pull request for security issues'
 ```
 
-When using the `prompt` input, the action still enriches the prompt with issue/PR context (title and description) if available in the workflow context.
+The prompt is enriched with issue/PR context (title and description) when available.
 
 ### Custom Extensions
 
-You can load custom Pi extensions to add additional tools, custom tools, or modify agent behavior:
+Load custom Pi extensions to add tools or modify agent behavior:
 
 ```yaml
-- name: Run Pi agent with extensions
-  uses: shaftoe/pi-coding-agent-action@v2
+- uses: mcowger/pi-coding-agent-action@v2
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     provider: openai
@@ -134,51 +113,12 @@ Supported extension sources:
 - **git repositories**: `git:github.com/user/repo` (supports branches with `#branch`)
 - **local files**: Relative paths to `.ts` extension files
 
-### Custom Providers via `models.json`
-
-The Pi SDK supports registering custom LLM providers (e.g., local servers, API gateways, OpenAI-compatible endpoints) through a `models.json` configuration file. By default the SDK looks for `~/.pi/agent/models.json`. When the file doesn't exist, only the built-in providers are available — identical to the previous behavior.
-
-See the [Custom Provider documentation](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/custom-provider.md) for the full schema reference.
-
-#### Example: configure a custom provider in a previous workflow step
-
-```yaml
-- name: Configure custom LLM provider
-  run: |
-    mkdir -p ~/.pi/agent
-    cat > ~/.pi/agent/models.json << 'EOF'
-    {
-      "providers": {
-        "my-llm": {
-          "baseUrl": "https://api.example.com/v1",
-          "apiKey": "${{ secrets.LLM_API_KEY }}",
-          "models": [{
-            "id": "my-model-v1",
-            "name": "My Model V1",
-            "api": "openai-chat",
-            "cost": { "input": 0.001, "output": 0.002, "cacheRead": 0, "cacheWrite": 0 },
-            "contextWindow": 128000,
-            "maxTokens": 4096
-          }]
-        }
-      }
-    }
-    EOF
-
-- uses: shaftoe/pi-coding-agent-action@v2
-  with:
-    provider: my-llm
-    model: my-model-v1
-    token: ${{ secrets.LLM_API_KEY }}
-```
-
 ### Disabling Built-in Extensions
 
-By default the action loads four built-in GitHub related tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`, `get_pr_diff`) to help Pi better interact with GitHub action environment without relying on external tools like `gh` nor need special skills setup for that. If you want Pi to use only your own custom extensions (or none at all), set `load_builtin_extensions` to `false`:
+Built-in GitHub tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`, `get_pr_diff`) are loaded by default. Disable them if you want only custom extensions:
 
 ```yaml
-- name: Run Pi agent
-  uses: shaftoe/pi-coding-agent-action@v2
+- uses: mcowger/pi-coding-agent-action@v2
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     provider: openai
@@ -189,16 +129,14 @@ By default the action loads four built-in GitHub related tools (`create_pull_req
       npm:my-custom-github-tools
 ```
 
-### Injecting Environment Variables
+### Environment Variables for Extensions
 
-Pi extensions often require environment variables for authentication or configuration. Use the native `env:` step key to pass variables from your workflow's secrets or configuration into the Pi session:
+Pass environment variables to Pi extensions using the native `env:` key:
 
 ```yaml
-- name: Run Pi agent with custom env vars
-  uses: shaftoe/pi-coding-agent-action@v2
+- uses: mcowger/pi-coding-agent-action@v2
   env:
     MY_API_KEY: ${{ secrets.MY_API_KEY }}
-    ANOTHER_SERVICE_TOKEN: ${{ secrets.ANOTHER_SERVICE_TOKEN }}
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     provider: openai
@@ -206,15 +144,12 @@ Pi extensions often require environment variables for authentication or configur
     token: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-Since the action runs as a single Node.js process, these environment variables are available in `process.env` and accessible to all Pi extensions.
+### Provider Auth via Environment
 
-#### Token input
-
-The `token` input is optional and the action auth could also be specified as environment variable instead, e.g:
+The `token` input is optional — you can use environment variables instead:
 
 ```yaml
-- name: Run Pi agent with auth env var
-  uses: shaftoe/pi-coding-agent-action@v2
+- uses: mcowger/pi-coding-agent-action@v2
   env:
     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   with:
@@ -223,52 +158,36 @@ The `token` input is optional and the action auth could also be specified as env
     model: gpt-5.4
 ```
 
-Examples in this documentation tend to favour `input` because is more consistent with GitHub environment variables/secrets and lets configure the LLM completely via the web admin interface without the need for patching workflow yaml files.
-
 ### Using Outputs in Downstream Jobs
-
-Use `outputs.<job-id>.outputs.<name>` to pass action outputs to another step or another job in the same workflow. For example, you can have Pi generate release notes in one job and then create a release in another:
 
 ```yaml
 jobs:
   pi-agent:
-      # shortened for brevity...
-      - name: Run Pi agent
-        id: pi          # Required to access outputs from this step
-        uses: shaftoe/pi-coding-agent-action@v2
+    steps:
+      - uses: actions/checkout@v6
+      - uses: mcowger/pi-coding-agent-action@v2
+        id: pi
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           provider: openai
           model: gpt-5.4
           token: ${{ secrets.OPENAI_API_KEY }}
-          prompt: 'Generate release notes for the latest commit'
+          prompt: 'Generate release notes'
 
   publish:
     needs: pi-agent
     if: ${{ needs.pi-agent.outputs.success == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Log results
-        run: |
-          echo "Response: ${{ needs.pi-agent.outputs.response }}"
+      - run: |
           echo "Cost: ${{ needs.pi-agent.outputs.cost }} USD"
           echo "Tokens: ${{ needs.pi-agent.outputs.input_tokens }} in / ${{ needs.pi-agent.outputs.output_tokens }} out"
-          echo "Duration: ${{ needs.pi-agent.outputs.duration_seconds }}s"
-
-      - name: Create GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo '${{ needs.pi-agent.outputs.response }}' > release-notes.md
-          gh release create v1.0.0 --notes-file release-notes.md
 ```
 
-### Uploading Session HTML as Artifact
-
-When `export_session_html` is enabled, the action writes a self-contained HTML file and exposes its path via the `session_html_path` output. It can be uploaded as a workflow artifact for example:
+### Export Session HTML
 
 ```yaml
-- uses: shaftoe/pi-coding-agent-action@v2
+- uses: mcowger/pi-coding-agent-action@v2
   id: pi
   with:
     export_session_html: true
@@ -280,118 +199,69 @@ When `export_session_html` is enabled, the action writes a self-contained HTML f
 - uses: actions/upload-artifact@v7
   if: ${{ steps.pi.outputs.session_html_path }}
   with:
-    name: pi-session-html-${{ github.event.issue.number || github.event.pull_request.number || github.run_number }}
+    name: pi-session-${{ github.run_number }}
     path: ${{ steps.pi.outputs.session_html_path }}
 ```
-
-## Quick Start
-
-Create a workflow file, e.g., `.github/workflows/pi-agent.yml`. See the [interactive](./.github/workflows/pi.yml) and [non-interactive](./.github/workflows/pr.yml) workflows in this repository to get started.
 
 ## Inputs
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `base_url` | Optional override for the provider base URL (e.g., to route traffic through a proxy or use an OpenAI-compatible gateway) | No | - |
-| `export_session_html` | Export the session as a self-contained HTML file | No | `false` |
-| `extensions` | Custom Pi extensions to load (one per line). Supports npm packages (npm:package-name), git repos (git:github.com/user/repo), or local file paths | No | - |
 | `github_token` | GitHub token for API access | Yes | - |
-| `load_builtin_extensions` | Whether to load built-in GitHub extensions (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`, `get_pr_diff`) | No | `true` |
-| `model` | Model to use (e.g., gpt-5.4, gpt-4o, gemini-2.5-pro) | Yes | - |
-| `prompt` | Optional prompt to send to the agent (skips comment extraction) | No | - |
-| `provider` | LLM provider (openai, google, anthropic, etc.) | Yes | - |
-| `thinking_level` | Model thinking level (off|low|medium|high) | No | off |
-| `token` | Provider API token. Required for most providers, but can be omitted when using providers that support alternative auth mechanisms (e.g., `google-vertex` with Application Default Credentials) | No | - |
-| `trigger` | Trigger phrase used to invoke the action | No | /pi |
-
-Refer to [Pi documentation](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) for the current list of supported providers / models / etc.
+| `provider` | LLM provider (openai, anthropic, google, etc.) | Yes | - |
+| `model` | Model to use (e.g. claude-sonnet-4-5, gpt-5.4, gemini-2.5-pro) | Yes | - |
+| `token` | Provider API token | No | - |
+| `thinking_level` | Model thinking level (off, low, medium, high) | No | `off` |
+| `trigger` | Trigger phrase to invoke the action | No | `/pi` |
+| `prompt` | Prompt to send (skips comment extraction) | No | - |
+| `extensions` | Custom extensions (one per line) | No | - |
+| `load_builtin_extensions` | Load built-in GitHub tools | No | `true` |
+| `base_url` | Override provider base URL (proxies, gateways) | No | - |
+| `export_session_html` | Export session as HTML file | No | `false` |
+| `suppress_final_comment` | Don't post final summary comment | No | `false` |
 
 ## Outputs
 
-The action exposes the following outputs, which can be consumed by downstream steps or jobs:
-
-| Output | Description | Example |
-|--------|-------------|----------|
-| `cost` | Cost of the invocation in USD (omitted if unavailable) | `0.042` |
-| `duration_seconds` | Wall-clock duration of agent execution in seconds | `12.7` |
-| `input_tokens` | Number of input tokens consumed (omitted if unavailable) | `1500` |
-| `output_tokens` | Number of output tokens generated (omitted if unavailable) | `800` |
-| `response` | The main agent response text (or error message on failure) | `Here is the fix for the bug...` |
-| `session_html_path` | Path to the exported session HTML file (when `export_session_html` is enabled) | `/tmp/pi-session-html/session.html` |
-| `success` | Whether the agent completed successfully (`true` / `false`) | `true` |
-
-> [!WARNING]
-> Tokens and cost outputs are only set when the underlying provider returns session statistics. They will be absent for providers that don't report token usage.
+| Output | Description |
+|--------|-------------|
+| `response` | Agent response text (or error message on failure) |
+| `success` | Whether the agent completed successfully (`true` / `false`) |
+| `input_tokens` | Input tokens consumed |
+| `output_tokens` | Output tokens generated |
+| `cost` | Cost in USD |
+| `duration_seconds` | Wall-clock execution duration |
+| `session_html_path` | Path to exported session HTML file |
 
 ## Custom Tools
 
-The action extends Pi with four custom tools:
-
 | Tool | Description |
 |------|-------------|
-| `create_pull_request` | Creates a new pull request by detecting file changes, creating a branch, committing changes via GitHub API, and opening the PR. Supports `dry_run` mode for testing without actual PR creation. |
-| `get_issue_or_pr_thread` | Retrieves the full thread of an issue or pull request including title, body, state, labels, branch info (for PRs), all comments, and review comments (inline comments on specific lines of the diff) for PRs. Useful for understanding the full context before making changes. |
-| `get_pr_diff` | Fetches the diff of a pull request on demand. Useful when the agent needs to understand what changed in a PR, e.g. for code reviews or addressing review feedback. Supports configurable `max_lines` truncation (default: 1000). |
-| `update_pull_request` | Updates an existing pull request by pushing new commits to the PR branch and optionally updating the title and/or description. Supports `dry_run` mode for testing without actual modifications. |
-
-> [!TIP]
-> Set `load_builtin_extensions` input to `false` to disable custom tool auto loading.
+| `create_pull_request` | Creates a new PR by detecting changes, creating a branch, committing via git CLI, and opening the PR. Supports `dry_run` mode. |
+| `update_pull_request` | Updates an existing PR by pushing commits and optionally updating title/description. Supports `dry_run` mode. |
+| `get_issue_or_pr_thread` | Retrieves the full thread of an issue or PR including comments, review comments, labels, and branch info. |
+| `get_pr_diff` | Fetches the diff of a pull request on demand. Supports `max_lines` truncation and file filtering. |
 
 ## Development
 
 ### Prerequisites
 
-- Bun package manager
-- Node.js 24+
+- [Bun](https://bun.sh) package manager
 
 ### Validation
-
-Before committing, run the following checks:
 
 ```bash
 bun run validate
 ```
 
-This runs:
-- Code formatting (Prettier)
-- Linting (ESLint)
-- Type checking (TypeScript)
-- Building
+Runs: Prettier formatting, ESLint linting, TypeScript type checking.
 
 ### Testing
 
-The project uses `bun test` for testing:
-
 ```bash
-# Run all tests
-bun test
-
-# Run tests with coverage
-bun run test:coverage
-
-# Watch mode for development
-bun run test:watch
-
-# Run end to end tests (requires LLM to be setup)
-bun run test:e2e
+bun test                 # Run all tests
+bun run test:coverage    # With coverage
+bun run test:watch       # Watch mode
 ```
-
-### Project Guidelines
-
-- Follow the existing code style and conventions
-- Add tests for new functionality
-- Update documentation as needed
-- Use `bun` as the package manager (preferred over npm)
-- Run `bun run validate` before committing
-
-### Releasing
-
-Automated release flow handled by `semantic-release` in [release.yml](./.github/workflows/release.yml)
-
-### Refereneces
-
-- Events that trigger workflows: <https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows>
-- Webhook schema source: <https://github.com/octokit/webhooks/tree/main/payload-schemas/api.github.com>
 
 ## License
 
