@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: mcowger/pi-action@v2
+      - uses: mcowger/pi-action@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           provider: anthropic
@@ -43,9 +43,9 @@ jobs:
 ```
 
 > [!IMPORTANT]
-> The `v2` branch is in active development. Pin to a specific release tag for production use:
+> The `main` branch is in active development. Pin to a specific release tag for production use:
 > ```yaml
->    uses: mcowger/pi-action@v2.15.5
+>    uses: mcowger/pi-action@main
 > ```
 
 ## Usage
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: mcowger/pi-action@v2
+      - uses: mcowger/pi-action@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           provider: openai
@@ -80,7 +80,7 @@ The action automatically checks out the repository, installs dependencies, and r
 Use the `prompt` input to run the agent without requiring a comment trigger:
 
 ```yaml
-- uses: mcowger/pi-action@v2
+- uses: mcowger/pi-action@main
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     provider: openai
@@ -115,7 +115,7 @@ Repository: {{context.payload.repository.full_name}}
 
 **Workflow step:**
 ```yaml
-- uses: mcowger/pi-action@v2
+- uses: mcowger/pi-action@main
   env:
     INITIAL_COMMENT_ID: ${{ steps.initial_comment.outputs.comment_id }}
   with:
@@ -137,7 +137,7 @@ Most GitHub context data (comment body, issue/PR fields, actor, repo, etc.) is a
 Load custom Pi extensions to add tools or modify agent behavior:
 
 ```yaml
-- uses: mcowger/pi-action@v2
+- uses: mcowger/pi-action@main
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     provider: openai
@@ -159,7 +159,7 @@ Supported extension sources:
 Built-in GitHub tools (`create_pull_request`, `update_pull_request`, `get_issue_or_pr_thread`, `get_pr_diff`) are loaded by default. Disable them if you want only custom extensions:
 
 ```yaml
-- uses: mcowger/pi-action@v2
+- uses: mcowger/pi-action@main
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     provider: openai
@@ -175,7 +175,7 @@ Built-in GitHub tools (`create_pull_request`, `update_pull_request`, `get_issue_
 Pass environment variables to Pi extensions using the native `env:` key:
 
 ```yaml
-- uses: mcowger/pi-action@v2
+- uses: mcowger/pi-action@main
   env:
     MY_API_KEY: ${{ secrets.MY_API_KEY }}
   with:
@@ -190,7 +190,7 @@ Pass environment variables to Pi extensions using the native `env:` key:
 The `token` input is optional — you can use environment variables instead:
 
 ```yaml
-- uses: mcowger/pi-action@v2
+- uses: mcowger/pi-action@main
   env:
     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   with:
@@ -206,7 +206,7 @@ jobs:
   pi-agent:
     steps:
       - uses: actions/checkout@v6
-      - uses: mcowger/pi-action@v2
+      - uses: mcowger/pi-action@main
         id: pi
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -228,7 +228,7 @@ jobs:
 ### Export Session HTML
 
 ```yaml
-- uses: mcowger/pi-action@v2
+- uses: mcowger/pi-action@main
   id: pi
   with:
     export_session_html: true
