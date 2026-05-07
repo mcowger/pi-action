@@ -105,7 +105,7 @@ export class Agent {
       throw new Error(
         `Model not found: ${this.provider}/${this.modelStr}. ` +
           `Please check that the \`provider\` and \`model\` inputs are correct and that the provider is supported. ` +
-          `See https://github.com/mcowger/pi-coding-agent-action#usage for details.`
+          `See https://github.com/mcowger/pi-action#usage for details.`
       );
     }
   }

@@ -1,5 +1,5 @@
 {
-  "name": "pi-coding-agent-action",
+  "name": "pi-action",
   "version": "2.15.5",
   "description": "CI/CD Action to integrate Pi coding agent in workflows",
   "main": "src/run.ts",

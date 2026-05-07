@@ -128,7 +128,7 @@ export class ActionOrchestrator {
       throw new Error(
         'Missing required input: `provider`. ' +
           'Set it to your LLM provider (e.g. "anthropic", "openai", "google"). ' +
-          'See https://github.com/mcowger/pi-coding-agent-action#usage for details.'
+          'See https://github.com/mcowger/pi-action#usage for details.'
       );
     }
 
@@ -136,7 +136,7 @@ export class ActionOrchestrator {
       throw new Error(
         'Missing required input: `model`. ' +
           'Set it to the desired model (e.g. "claude-sonnet-4-5", "gpt-4o"). ' +
-          'See https://github.com/mcowger/pi-coding-agent-action#usage for details.'
+          'See https://github.com/mcowger/pi-action#usage for details.'
       );
     }
 
