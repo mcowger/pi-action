@@ -114,15 +114,47 @@ function git(args: string): string {
 }
 
 /**
+ * Detect whether the current branch has commits ahead of the given base branch.
+ *
+ * Returns the current branch name if it is ahead of base (i.e. has at least one
+ * commit not reachable from base). Returns `undefined` if the current branch is
+ * the base branch or is at/behind base.
+ */
+function detectExistingBranchWithCommits(baseBranch: string): string | undefined {
+  const currentBranch = git(`branch --show-current`);
+  if (!currentBranch || currentBranch === baseBranch) {
+    return undefined;
+  }
+
+  // Check if there are commits on the current branch not reachable from base
+  try {
+    const revCount = git(`rev-list --count ${baseBranch}..HEAD`);
+    if (parseInt(revCount, 10) > 0) {
+      core.info(`Detected existing branch '${currentBranch}' with ${revCount} commit(s) ahead of '${baseBranch}'`);
+      return currentBranch;
+    }
+  } catch {
+    // rev-list may fail if base branch is not a direct ancestor; treat as no commits ahead
+  }
+
+  return undefined;
+}
+
+/**
  * Create a pull request end-to-end.
  *
- * 1. Create a new branch via `git checkout -b`
- * 2. Stage all changes via `git add -A`
- * 3. Commit via `git commit`
- * 4. Push via `git push`
- * 5. Open the PR via GitHub REST API
+ * Supports two scenarios:
  *
- * In dry-run mode, steps 1-5 are reported but not executed.
+ * **Scenario A – pre-committed branch:** If the current branch already has
+ * commits ahead of the base branch (e.g. the agent already committed and
+ * pushed its changes), the tool uses that branch directly. Any additional
+ * uncommitted changes in the working tree are staged and committed on top.
+ *
+ * **Scenario B – uncommitted changes:** If the current branch has no commits
+ * ahead of base, the tool falls back to the original behavior: create a new
+ * branch from base, stage all changes, commit, push, and open the PR.
+ *
+ * In dry-run mode, all steps are reported but not executed.
  */
 export async function createPullRequest(
   params: CreatePullRequestParams
@@ -131,7 +163,7 @@ export async function createPullRequest(
 
   const issueNumber = github.context.issue?.number ?? 'unknown';
   const timestamp = Temporal.Now.instant().epochMilliseconds;
-  const head = `${BRANCH_PREFIX}-${issueNumber}-${timestamp}`;
+  const generatedHead = `${BRANCH_PREFIX}-${issueNumber}-${timestamp}`;
   const baseBranch = await determineBaseBranch(params.base);
   const bodyText = generatePullRequestBody(params.body);
 
@@ -141,28 +173,46 @@ export async function createPullRequest(
       `- Title: ${params.title}`,
       `- Body: ${bodyText || '(empty)'}`,
       `- Base: ${baseBranch}`,
-      `- Head: ${head}`,
+      `- Head: ${generatedHead}`,
     ].join('\n');
     return {
       content: [{ type: 'text', text: message }],
-      details: { pullRequestNumber: 0, pullRequestUrl: '', headBranch: head, baseBranch, dryRun: true },
+      details: { pullRequestNumber: 0, pullRequestUrl: '', headBranch: generatedHead, baseBranch, dryRun: true },
     };
   }
 
   try {
-    // Checkout base, create feature branch
-    git(`checkout ${baseBranch}`);
-    git(`checkout -b ${head}`);
+    // Detect if the current branch already has committed changes ahead of base
+    const existingBranch = detectExistingBranchWithCommits(baseBranch);
+    let head: string;
 
-    // Stage and verify there's something to commit
-    git(`add -A`);
-    if (!git(`status --porcelain`)) {
-      throw new Error(
-        'No changes detected. Please add new files and/or make your changes before creating a pull request.'
-      );
+    if (existingBranch) {
+      // ── Scenario A: use the existing branch ──────────────────────────
+      head = existingBranch;
+      core.info(`Using existing branch '${head}' that is ahead of '${baseBranch}'`);
+
+      // Stage any additional uncommitted changes on top of the existing commits
+      git(`add -A`);
+      if (git(`status --porcelain`)) {
+        git(`commit -m "${params.title.replace(/"/g, '\\"')}"`);
+      }
+    } else {
+      // ── Scenario B: create a new branch from base ────────────────────
+      head = generatedHead;
+      git(`checkout ${baseBranch}`);
+      git(`checkout -b ${head}`);
+
+      // Stage and verify there's something to commit
+      git(`add -A`);
+      if (!git(`status --porcelain`)) {
+        throw new Error(
+          'No changes detected. Please add new files and/or make your changes before creating a pull request.'
+        );
+      }
+
+      git(`commit -m "${params.title.replace(/"/g, '\\"')}"`);
     }
 
-    git(`commit -m "${params.title.replace(/"/g, '\\"')}"`);
     git(`push origin ${head}`);
 
     // Create PR via API
