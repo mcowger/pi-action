@@ -1,25 +1,22 @@
 /**
  * @file Parse inline directives from user comments.
  *
- * Users can include directives like `model: anthropic/claude-sonnet-4-6` in their
+ * Users can include directives like `model: claude-sonnet-4-6` in their
  * triggering comment to override action defaults. These directives are stripped
  * from the prompt text so the LLM never sees them.
  *
  * Supported directives:
- * - `model: <model-name>`         — Override model only (keep configured provider)
- * - `model: <provider>/<model>`   — Override both provider and model
+ * - `model: <model-name>` — Override the model (keep configured provider)
  *
  * Directives are case-insensitive and can appear on any line in the comment.
  * They must be at the start of a line (after optional whitespace) to be recognized.
  */
 
 /**
- * Parsed model directive containing provider and/or model overrides.
+ * Parsed model directive.
  */
 export interface ModelDirective {
-  /** Override the provider (e.g. "anthropic", "openai"). Only set when `provider/model` format is used. */
-  provider?: string;
-  /** Override the model (e.g. "claude-sonnet-4-6"). Always set when model directive is present. */
+  /** Override the model (e.g. "claude-sonnet-4-6"). */
   model: string;
 }
 
@@ -68,18 +65,8 @@ export function parsePromptDirectives(prompt: string): ParsedDirectives {
       continue;
     }
 
-    if (value.includes('/')) {
-      // provider/model format
-      const slashIndex = value.indexOf('/');
-      const provider = value.slice(0, slashIndex);
-      const model = value.slice(slashIndex + 1);
-      if (provider && model) {
-        directives.model = { provider, model };
-      }
-    } else {
-      // bare model name — override model only
-      directives.model = { model: value };
-    }
+    // Always override model only — provider stays from action config
+    directives.model = { model: value };
   }
 
   // Strip all matched directive lines from the prompt

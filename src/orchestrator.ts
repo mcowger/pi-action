@@ -71,9 +71,9 @@ export class ActionOrchestrator {
 
       if (directives.model) {
         this.core.info(
-          `[directive] Model override from comment: ${config.provider}/${config.model} → ${directives.model.provider}/${directives.model.model}`
+          `[directive] Model override from comment: ${config.model} → ${directives.model.model}`
         );
-        config = { ...config, ...directives.model };
+        config = { ...config, model: directives.model.model };
       }
 
       try {

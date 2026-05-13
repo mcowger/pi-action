@@ -493,30 +493,30 @@ describe('ActionOrchestrator', () => {
 
   // ── Model directive from comment ─────────────────────────────────
 
-  test('model directive in prompt overrides config model and provider', async () => {
+  test('model directive in prompt overrides config model', async () => {
     const m = setupMocks();
-    // Simulate a prompt with a model directive
     m.mockGit.getPrompt = mock(async () =>
-      'model: openai/gpt-4o\nPlease review this code'
+      'model: claude-sonnet-4-6\nPlease review this code'
     ) as any;
 
     await createOrchestrator(m).execute();
     expect(m.mockPiFactory).toHaveBeenCalledWith(
-      expect.objectContaining({ provider: 'openai', model: 'gpt-4o' }),
+      expect.objectContaining({ provider: 'anthropic', model: 'claude-sonnet-4-6' }),
       m.mockCore,
       m.mockProvider
     );
   });
 
-  test('model directive with bare model name overrides config model only', async () => {
+  test('model directive does not override provider', async () => {
     const m = setupMocks();
     m.mockGit.getPrompt = mock(async () =>
-      'model: claude-opus-4\nFix the bug'
+      'model: gpt-4o\nPlease review this code'
     ) as any;
 
     await createOrchestrator(m).execute();
+    // Provider stays as configured (anthropic), only model changes
     expect(m.mockPiFactory).toHaveBeenCalledWith(
-      expect.objectContaining({ provider: 'anthropic', model: 'claude-opus-4' }),
+      expect.objectContaining({ provider: 'anthropic', model: 'gpt-4o' }),
       m.mockCore,
       m.mockProvider
     );
@@ -548,7 +548,7 @@ describe('ActionOrchestrator', () => {
   test('model override is logged', async () => {
     const m = setupMocks();
     m.mockGit.getPrompt = mock(async () =>
-      'model: google/gemini-2.5-pro\nReview please'
+      'model: claude-sonnet-4-6\nReview please'
     ) as any;
 
     await createOrchestrator(m).execute();
