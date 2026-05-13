@@ -129,4 +129,6 @@ export interface CommentMetadata {
   executionDuration?: Temporal.Duration;
   /** Session statistics including token usage */
   sessionStats?: SessionStats;
+  /** The model requested via directive that could not be found; the default was used instead */
+  modelDirectiveFallback?: string;
 }

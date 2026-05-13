@@ -556,4 +556,61 @@ describe('ActionOrchestrator', () => {
       expect.stringContaining('[directive] Model override')
     );
   });
+
+  test('model directive falls back to default when requested model not found', async () => {
+    const m = setupMocks();
+    m.mockGit.getPrompt = mock(async () =>
+      'model: nonexistent-model\nReview please'
+    ) as any;
+
+    // First call with directive model throws, second call with default succeeds
+    let factoryCallCount = 0;
+    const originalFactory = m.mockPiFactory;
+    m.mockPiFactory = mock((config: any) => {
+      factoryCallCount++;
+      if (factoryCallCount === 1 && config.model === 'nonexistent-model') {
+        throw new Error('Model not found: anthropic/nonexistent-model');
+      }
+      return (originalFactory as any)(config, m.mockCore, m.mockProvider);
+    }) as any;
+
+    await createOrchestrator(m).execute();
+
+    // Should have been called twice: once with directive model, once with default
+    expect(m.mockPiFactory).toHaveBeenCalledTimes(2);
+    expect(m.mockPiFactory).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ model: 'claude-sonnet-4-5' }),
+      m.mockCore,
+      m.mockProvider
+    );
+    // Should log warning about fallback
+    expect(m.mockCore.warning).toHaveBeenCalledWith(
+      expect.stringContaining('nonexistent-model')
+    );
+  });
+
+  test('model directive fallback includes note in final comment', async () => {
+    const m = setupMocks();
+    m.mockGit.getPrompt = mock(async () =>
+      'model: nonexistent-model\nReview please'
+    ) as any;
+
+    let factoryCallCount = 0;
+    const originalFactory = m.mockPiFactory;
+    m.mockPiFactory = mock((config: any) => {
+      factoryCallCount++;
+      if (factoryCallCount === 1 && config.model === 'nonexistent-model') {
+        throw new Error('Model not found: anthropic/nonexistent-model');
+      }
+      return (originalFactory as any)(config, m.mockCore, m.mockProvider);
+    }) as any;
+
+    await createOrchestrator(m).execute();
+
+    expect(m.mockGit.createFinalComment).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ modelDirectiveFallback: 'nonexistent-model' })
+    );
+  });
 });

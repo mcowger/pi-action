@@ -29,6 +29,8 @@ export interface CommentMetadata {
   sessionStats?: SessionStats;
   /** Pi SDK version */
   piSdkVersion?: string;
+  /** The model requested via directive that could not be found; the default was used instead */
+  modelDirectiveFallback?: string;
 }
 
 export type CreateCommentType =
@@ -188,6 +190,12 @@ export async function createFinalComment(
         modStr = `${modStr} (thinking: ${metadata.thinkingLevel})`;
       }
       metadataParts.push(modStr);
+    }
+
+    if (metadata?.modelDirectiveFallback) {
+      metadataParts.push(
+        `⚠️ Requested model \"${metadata.modelDirectiveFallback}\" not found, used default`
+      );
     }
 
     if (metadata?.executionDuration !== undefined) {

@@ -69,6 +69,9 @@ export class ActionOrchestrator {
       const { prompt: cleanedPrompt, directives } = parsePromptDirectives(prompt);
       prompt = cleanedPrompt;
 
+      let modelDirectiveFallback = false;
+      const originalModel = config.model;
+
       if (directives.model) {
         this.core.info(
           `[directive] Model override from comment: ${config.model} → ${directives.model.model}`
@@ -83,7 +86,24 @@ export class ActionOrchestrator {
         this.core.notice(`failed to add reaction: ${errorMessage}`);
       }
 
-      const pi = this.piAgentFactory(config, this.core, this.platformProvider);
+      let pi: PiAgent;
+      try {
+        pi = this.piAgentFactory(config, this.core, this.platformProvider);
+      } catch (e) {
+        // If a model directive was used and the requested model wasn't found,
+        // fall back to the default model from the action config and note the issue.
+        if (directives.model && e instanceof Error && e.message.startsWith('Model not found')) {
+          this.core.warning(
+            `[directive] Requested model "${directives.model.model}" not found. ` +
+              `Falling back to default: ${originalModel}`
+          );
+          config = { ...config, model: originalModel };
+          modelDirectiveFallback = true;
+          pi = this.piAgentFactory(config, this.core, this.platformProvider);
+        } else {
+          throw e;
+        }
+      }
       const { result, sessionStats } = await pi.run(prompt);
 
       this.core.info('\n');
@@ -97,7 +117,7 @@ export class ActionOrchestrator {
         this.core.debug('[session-html] export disabled by configuration');
       }
 
-      await this.finalize(result, config, startTime, reaction, sessionStats, true);
+      await this.finalize(result, config, startTime, reaction, sessionStats, true, modelDirectiveFallback, directives.model?.model);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
 
@@ -329,7 +349,9 @@ export class ActionOrchestrator {
     startTime: Temporal.Instant,
     reaction: CreateReactionType | undefined,
     sessionStats: SessionStats | undefined,
-    success: boolean
+    success: boolean,
+    modelDirectiveFallback = false,
+    requestedModel?: string
   ): Promise<void> {
     try {
       if (reaction) {
@@ -363,6 +385,10 @@ export class ActionOrchestrator {
       thinkingLevel: config.thinkingLevel,
       executionDuration,
     };
+
+    if (modelDirectiveFallback && requestedModel) {
+      metadata.modelDirectiveFallback = requestedModel;
+    }
 
     if (sessionStats !== undefined) {
       metadata.sessionStats = sessionStats;
