@@ -3,8 +3,8 @@
  */
 
 import { Type, Static } from 'typebox';
-import { defineTool } from '@mariozechner/pi-coding-agent';
-import type { AgentToolResult } from '@mariozechner/pi-coding-agent';
+import { defineTool } from '@earendil-works/pi-coding-agent';
+import type { AgentToolResult } from '@earendil-works/pi-coding-agent';
 import {
   CREATE_INLINE_COMMENT_PROMPT_SNIPPET,
   CREATE_INLINE_COMMENT_PROMPT_GUIDELINES,

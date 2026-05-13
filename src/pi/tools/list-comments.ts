@@ -3,7 +3,7 @@
  */
 
 import { Type, Static } from 'typebox';
-import { defineTool } from '@mariozechner/pi-coding-agent';
+import { defineTool } from '@earendil-works/pi-coding-agent';
 import {
   LIST_COMMENTS_PROMPT_SNIPPET,
   LIST_COMMENTS_PROMPT_GUIDELINES,

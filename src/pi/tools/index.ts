@@ -22,7 +22,7 @@ import { addIssueCommentToolFactory } from './add-issue-comment';
 import { updateCommentToolFactory } from './update-comment';
 import { createInlineCommentToolFactory } from './create-inline-comment';
 import { listCommentsToolFactory } from './list-comments';
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { PlatformProvider } from '../../platform';
 
 // Re-export tool execution utilities for use in custom tools
