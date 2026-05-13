@@ -12,6 +12,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as github from '@actions/github';
+import { parsePromptDirectives } from './prompt-directives';
 import {
   type CommentMetadata,
   type CoreAdapter,
@@ -60,6 +61,19 @@ export class ActionOrchestrator {
 
       if (!prompt) {
         throw new Error('No prompt found - cannot proceed');
+      }
+
+      // Parse inline directives from the prompt (e.g. "model: anthropic/claude-sonnet-4-6")
+      // and apply overrides to the config. Directives are stripped from the prompt
+      // so the LLM never sees them.
+      const { prompt: cleanedPrompt, directives } = parsePromptDirectives(prompt);
+      prompt = cleanedPrompt;
+
+      if (directives.model) {
+        this.core.info(
+          `[directive] Model override from comment: ${config.provider}/${config.model} → ${directives.model.provider}/${directives.model.model}`
+        );
+        config = { ...config, ...directives.model };
       }
 
       try {

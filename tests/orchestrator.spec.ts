@@ -490,4 +490,70 @@ describe('ActionOrchestrator', () => {
     await expect(createOrchestrator(m).execute()).rejects.toThrow('Invalid `retries` input');
     expect(m.mockCore.setFailed).toHaveBeenCalled();
   });
+
+  // ── Model directive from comment ─────────────────────────────────
+
+  test('model directive in prompt overrides config model and provider', async () => {
+    const m = setupMocks();
+    // Simulate a prompt with a model directive
+    m.mockGit.getPrompt = mock(async () =>
+      'model: openai/gpt-4o\nPlease review this code'
+    ) as any;
+
+    await createOrchestrator(m).execute();
+    expect(m.mockPiFactory).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'openai', model: 'gpt-4o' }),
+      m.mockCore,
+      m.mockProvider
+    );
+  });
+
+  test('model directive with bare model name overrides config model only', async () => {
+    const m = setupMocks();
+    m.mockGit.getPrompt = mock(async () =>
+      'model: claude-opus-4\nFix the bug'
+    ) as any;
+
+    await createOrchestrator(m).execute();
+    expect(m.mockPiFactory).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'anthropic', model: 'claude-opus-4' }),
+      m.mockCore,
+      m.mockProvider
+    );
+  });
+
+  test('model directive is stripped from prompt before sending to agent', async () => {
+    const m = setupMocks();
+    m.mockGit.getPrompt = mock(async () =>
+      'model: anthropic/claude-sonnet-4-6\nPlease review this code'
+    ) as any;
+
+    await createOrchestrator(m).execute();
+    // The agent's run() should receive the cleaned prompt without the directive
+    expect(m.mockPiAgent.run).toHaveBeenCalledWith('Please review this code');
+  });
+
+  test('no model directive preserves default config', async () => {
+    const m = setupMocks();
+    m.mockGit.getPrompt = mock(async () => 'Fix the bug') as any;
+
+    await createOrchestrator(m).execute();
+    expect(m.mockPiFactory).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'anthropic', model: 'claude-sonnet-4-5' }),
+      m.mockCore,
+      m.mockProvider
+    );
+  });
+
+  test('model override is logged', async () => {
+    const m = setupMocks();
+    m.mockGit.getPrompt = mock(async () =>
+      'model: google/gemini-2.5-pro\nReview please'
+    ) as any;
+
+    await createOrchestrator(m).execute();
+    expect(m.mockCore.info).toHaveBeenCalledWith(
+      expect.stringContaining('[directive] Model override')
+    );
+  });
 });
