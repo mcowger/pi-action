@@ -6,7 +6,7 @@ Do these steps, in order.
 
 ## 1. Create `.github/prompts/pi-assistant.md`
 
-Copy the prompt file below. Change the first line to reference your repo name instead of "Plexus".
+Copy the prompt file below. Change the first line to reference your repo name.
 
 ```
 You are a coding assistant for the **YOUR-REPO-NAME** repository.
@@ -68,9 +68,11 @@ Your VERY FIRST action — before writing your TODO list, before reading any fil
 - You are already checked out on a working branch (`{{env.WORKING_BRANCH}}`). Do NOT run `git checkout` or create a new branch manually. When you are ready to open a PR, use the `create_pull_request` tool — it will handle branching, committing, and pushing for you.
 ```
 
-The `{{...}}` placeholders are resolved at runtime by pi-action:
+The `{{...}}` placeholders are resolved at runtime by pi-action.  Do not edit them.:
 - `{{context.*}}` → the full `@actions/github` context (event payload, actor, repo, etc.)
 - `{{env.*}}` → environment variables from the "Run Pi agent" step's `env:` block
+
+
 
 ---
 
@@ -225,42 +227,20 @@ jobs:
 
 Things you may need to change for your repo:
 - **Install step** — if you don't use Bun, replace the `setup-bun` / `bun install` steps with your package manager
-- **Build step** — the Plexus workflow runs `bun run build:frontend` before the agent; add whatever build step your repo needs (or remove it)
-- **`LLM_API_KEY` suffix** — the Plexus workflow appends `:${{ github.job }}` to the key for gateway job-tracking; if your provider doesn't expect that, change it to just `${{ secrets.LLM_API_KEY }}`
-- **`provider`** — change `openrouter` if you use a different LLM provider
+- **Build step** — the sample workflow runs `bun run build:frontend` before the agent; add whatever build step your repo needs (or remove it)
+- **`LLM_API_KEY` suffix** — the sample workflow appends `:${{ github.job }}` to the key for gateway job-tracking; if your provider doesn't expect that, change it to just `${{ secrets.LLM_API_KEY }}`
+- **`provider`** — do not change this.
 
 ---
 
 ## 3. Set GitHub secrets and variables
 
-Go to the repo on GitHub → **Settings → Secrets and variables → Actions**.
-
-Add these three:
-
-| Type | Name | Value |
-|------|------|-------|
-| **Secret** | `LLM_API_KEY` | Your LLM provider API key (e.g. OpenRouter key) |
-| **Secret** | `LLM_API_HOST` | API base URL (e.g. `https://openrouter.ai/api/v1`) |
-| **Variable** | `LLM_MODEL_ID` | Model ID (e.g. `anthropic/claude-sonnet-4`) |
-
-Or via CLI:
+Next ask the user to manaully run the following commands
 
 ```bash
-gh secret set LLM_API_KEY
-gh secret set LLM_API_HOST
-gh variable set LLM_MODEL_ID --body "anthropic/claude-sonnet-4"
+gh secret set LLM_API_KEY --repo OWNER/REPO
+gh secret set LLM_API_HOST --repo OWNER/REPO
+gh variable set LLM_MODEL_ID --body "anthropic/claude-sonnet-4.6" --repo OWNER/REPO
 ```
 
-`GITHUB_TOKEN` is provided automatically by GitHub Actions — no setup needed.
 
----
-
-## 4. (Optional) Add `AGENTS.md`
-
-If you place an `AGENTS.md` at the repo root, the agent reads it for project-specific conventions (build/test commands, coding rules, tech stack). This is where you tell the agent how your repo works.
-
----
-
-## 5. Test it
-
-Create an issue, comment `/pi` on it. You should see a "Pi is working on it..." comment appear within a few seconds. Check the Actions tab for the running workflow.
