@@ -38,6 +38,8 @@ export class Agent {
   private extensions?: string[];
   private loadBuiltinExtensions?: boolean;
   private baseUrl?: string;
+  private retries: number;
+  private maxRetries: number;
 
   /**
    * Create a new Pi agent.
@@ -54,6 +56,7 @@ export class Agent {
    * @param extensions            - Optional array of extension sources (npm, git, or local paths).
    * @param loadBuiltinExtensions - Whether to load built-in GitHub extensions (default true).
    * @param baseUrl               - Optional base URL override for the provider.
+   * @param retries                - Number of retry attempts on transient provider errors (default 3).
    * @throws {Error}   If the requested model cannot be found in the registry.
    */
   constructor(
@@ -65,7 +68,8 @@ export class Agent {
     platformProvider: PlatformProvider,
     extensions?: string[],
     loadBuiltinExtensions?: boolean,
-    baseUrl?: string
+    baseUrl?: string,
+    retries = 3
   ) {
     this.modelStr = modelStr;
     this.provider = provider;
@@ -82,6 +86,8 @@ export class Agent {
     if (baseUrl !== undefined) {
       this.baseUrl = baseUrl;
     }
+    this.retries = 0;
+    this.maxRetries = retries;
     this.modelRegistry = ModelRegistry.create(this.authStorage);
 
     if (this.token) {
@@ -184,6 +190,11 @@ export class Agent {
   /**
    * Run the agent with the given prompt and return the accumulated text response with session statistics.
    *
+   * Retries the prompt call on transient provider errors (up to `maxRetries` attempts)
+   * by re-prompting the same session. The SDK's `transformMessages` already skips
+   * errored/aborted assistant messages, so retrying effectively resends the same
+   * conversation minus the failed response.
+   *
    * @param text - The prompt text to send. Must be non-empty.
    * @returns The full assistant text response and session statistics.
    * @throws {Error} If `text` is falsy.
@@ -206,7 +217,26 @@ export class Agent {
     // exceeded) that it then auto-recovers from via compaction/retry. Our event listener
     // properly clears sessionError on successful message_end, so only terminal (unrecovered)
     // errors survive into this check.
+    //
+    // When a session error occurs and retries remain, we retry by re-prompting the same
+    // session. The SDK's auto-retry already handles known transient patterns (5xx, rate
+    // limit, timeout), but some errors (e.g. "invalid request: unsupported role ROLE_UNSPECIFIED")
+    // are transient at the provider level but not recognized by the SDK's retry regex.
+    // Our retry catches those cases too.
     if (this.sessionError) {
+      if (this.retries < this.maxRetries) {
+        this.retries++;
+        this.core.info(
+          `[retry] Session error on attempt ${this.retries}/${this.maxRetries}: ${this.sessionError}. Retrying...`
+        );
+        this.sessionError = undefined;
+        this.outputChunks = [];
+        return this.run(text);
+      }
+
+      this.core.info(
+        `[retry] Max retries (${this.maxRetries}) exceeded. Last error: ${this.sessionError}`
+      );
       throw new Error(`Pi agent session error: ${this.sessionError}`);
     }
 

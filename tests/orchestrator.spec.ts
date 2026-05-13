@@ -31,6 +31,7 @@ function setupMocks(coreOverrides?: Partial<Record<string, string>>) {
       thinking_level: '',
       prompt: '',
       prompt_file: '',
+      retries: '3',
     };
     return coreOverrides?.[name] ?? defaults[name] ?? '';
   });
@@ -444,5 +445,49 @@ describe('ActionOrchestrator', () => {
     (m.mockGit.addReaction as any) = mock(async () => undefined);
     await createOrchestrator(m).execute();
     expect(m.mockGit.deleteReaction).not.toHaveBeenCalled();
+  });
+
+  // ── Retries configuration ─────────────────────────────────────────
+
+  test('passes retries from input to PiConfig', async () => {
+    const m = setupMocks({ retries: '5' });
+    await createOrchestrator(m).execute();
+    expect(m.mockPiFactory).toHaveBeenCalledWith(
+      expect.objectContaining({ retries: 5 }),
+      m.mockCore,
+      m.mockProvider
+    );
+  });
+
+  test('defaults retries to 3 when input not set', async () => {
+    const m = setupMocks();
+    await createOrchestrator(m).execute();
+    expect(m.mockPiFactory).toHaveBeenCalledWith(
+      expect.objectContaining({ retries: 3 }),
+      m.mockCore,
+      m.mockProvider
+    );
+  });
+
+  test('allows retries=0 to disable retries', async () => {
+    const m = setupMocks({ retries: '0' });
+    await createOrchestrator(m).execute();
+    expect(m.mockPiFactory).toHaveBeenCalledWith(
+      expect.objectContaining({ retries: 0 }),
+      m.mockCore,
+      m.mockProvider
+    );
+  });
+
+  test('throws on invalid retries input', async () => {
+    const m = setupMocks({ retries: 'abc' });
+    await expect(createOrchestrator(m).execute()).rejects.toThrow('Invalid `retries` input');
+    expect(m.mockCore.setFailed).toHaveBeenCalled();
+  });
+
+  test('throws on negative retries input', async () => {
+    const m = setupMocks({ retries: '-1' });
+    await expect(createOrchestrator(m).execute()).rejects.toThrow('Invalid `retries` input');
+    expect(m.mockCore.setFailed).toHaveBeenCalled();
   });
 });

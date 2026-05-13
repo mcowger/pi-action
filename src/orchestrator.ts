@@ -98,6 +98,7 @@ export class ActionOrchestrator {
           token: '',
           thinkingLevel: '',
           promptInput: '',
+          retries: 0,
         };
         await this.finalize(errorMessage, errorConfig, startTime, reaction, undefined, false);
       } catch (finalizeError) {
@@ -178,6 +179,14 @@ export class ActionOrchestrator {
       ? suppressFinalCommentInput.toLowerCase() === 'true'
       : false; // default to false
 
+    const retriesInput = this.core.getInput('retries');
+    const retries = retriesInput ? parseInt(retriesInput, 10) : 3;
+    if (isNaN(retries) || retries < 0) {
+      throw new Error(
+        `Invalid \`retries\` input: "${retriesInput}". Must be a non-negative integer.`
+      );
+    }
+
     return {
       provider,
       model,
@@ -190,6 +199,7 @@ export class ActionOrchestrator {
       ...(baseUrl ? { baseUrl } : {}),
       exportSessionHtml,
       suppressFinalComment,
+      retries,
     };
   }
 

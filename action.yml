@@ -69,6 +69,11 @@ inputs:
     required: false
     default: 'false'
 
+  retries:
+    description: 'Number of retry attempts when the LLM provider returns a transient error (e.g. invalid request, server error). Each retry creates a fresh session. Set to 0 to disable retries.'
+    required: false
+    default: '3'
+
 runs:
   using: 'composite'
   steps:
@@ -108,6 +113,7 @@ runs:
         INPUT_BASE_URL: ${{ inputs.base_url }}
         INPUT_EXPORT_SESSION_HTML: ${{ inputs.export_session_html }}
         INPUT_SUPPRESS_FINAL_COMMENT: ${{ inputs.suppress_final_comment }}
+        INPUT_RETRIES: ${{ inputs.retries }}
 
 outputs:
   response:

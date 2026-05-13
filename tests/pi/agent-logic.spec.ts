@@ -294,6 +294,7 @@ describe('Agent', () => {
       const agent = createRealAgent();
       await agent.ready();
 
+      agent['maxRetries'] = 0; // disable retries for this test
       agent['sessionError'] = 'Provider finish_reason: model_context_window_exceeded';
       agent['session'] = {
         ...agent['session'],
@@ -332,6 +333,7 @@ describe('Agent', () => {
       const agent = createRealAgent();
       await agent.ready();
 
+      agent['maxRetries'] = 0; // disable retries for this test
       agent['sessionError'] = 'Event-tracked error';
       agent['session'] = {
         ...agent['session'],
@@ -376,6 +378,7 @@ describe('Agent', () => {
       const agent = createRealAgent();
       await agent.ready();
 
+      agent['maxRetries'] = 0; // disable retries for this test
       agent['sessionError'] =
         'Context overflow recovery failed after one compact-and-retry attempt.';
 
@@ -423,6 +426,158 @@ describe('Agent', () => {
           version: expect.any(String),
         },
       });
+    });
+  });
+
+  describe('retry on transient errors', () => {
+    test('retries on session error and succeeds on second attempt', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['maxRetries'] = 3;
+      agent['retries'] = 0;
+
+      let promptCallCount = 0;
+      const mockPrompt = async () => {
+        promptCallCount++;
+        if (promptCallCount === 1) {
+          // First attempt: simulate a transient error
+          agent['sessionError'] = 'invalid request: unsupported role ROLE_UNSPECIFIED';
+        } else {
+          // Second attempt: success
+          agent['sessionError'] = undefined;
+        }
+      };
+
+      agent['session'] = {
+        ...agent['session'],
+        prompt: mockPrompt,
+        state: { errorMessage: undefined },
+        getSessionStats: () => ({
+          tokens: { input: 100, output: 50, total: 150 },
+          cost: 0.001,
+        }),
+      } as any;
+
+      const result = await agent.run('Hello');
+      expect(promptCallCount).toBe(2);
+      expect(result.sessionStats).toBeDefined();
+    });
+
+    test('retries up to maxRetries then throws', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['maxRetries'] = 2;
+      agent['retries'] = 0;
+
+      let promptCallCount = 0;
+      const mockPrompt = async () => {
+        promptCallCount++;
+        // Always fail
+        agent['sessionError'] = 'server error: 503 service unavailable';
+      };
+
+      agent['session'] = {
+        ...agent['session'],
+        prompt: mockPrompt,
+        state: { errorMessage: undefined },
+      } as any;
+
+      await expect(agent.run('Hello')).rejects.toThrow(
+        'Pi agent session error: server error: 503 service unavailable'
+      );
+      // 1 initial + 2 retries = 3 total attempts
+      expect(promptCallCount).toBe(3);
+    });
+
+    test('does not retry when maxRetries is 0', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['maxRetries'] = 0;
+      agent['retries'] = 0;
+
+      let promptCallCount = 0;
+      const mockPrompt = async () => {
+        promptCallCount++;
+        agent['sessionError'] = 'transient error';
+      };
+
+      agent['session'] = {
+        ...agent['session'],
+        prompt: mockPrompt,
+        state: { errorMessage: undefined },
+      } as any;
+
+      await expect(agent.run('Hello')).rejects.toThrow('Pi agent session error: transient error');
+      expect(promptCallCount).toBe(1);
+    });
+
+    test('clears outputChunks on retry so previous partial output is not accumulated', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['maxRetries'] = 3;
+      agent['retries'] = 0;
+
+      let promptCallCount = 0;
+      const mockPrompt = async () => {
+        promptCallCount++;
+        if (promptCallCount === 1) {
+          agent['outputChunks'] = ['partial garbage'];
+          agent['sessionError'] = 'transient error';
+        } else {
+          agent['outputChunks'] = ['real response'];
+          agent['sessionError'] = undefined;
+        }
+      };
+
+      agent['session'] = {
+        ...agent['session'],
+        prompt: mockPrompt,
+        state: { errorMessage: undefined },
+        getSessionStats: () => ({
+          tokens: { input: 100, output: 50, total: 150 },
+          cost: 0.001,
+        }),
+      } as any;
+
+      const result = await agent.run('Hello');
+      expect(result.result).toBe('real response');
+    });
+
+    test('retries multiple times then succeeds', async () => {
+      const agent = createRealAgent();
+      await agent.ready();
+
+      agent['maxRetries'] = 5;
+      agent['retries'] = 0;
+
+      let promptCallCount = 0;
+      const mockPrompt = async () => {
+        promptCallCount++;
+        if (promptCallCount <= 3) {
+          agent['sessionError'] = 'transient error';
+        } else {
+          agent['sessionError'] = undefined;
+          agent['outputChunks'] = ['success after retries'];
+        }
+      };
+
+      agent['session'] = {
+        ...agent['session'],
+        prompt: mockPrompt,
+        state: { errorMessage: undefined },
+        getSessionStats: () => ({
+          tokens: { input: 100, output: 50, total: 150 },
+          cost: 0.001,
+        }),
+      } as any;
+
+      const result = await agent.run('Hello');
+      expect(promptCallCount).toBe(4); // 1 initial + 3 retries
+      expect(result.result).toBe('success after retries');
     });
   });
 

@@ -112,6 +112,7 @@ export interface PiConfig {
   baseUrl?: string;
   exportSessionHtml?: boolean;
   suppressFinalComment?: boolean;
+  retries: number;
 }
 
 /**
