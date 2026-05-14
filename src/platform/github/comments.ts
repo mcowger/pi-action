@@ -156,7 +156,7 @@ export function formatNumber(value: number): string {
 }
 
 /** Sentinel string used to detect an existing header for deduplication. */
-const HEADER_SENTINEL = '---\n**Pi Action**';
+const HEADER_SENTINEL = '> 🤖 **Pi Action**';
 
 /**
  * Build the action run URL from the current GitHub context.
@@ -186,7 +186,7 @@ export function buildHeader(): string {
   const startTime = getStartTimeFromContext() ?? Temporal.Now.instant();
   const startTimeStr = new Date(startTime.epochMilliseconds).toUTCString();
 
-  const parts: string[] = ['**Pi Action**'];
+  const parts: string[] = [HEADER_SENTINEL];
   if (actionRunUrl) {
     parts.push(`[GitHub Actions Run](${actionRunUrl})`);
   }
@@ -195,7 +195,7 @@ export function buildHeader(): string {
   }
   parts.push(`Started: ${startTimeStr}`);
 
-  return `${HEADER_SENTINEL} | ${parts.slice(1).join(' | ')}\n---`;
+  return parts.join(' | ');
 }
 
 /**
@@ -204,12 +204,9 @@ export function buildHeader(): string {
 export function prependHeader(body: string): string {
   let stripped = body;
   if (stripped.startsWith(HEADER_SENTINEL)) {
-    // Remove the header block (up to and including the closing ---) and any leading whitespace
-    const closingMarker = '\n---';
-    const closingIdx = stripped.indexOf(closingMarker, HEADER_SENTINEL.length);
-    if (closingIdx !== -1) {
-      stripped = stripped.slice(closingIdx + closingMarker.length).replace(/^\n+/, '');
-    }
+    // Header is a single line — strip it and any trailing newlines
+    const newlineIdx = stripped.indexOf('\n');
+    stripped = (newlineIdx !== -1 ? stripped.slice(newlineIdx + 1) : '').replace(/^\n+/, '');
   }
   const header = buildHeader();
   return stripped ? `${header}\n\n${stripped}` : header;
@@ -221,6 +218,33 @@ export function prependHeader(body: string): string {
  * @returns The Octokit response, or `undefined` if posting is not possible.
  */
 export async function postInitialComment(): Promise<CreateCommentType | undefined> {
+  const initialCommentId = process.env.INITIAL_COMMENT_ID
+    ? parseInt(process.env.INITIAL_COMMENT_ID, 10)
+    : undefined;
+
+  if (initialCommentId) {
+    // Workflow already posted a placeholder comment — update it with the header prepended
+    const octokit = getOctokit();
+    const issueNumber = github.context.issue.number;
+    const { owner, repo } = github.context.repo;
+
+    let existingBody = '';
+    try {
+      const { data } = await octokit.rest.issues.getComment({ owner, repo, comment_id: initialCommentId });
+      existingBody = data.body ?? '';
+    } catch {
+      // If we can't fetch the existing body, just use the header alone
+    }
+
+    await octokit.rest.issues.updateComment({
+      owner,
+      repo,
+      comment_id: initialCommentId,
+      body: prependHeader(existingBody),
+    });
+    return undefined;
+  }
+
   return createComment(buildHeader());
 }
 
