@@ -41,6 +41,8 @@ process.env.INPUT_MAX_COMMENTS = '100';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
 const { Agent } = await import('../../src/pi/agent.js');
+// @ts-ignore TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
+const { AuthStorage } = await import('@earendil-works/pi-coding-agent');
 
 // Create a mock CoreAdapter for tests
 const mockCoreAdapter = {
@@ -84,7 +86,12 @@ function createRealAgent(): InstanceType<typeof Agent> {
     'test-token',
     'off',
     mockCoreAdapter as any,
-    mockPlatformProvider
+    mockPlatformProvider,
+    undefined,
+    undefined,
+    undefined,
+    3,
+    AuthStorage.inMemory()
   );
 }
 
@@ -99,7 +106,12 @@ describe('Agent', () => {
           'test-token',
           'off',
           mockCoreAdapter as any,
-          mockPlatformProvider
+          mockPlatformProvider,
+          undefined,
+          undefined,
+          undefined,
+          3,
+          AuthStorage.inMemory()
         );
       }).toThrow('Model not found');
     });
@@ -111,7 +123,12 @@ describe('Agent', () => {
         'sk-12345',
         'off',
         mockCoreAdapter as any,
-        mockPlatformProvider
+        mockPlatformProvider,
+        undefined,
+        undefined,
+        undefined,
+        3,
+        AuthStorage.inMemory()
       );
       // Agent is created without error
       expect(agent).toBeDefined();
@@ -124,7 +141,7 @@ describe('Agent', () => {
       };
       const adapter = { ...mockCoreAdapter, debug: mock(debugLogger) };
 
-      new Agent('claude-sonnet-4-5', 'anthropic', '', 'off', adapter as any, mockPlatformProvider);
+      new Agent('claude-sonnet-4-5', 'anthropic', '', 'off', adapter as any, mockPlatformProvider, undefined, undefined, undefined, 3, AuthStorage.inMemory());
 
       // Should not log auth debug message
       expect(mockDebug).not.toContain('[auth] Setting api_key token');
@@ -137,7 +154,12 @@ describe('Agent', () => {
         'test-token',
         'medium',
         mockCoreAdapter as any,
-        mockPlatformProvider
+        mockPlatformProvider,
+        undefined,
+        undefined,
+        undefined,
+        3,
+        AuthStorage.inMemory()
       );
       // Agent is created without error
       expect(agent).toBeDefined();

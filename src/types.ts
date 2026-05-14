@@ -41,6 +41,8 @@ export interface GitAdapter {
   addReaction(): Promise<CreateReactionType | undefined>;
   /** Remove a previously added reaction. */
   deleteReaction(reaction: CreateReactionType | undefined): Promise<void>;
+  /** Post the initial header comment before the agent runs. */
+  postInitialComment(): Promise<void>;
   /** Create the final comment with optional metadata. */
   createFinalComment(body: string, metadata: CommentMetadata): Promise<void>;
   /** Get the prompt from input or comment context. */

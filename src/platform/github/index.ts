@@ -167,7 +167,7 @@ export {
 export { addReaction, deleteReaction, type CreateReactionType } from './reactions';
 
 // Comment creation functions (used by run.ts)
-export { createFinalComment } from './comments';
+export { createFinalComment, postInitialComment } from './comments';
 
 // Tool implementations (used by git-adapter and provider)
 export {

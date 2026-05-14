@@ -7,6 +7,7 @@ import {
   addReaction,
   deleteReaction,
   createFinalComment,
+  postInitialComment,
   getPrompt,
   setCoreAdapter,
   getStartTimeFromContext,
@@ -32,6 +33,10 @@ export class RealGitAdapter implements GitAdapter {
 
   async deleteReaction(reaction: CreateReactionType | undefined) {
     await deleteReaction(reaction);
+  }
+
+  async postInitialComment(): Promise<void> {
+    await postInitialComment();
   }
 
   async createFinalComment(body: string, metadata: CommentMetadata): Promise<void> {

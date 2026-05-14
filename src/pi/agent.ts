@@ -24,7 +24,7 @@ import type { PlatformProvider } from '../platform';
  */
 export class Agent {
   private model: Model<Api>;
-  private authStorage: AuthStorage = AuthStorage.create();
+  private authStorage: AuthStorage;
   private modelRegistry: ModelRegistry;
   private session!: AgentSession;
   private modelStr: string;
@@ -69,8 +69,10 @@ export class Agent {
     extensions?: string[],
     loadBuiltinExtensions?: boolean,
     baseUrl?: string,
-    retries = 3
+    retries = 3,
+    authStorage?: AuthStorage
   ) {
+    this.authStorage = authStorage ?? AuthStorage.create();
     this.modelStr = modelStr;
     this.provider = provider;
     this.token = token;

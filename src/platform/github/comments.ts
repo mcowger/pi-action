@@ -11,6 +11,7 @@ import RestEndpointMethodTypes from '@octokit/plugin-rest-endpoint-methods';
 import { Temporal } from '@js-temporal/polyfill';
 import { getOctokit } from './octokit';
 import { getCoreAdapter } from './index';
+import { getStartTimeFromContext } from './context';
 import type { SessionStats } from '../../types';
 
 /**
@@ -154,6 +155,75 @@ export function formatNumber(value: number): string {
   return String(value);
 }
 
+/** Sentinel string used to detect an existing header for deduplication. */
+const HEADER_SENTINEL = '---\n**Pi Action**';
+
+/**
+ * Build the action run URL from the current GitHub context.
+ */
+function buildActionRunUrl(): string | undefined {
+  const serverUrl = github.context.serverUrl || 'https://github.com';
+  const { owner, repo } = github.context.repo;
+  const runId = github.context.runId;
+  if (!owner || !repo || !runId) return undefined;
+  return `${serverUrl}/${owner}/${repo}/actions/runs/${runId}`;
+}
+
+/**
+ * Build the header string statelessly from GitHub Actions context and environment.
+ *
+ * Reads the model from INPUT_PROVIDER / INPUT_MODEL env vars and the start time
+ * from the GitHub event context, falling back to the current instant.
+ *
+ * @internal Exported for testing purposes only.
+ */
+export function buildHeader(): string {
+  const actionRunUrl = buildActionRunUrl();
+  const provider = process.env.INPUT_PROVIDER ?? '';
+  const model = process.env.INPUT_MODEL ?? '';
+  const modelStr = provider && model ? `${provider}/${model}` : (model || provider);
+
+  const startTime = getStartTimeFromContext() ?? Temporal.Now.instant();
+  const startTimeStr = new Date(startTime.epochMilliseconds).toUTCString();
+
+  const parts: string[] = ['**Pi Action**'];
+  if (actionRunUrl) {
+    parts.push(`[GitHub Actions Run](${actionRunUrl})`);
+  }
+  if (modelStr) {
+    parts.push(`Model: \`${modelStr}\``);
+  }
+  parts.push(`Started: ${startTimeStr}`);
+
+  return `${HEADER_SENTINEL} | ${parts.slice(1).join(' | ')}\n---`;
+}
+
+/**
+ * Prepend the header to a comment body, stripping any existing header first.
+ */
+export function prependHeader(body: string): string {
+  let stripped = body;
+  if (stripped.startsWith(HEADER_SENTINEL)) {
+    // Remove the header block (up to and including the closing ---) and any leading whitespace
+    const closingMarker = '\n---';
+    const closingIdx = stripped.indexOf(closingMarker, HEADER_SENTINEL.length);
+    if (closingIdx !== -1) {
+      stripped = stripped.slice(closingIdx + closingMarker.length).replace(/^\n+/, '');
+    }
+  }
+  const header = buildHeader();
+  return stripped ? `${header}\n\n${stripped}` : header;
+}
+
+/**
+ * Post an initial header comment on the current issue or PR before the agent runs.
+ *
+ * @returns The Octokit response, or `undefined` if posting is not possible.
+ */
+export async function postInitialComment(): Promise<CreateCommentType | undefined> {
+  return createComment(buildHeader());
+}
+
 /**
  * Post the final result (or error) comment on the current issue or pull request.
  *
@@ -172,15 +242,10 @@ export async function createFinalComment(
     return;
   }
 
-  // Build the action run URL
-  const serverUrl = github.context.serverUrl || 'https://github.com';
-  const { owner, repo } = github.context.repo;
-  const runId = github.context.runId;
-
-  let finalBody = body;
-  if (owner && repo && runId) {
-    const actionRunUrl = `${serverUrl}/${owner}/${repo}/actions/runs/${runId}`;
-
+  const bodyWithHeader = prependHeader(body);
+  let finalBody = bodyWithHeader;
+  const actionRunUrl = buildActionRunUrl();
+  if (actionRunUrl) {
     // Build metadata parts
     const metadataParts: string[] = [`[View action run](${actionRunUrl})`];
 
@@ -216,7 +281,7 @@ export async function createFinalComment(
       metadataParts.push(`Pi SDK v${metadata.sessionStats.version}`);
     }
 
-    finalBody = `${body}\n\n---\n\n${metadataParts.join(' | ')}`;
+    finalBody = `${bodyWithHeader}\n\n---\n\n${metadataParts.join(' | ')}`;
   }
 
   return createComment(finalBody);

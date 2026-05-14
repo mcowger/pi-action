@@ -54,6 +54,7 @@ function setupMocks(coreOverrides?: Partial<Record<string, string>>) {
 
   const addReactionMock = mock(async () => ({ data: { id: 123 } }) as CreateReactionType);
   const deleteReactionMock = mock(async () => {});
+  const postInitialCommentMock = mock(async () => {});  // no args — stateless
   const createFinalCommentMock = mock(async () => {});
   const getPromptMock = mock(async () => 'Help me write tests');
   const getStartTimeMock = mock(() => Temporal.Now.instant());
@@ -61,6 +62,7 @@ function setupMocks(coreOverrides?: Partial<Record<string, string>>) {
   const mockGit: GitAdapter = {
     addReaction: addReactionMock as any,
     deleteReaction: deleteReactionMock as any,
+    postInitialComment: postInitialCommentMock as any,
     createFinalComment: createFinalCommentMock as any,
     getPrompt: getPromptMock as any,
     getStartTime: getStartTimeMock as any,

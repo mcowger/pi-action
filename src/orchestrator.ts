@@ -54,6 +54,13 @@ export class ActionOrchestrator {
 
     try {
       config = this.gatherConfig();
+      try {
+        await this.git.postInitialComment();
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        this.core.notice(`failed to post initial comment: ${errorMessage}`);
+      }
+
       const resolvedPromptInput = config.promptFile
         ? this.readAndRenderPromptFile(config.promptFile)
         : config.promptInput;

@@ -11,6 +11,7 @@
 import * as github from '@actions/github';
 import { getOctokit } from '../octokit';
 import { getCoreAdapter } from '../index';
+import { prependHeader } from '../comments';
 import type {
   AddIssueCommentParams,
   AddIssueCommentDetails,
@@ -101,7 +102,8 @@ export async function addIssueComment(
  * @throws {Error} If the API call fails.
  */
 export async function updateComment(params: UpdateCommentParams): Promise<UpdateCommentDetails> {
-  const { comment_id, body, is_review_comment = false } = params;
+  const { comment_id, is_review_comment = false } = params;
+  const body = prependHeader(params.body);
   const { owner, repo } = resolveOwnerRepo(params.owner, params.repo);
 
   if (!comment_id) {
