@@ -38,10 +38,9 @@ process.env.INPUT_GITHUB_TOKEN = 'fake-token';
 process.env.INPUT_MAX_COMMENTS = '100';
 
 // Dynamic import to ensure mocks are set up before module loads
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
+// @ts-expect-error TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
 const { Agent } = await import('../../src/pi/agent.js');
-// @ts-ignore TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
+// @ts-expect-error TS1309 -- Top-level await not supported in CommonJS, but Bun test runner handles it
 const { AuthStorage } = await import('@earendil-works/pi-coding-agent');
 
 // Create a mock CoreAdapter for tests
@@ -141,7 +140,19 @@ describe('Agent', () => {
       };
       const adapter = { ...mockCoreAdapter, debug: mock(debugLogger) };
 
-      new Agent('claude-sonnet-4-5', 'anthropic', '', 'off', adapter as any, mockPlatformProvider, undefined, undefined, undefined, 3, AuthStorage.inMemory());
+      new Agent(
+        'claude-sonnet-4-5',
+        'anthropic',
+        '',
+        'off',
+        adapter as any,
+        mockPlatformProvider,
+        undefined,
+        undefined,
+        undefined,
+        3,
+        AuthStorage.inMemory()
+      );
 
       // Should not log auth debug message
       expect(mockDebug).not.toContain('[auth] Setting api_key token');

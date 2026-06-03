@@ -165,7 +165,9 @@ function buildActionRunUrl(): string | undefined {
   const serverUrl = github.context.serverUrl || 'https://github.com';
   const { owner, repo } = github.context.repo;
   const runId = github.context.runId;
-  if (!owner || !repo || !runId) return undefined;
+  if (!owner || !repo || !runId) {
+    return undefined;
+  }
   return `${serverUrl}/${owner}/${repo}/actions/runs/${runId}`;
 }
 
@@ -225,7 +227,6 @@ export async function postInitialComment(): Promise<CreateCommentType | undefine
   if (initialCommentId) {
     // Workflow already posted a placeholder comment — update it with the header prepended
     const octokit = getOctokit();
-    const issueNumber = github.context.issue.number;
     const { owner, repo } = github.context.repo;
 
     let existingBody = '';
