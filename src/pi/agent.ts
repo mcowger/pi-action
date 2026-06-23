@@ -23,7 +23,7 @@ import type { PlatformProvider } from '../platform';
  * execution into a simple interface: construct → {@link ready} → {@link run}.
  */
 export class Agent {
-  private model: Model<Api>;
+  private model!: Model<Api>;
   private authStorage: AuthStorage;
   private modelRegistry: ModelRegistry;
   private session!: AgentSession;
@@ -104,18 +104,6 @@ export class Agent {
       this.core.debug(`[provider] Overriding base URL for ${this.provider}: ${this.baseUrl}`);
       this.modelRegistry.registerProvider(this.provider, { baseUrl: this.baseUrl });
     }
-
-    const foundModel = this.modelRegistry.find(this.provider, this.modelStr);
-
-    if (foundModel) {
-      this.model = foundModel;
-    } else {
-      throw new Error(
-        `Model not found: ${this.provider}/${this.modelStr}. ` +
-          `Please check that the \`provider\` and \`model\` inputs are correct and that the provider is supported. ` +
-          `See https://github.com/mcowger/pi-action#usage for details.`
-      );
-    }
   }
 
   /**
@@ -127,17 +115,93 @@ export class Agent {
    * @returns The agent instance itself, for chaining.
    */
   async ready(): Promise<Agent> {
+    const resourceLoader = await getResourceLoader(
+      this.core,
+      this.platformProvider,
+      this.extensions,
+      this.loadBuiltinExtensions
+    );
+
+    // Refresh model registry to load providers/models from loaded extensions.
+    this.modelRegistry.refresh();
+
+    let foundModel = this.modelRegistry.find(this.provider, this.modelStr);
+
+    if (!foundModel) {
+      const builtInProviders = new Set([
+        'openai',
+        'anthropic',
+        'google',
+        'google-vertex',
+        'amazon-bedrock',
+        'azure-openai-responses',
+        'openai-codex',
+        'mistral',
+        'deepseek',
+        'groq',
+        'cerebras',
+        'openrouter',
+        'together',
+        'huggingface',
+        'fireworks',
+      ]);
+      const isKnownProvider = builtInProviders.has(this.provider);
+
+      if (this.baseUrl || isKnownProvider) {
+        this.core.debug(
+          `[model-registry] Model ${this.provider}/${this.modelStr} not found in built-ins. Registering dynamically.`
+        );
+
+        let api = 'openai-completions';
+        let defaultBaseUrl = 'https://api.openai.com/v1';
+
+        if (this.provider === 'anthropic') {
+          api = 'anthropic-messages';
+          defaultBaseUrl = 'https://api.anthropic.com/v1';
+        } else if (this.provider === 'google' || this.provider === 'google-vertex') {
+          api = 'google-generative-ai';
+          defaultBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+        }
+
+        const baseUrl = this.baseUrl ?? defaultBaseUrl;
+
+        this.modelRegistry.registerProvider(this.provider, {
+          baseUrl,
+          apiKey: this.token || 'dummy',
+          api,
+          models: [
+            {
+              id: this.modelStr,
+              name: this.modelStr,
+              api,
+              reasoning: false,
+              input: ['text'],
+              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+              contextWindow: 128000,
+              maxTokens: 16384,
+            },
+          ],
+        });
+        foundModel = this.modelRegistry.find(this.provider, this.modelStr);
+      }
+    }
+
+    if (foundModel) {
+      this.model = foundModel;
+    } else {
+      throw new Error(
+        `Model not found: ${this.provider}/${this.modelStr}. ` +
+          `Please check that the \`provider\` and \`model\` inputs are correct and that the provider is supported. ` +
+          `See https://github.com/mcowger/pi-action#usage for details.`
+      );
+    }
+
     const { session } = await createAgentSession({
       model: this.model,
       thinkingLevel: this.thinkingLevel,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      resourceLoader: await getResourceLoader(
-        this.core,
-        this.platformProvider,
-        this.extensions,
-        this.loadBuiltinExtensions
-      ),
+      resourceLoader,
     });
     this.session = session;
 

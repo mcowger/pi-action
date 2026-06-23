@@ -159,7 +159,7 @@ jobs:
         uses: mcowger/pi-action@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: openrouter
+          provider: custom-provider # e.g. openrouter, deepseek, ollama, or any custom label
           model: ${{ vars.LLM_MODEL_ID }}
           token: ${{ env.LLM_API_KEY }}
           base_url: ${{ secrets.LLM_API_HOST }}
@@ -229,7 +229,7 @@ Things you may need to change for your repo:
 - **Install step** — if you don't use Bun, replace the `setup-bun` / `bun install` steps with your package manager
 - **Build step** — the sample workflow runs `bun run build:frontend` before the agent; add whatever build step your repo needs (or remove it)
 - **`LLM_API_KEY` suffix** — the sample workflow appends `:${{ github.job }}` to the key for gateway job-tracking; if your provider doesn't expect that, change it to just `${{ secrets.LLM_API_KEY }}`
-- **`provider`** — do not change this.
+- **`provider`** — set to your LLM provider (e.g., `openai`, `anthropic`, `deepseek`, or any custom label if using custom base URLs/gateways).
 
 ---
 

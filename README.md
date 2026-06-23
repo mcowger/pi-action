@@ -283,6 +283,44 @@ jobs:
 | `get_issue_or_pr_thread` | Retrieves the full thread of an issue or PR including comments, review comments, labels, and branch info. |
 | `get_pr_diff` | Fetches the diff of a pull request on demand. Supports `max_lines` truncation and file filtering. |
 
+## Custom Providers, Models & Extensions
+
+The action supports custom models, OpenAI-compatible proxy gateways, and dynamically registered models from extensions.
+
+### 1. Custom and OpenAI-Compatible Providers
+
+You do not need to use standard providers or register models beforehand. If you provide a `base_url` or use a recognized provider, the action will automatically and dynamically register your custom model inside the Pi Model Registry.
+
+This allows you to connect to Ollama, LM Studio, vLLM, DeepSeek, or other custom proxies directly without needing workaround configurations (such as pretending the provider is `openrouter`).
+
+**Example: Custom OpenAI-Compatible Provider**
+```yaml
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    provider: my-custom-gateway # Any custom identifier
+    model: llama-3.3-70b-instruct
+    base_url: https://my-openai-compatible-proxy.com/v1
+    token: ${{ secrets.PROXY_API_KEY }}
+```
+
+### 2. Providers and Models from Extensions
+
+If you have custom extensions that register a provider or custom models (using `pi.registerProvider`), the action automatically loads your extensions first, refreshes the Model Registry, and then resolves the target `model`.
+
+This makes it simple to integrate proprietary or enterprise model wrappers that are packaged as extensions.
+
+**Example: Extension-Registered Model**
+```yaml
+- uses: mcowger/pi-action@main
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    provider: extension-provider
+    model: extension-model
+    extensions: |
+      npm:@my-org/pi-enterprise-provider-extension
+```
+
 ## Development
 
 ### Prerequisites
