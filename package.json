@@ -21,7 +21,7 @@
     "@actions/core": "^3.0.1",
     "@actions/github": "^9.1.1",
     "@js-temporal/polyfill": "^0.5.1",
-    "@earendil-works/pi-coding-agent": "0.79.10"
+    "@earendil-works/pi-coding-agent": "^0.79.10"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
