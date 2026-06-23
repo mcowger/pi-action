@@ -96,23 +96,58 @@ function createRealAgent(): InstanceType<typeof Agent> {
 
 describe('Agent', () => {
   describe('constructor', () => {
-    test('throws error for non-existent model', () => {
+    test('throws error for non-existent model in ready()', async () => {
       // Use a provider/model combo that won't exist in the registry
-      expect(() => {
-        const _agent = new Agent(
-          'model-name',
-          'fake-provider',
-          'test-token',
-          'off',
-          mockCoreAdapter as any,
-          mockPlatformProvider,
-          undefined,
-          undefined,
-          undefined,
-          3,
-          AuthStorage.inMemory()
-        );
-      }).toThrow('Model not found');
+      const agent = new Agent(
+        'model-name',
+        'fake-provider',
+        'test-token',
+        'off',
+        mockCoreAdapter as any,
+        mockPlatformProvider,
+        undefined,
+        undefined,
+        undefined,
+        3,
+        AuthStorage.inMemory()
+      );
+      await expect(agent.ready()).rejects.toThrow('Model not found');
+    });
+
+    test('dynamically registers custom model when baseUrl is provided', async () => {
+      const agent = new Agent(
+        'model-name',
+        'fake-provider',
+        'test-token',
+        'off',
+        mockCoreAdapter as any,
+        mockPlatformProvider,
+        undefined,
+        undefined,
+        'https://my-api-host.com/v1',
+        3,
+        AuthStorage.inMemory()
+      );
+      const readyResult = await agent.ready();
+      expect(readyResult).toBe(agent);
+    });
+
+    test('dynamically registers custom model when provider is known', async () => {
+      const agent = new Agent(
+        'unreleased-gpt-model',
+        'openai',
+        'test-token',
+        'off',
+        mockCoreAdapter as any,
+        mockPlatformProvider,
+        undefined,
+        undefined,
+        undefined,
+        3,
+        AuthStorage.inMemory()
+      );
+      const readyResult = await agent.ready();
+      expect(readyResult).toBe(agent);
     });
 
     test('stores token in auth storage when provided', () => {

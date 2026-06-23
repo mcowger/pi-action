@@ -78,7 +78,7 @@ jobs:
         uses: mcowger/pi-action@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: openrouter
+          provider: custom-provider # e.g. openrouter, deepseek, ollama, or any custom label
           model: ${{ vars.LLM_MODEL_ID }}
           token: ${{ env.LLM_API_KEY }}
           base_url: ${{ secrets.LLM_API_HOST }}
